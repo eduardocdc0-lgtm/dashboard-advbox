@@ -101,51 +101,45 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// Consolida prazos de todos os processos
+// Busca todos os posts via paginação
+async function fetchAllPosts() {
+  const PAGE_SIZE = 50;
+  const first = await callAdvBox(`/posts?limit=${PAGE_SIZE}&offset=0`);
+  const total = first.totalCount || 0;
+  const allItems = [...(first.data || [])];
+
+  const pages = [];
+  for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) {
+    pages.push(offset);
+  }
+
+  const results = await Promise.allSettled(
+    pages.map(offset => callAdvBox(`/posts?limit=${PAGE_SIZE}&offset=${offset}`))
+  );
+  results.forEach(r => {
+    if (r.status === 'fulfilled') allItems.push(...(r.value.data || []));
+  });
+
+  return allItems;
+}
+
+// Consolida prazos a partir dos posts (agenda do AdvBox)
 app.get('/api/deadlines', async (req, res) => {
   try {
-    const lawsuitsData = await callAdvBox('/lawsuits?limit=1000');
-    const lawsuits = lawsuitsData.data || [];
+    const allPosts = await fetchAllPosts();
 
-    const BATCH_SIZE = 5;
-    const allDeadlines = [];
-
-    for (let i = 0; i < lawsuits.length; i += BATCH_SIZE) {
-      const batch = lawsuits.slice(i, i + BATCH_SIZE);
-      const results = await Promise.allSettled(
-        batch.map(async (lawsuit) => {
-          const histData = await callAdvBox(`/history/${lawsuit.id}?status=pending`);
-          const tasks = histData.data || histData || [];
-          if (!Array.isArray(tasks)) return [];
-          return tasks
-            .filter(t => t.date_deadline)
-            .map(t => ({
-              id: t.id,
-              date_deadline: t.date_deadline,
-              type: t.type || t.task_type || t.title || '',
-              client: lawsuit.customer_name || lawsuit.client_name || lawsuit.name || '',
-              responsible: t.responsible_name || t.user_name || t.responsible || '',
-              process: lawsuit.process_number || lawsuit.protocol_number || `#${lawsuit.id}`,
-              lawsuit_id: lawsuit.id,
-              title: t.title || t.description || ''
-            }));
-        })
-      );
-      results.forEach(r => {
-        if (r.status === 'fulfilled') allDeadlines.push(...r.value);
-      });
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    // Filtra tarefas com prazo E que ainda têm ao menos um usuário pendente
+    const pending = allPosts.filter(p => {
+      if (!p.date_deadline) return false;
+      const users = p.users || [];
+      // se não há usuários, considera pendente
+      if (users.length === 0) return true;
+      // pendente se pelo menos um usuário não completou
+      return users.some(u => !u.completed);
+    });
 
     const parseDeadline = (str) => {
       if (!str) return null;
-      // suporta YYYY-MM-DD e DD/MM/YYYY
       if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str.substring(0, 10) + 'T00:00:00');
       if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
         const [d, m, y] = str.split('/');
@@ -154,21 +148,60 @@ app.get('/api/deadlines', async (req, res) => {
       return new Date(str);
     };
 
-    const classified = allDeadlines.map(d => {
-      const dl = parseDeadline(d.date_deadline);
-      if (!dl || isNaN(dl)) return { ...d, status: 'unknown', daysOverdue: 0 };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const classified = pending.map(p => {
+      const dl = parseDeadline(p.date_deadline);
+      if (!dl || isNaN(dl)) return null;
       const dlTime = dl.getTime();
+
       let status;
       if (dlTime < today.getTime()) status = 'overdue';
       else if (dlTime === today.getTime()) status = 'today';
       else if (dlTime === tomorrow.getTime()) status = 'tomorrow';
       else if (dl <= nextWeek) status = 'this_week';
       else status = 'future';
-      const daysOverdue = status === 'overdue' ? Math.floor((today.getTime() - dlTime) / 86400000) : 0;
-      return { ...d, status, daysOverdue };
-    });
 
-    const typeMatch = (type, keyword) => (type || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(keyword);
+      const daysOverdue = status === 'overdue'
+        ? Math.floor((today.getTime() - dlTime) / 86400000)
+        : 0;
+
+      // nome do cliente principal (primeiro da lista, excluindo INSS/órgãos públicos se houver)
+      const customers = (p.lawsuit && p.lawsuit.customers) || [];
+      const clientName = customers.length > 0
+        ? customers.find(c => !c.customers_origins_id)?.name || customers[0].name
+        : '';
+
+      // responsáveis pendentes
+      const responsibles = (p.users || [])
+        .filter(u => !u.completed)
+        .map(u => u.name)
+        .join(', ');
+
+      const process = p.lawsuit
+        ? (p.lawsuit.process_number || p.lawsuit.protocol_number || `#${p.lawsuits_id}`)
+        : (p.lawsuits_id ? `#${p.lawsuits_id}` : '—');
+
+      return {
+        id: p.id,
+        date_deadline: p.date_deadline,
+        type: p.task || '',
+        client: clientName,
+        responsible: responsibles,
+        process,
+        lawsuit_id: p.lawsuits_id,
+        status,
+        daysOverdue
+      };
+    }).filter(Boolean);
+
+    const typeMatch = (type, keyword) =>
+      (type || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(keyword);
 
     const summary = {
       today: classified.filter(d => d.status === 'today').length,
@@ -189,7 +222,14 @@ app.get('/api/deadlines', async (req, res) => {
       .filter(d => d.status === 'overdue')
       .sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-    res.json({ summary, next7, overdue, total: classified.length });
+    res.json({
+      summary,
+      next7,
+      overdue,
+      total: classified.length,
+      totalFetched: allPosts.length,
+      pendingWithDeadline: pending.length
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
