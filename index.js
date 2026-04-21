@@ -30,6 +30,13 @@ async function callAdvBox(endpoint) {
       'Content-Type': 'application/json'
     }
   });
+  if (response.status === 429) {
+    throw new Error('RATE_LIMIT');
+  }
+  const ct = response.headers.get('content-type') || '';
+  if (!ct.includes('json')) {
+    throw new Error(`RATE_LIMIT`); // HTML = redirecionamento por rate limit / auth
+  }
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || data.message || `Erro ${response.status}`);
@@ -101,107 +108,129 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// Busca todos os posts via paginação
-async function fetchAllPosts() {
-  const PAGE_SIZE = 50;
-  const first = await callAdvBox(`/posts?limit=${PAGE_SIZE}&offset=0`);
-  const total = first.totalCount || 0;
-  const allItems = [...(first.data || [])];
-
-  const pages = [];
-  for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) {
-    pages.push(offset);
+// Parseia string de data (YYYY-MM-DD ou DD/MM/YYYY)
+function parseDeadline(str) {
+  if (!str) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str.substring(0, 10) + 'T00:00:00');
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+    const [d, m, y] = str.split('/');
+    return new Date(`${y}-${m}-${d}T00:00:00`);
   }
-
-  const results = await Promise.allSettled(
-    pages.map(offset => callAdvBox(`/posts?limit=${PAGE_SIZE}&offset=${offset}`))
-  );
-  results.forEach(r => {
-    if (r.status === 'fulfilled') allItems.push(...(r.value.data || []));
-  });
-
-  return allItems;
+  return new Date(str);
 }
 
-// Consolida prazos a partir dos posts (agenda do AdvBox)
-app.get('/api/deadlines', async (req, res) => {
+// Extrai o cliente principal de uma string "CLIENTE, RESPONSÁVEL, PARTE2"
+// Remove nomes que estão no campo responsible
+function extractClientName(customersStr, responsibleStr) {
+  if (!customersStr) return '';
+  const responsibles = (responsibleStr || '')
+    .split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+  const names = customersStr.split(',').map(s => s.trim()).filter(Boolean);
+  const clients = names.filter(n => !responsibles.includes(n.toUpperCase()));
+  return clients.length > 0 ? clients[0] : names[0] || '';
+}
+
+// Busca TODOS os posts via /posts paginado
+async function fetchAllPosts() {
+  const first = await callAdvBox('/posts?limit=200&offset=0');
+  const total = first.totalCount || (first.data || []).length;
+  const all = [...(first.data || [])];
+  console.log(`[Alice] Posts: ${all.length} de ${total} total`);
+
+  // Paginar para pegar o restante
+  for (let offset = 200; offset < total; offset += 200) {
+    await new Promise(r => setTimeout(r, 500)); // pausa gentil entre páginas
+    const page = await callAdvBox(`/posts?limit=200&offset=${offset}`);
+    const pageData = page.data || [];
+    all.push(...pageData);
+    console.log(`[Alice] Posts: ${all.length} de ${total}`);
+    if (pageData.length < 200) break;
+  }
+  return all;
+}
+
+// ── Cache de prazos ──────────────────────────────────────────────
+let deadlinesCache = null;
+let deadlinesFetchedAt = null;
+let deadlinesFetching = false;
+let deadlinesLastError = 0;
+const CACHE_TTL_MS = 30 * 60 * 1000;   // 30 minutos entre refreshes
+const ERROR_BACKOFF_MS = 5 * 60 * 1000; // 5 minutos após erro
+
+async function buildDeadlinesCache() {
+  if (deadlinesFetching) return;
+  // Backoff após erro: não tentar por 5 minutos
+  if (deadlinesLastError && (Date.now() - deadlinesLastError) < ERROR_BACKOFF_MS) return;
+
+  deadlinesFetching = true;
+  console.log('[Alice] Iniciando busca de prazos via posts...');
   try {
+    // Buscar todos os posts paginados (max ~3 chamadas no total)
     const allPosts = await fetchAllPosts();
+    console.log(`[Alice] ${allPosts.length} posts encontrados. Filtrando prazos...`);
 
-    // Filtra tarefas com prazo E que ainda têm ao menos um usuário pendente
-    const pending = allPosts.filter(p => {
-      if (!p.date_deadline) return false;
-      const users = p.users || [];
-      // se não há usuários, considera pendente
-      if (users.length === 0) return true;
-      // pendente se pelo menos um usuário não completou
-      return users.some(u => !u.completed);
-    });
+    // Extrair nome do cliente do objeto lawsuit dentro do post
+    function clientFromPost(post) {
+      const customers = (post.lawsuit && post.lawsuit.customers) || [];
+      if (customers.length === 0) return '';
+      // Retorna o primeiro cliente que não seja INSS/órgão público
+      const personal = customers.find(c =>
+        c.name && !/INSS|INSTITUTO NACIONAL|PREVIDÊNCIA|ESTADO|MUNICÍPIO|UNIÃO FEDERAL/i.test(c.name)
+      );
+      return (personal || customers[0]).name || '';
+    }
 
-    const parseDeadline = (str) => {
-      if (!str) return null;
-      if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str.substring(0, 10) + 'T00:00:00');
-      if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
-        const [d, m, y] = str.split('/');
-        return new Date(`${y}-${m}-${d}T00:00:00`);
+    // Converter posts em prazos — 1 entrada por usuário por tarefa (igual ao AdvBox)
+    // Inclui usuários pendentes (completed=null)
+    const allDeadlines = [];
+    for (const p of allPosts) {
+      if (!p.date_deadline) continue;
+      const allUsers = p.users || [];
+      const pendingUsers = allUsers.filter(u => !u.completed);
+      if (pendingUsers.length === 0) continue; // todos completaram — ignorar
+
+      const processNum = (p.lawsuit && (p.lawsuit.process_number || p.lawsuit.protocol_number)) || '';
+      const processLabel = processNum || `#${p.lawsuits_id || p.id}`;
+      const client = clientFromPost(p);
+
+      for (const user of pendingUsers) {
+        allDeadlines.push({
+          key: `post|${p.id}|user|${user.user_id}`,
+          date_deadline: p.date_deadline,
+          type: p.task || '',
+          client,
+          responsible: user.name,
+          process: processLabel,
+          lawsuit_id: p.lawsuits_id || null,
+          post_id: p.id,
+          source: 'post'
+        });
       }
-      return new Date(str);
-    };
+    }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    console.log(`[Alice] ${allDeadlines.length} entradas prazo-usuário pendentes.`);
 
-    const classified = pending.map(p => {
-      const dl = parseDeadline(p.date_deadline);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today); nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const classified = allDeadlines.map(d => {
+      const dl = parseDeadline(d.date_deadline);
       if (!dl || isNaN(dl)) return null;
       const dlTime = dl.getTime();
-
       let status;
       if (dlTime < today.getTime()) status = 'overdue';
       else if (dlTime === today.getTime()) status = 'today';
       else if (dlTime === tomorrow.getTime()) status = 'tomorrow';
       else if (dl <= nextWeek) status = 'this_week';
       else status = 'future';
-
       const daysOverdue = status === 'overdue'
-        ? Math.floor((today.getTime() - dlTime) / 86400000)
-        : 0;
-
-      // nome do cliente principal (primeiro da lista, excluindo INSS/órgãos públicos se houver)
-      const customers = (p.lawsuit && p.lawsuit.customers) || [];
-      const clientName = customers.length > 0
-        ? customers.find(c => !c.customers_origins_id)?.name || customers[0].name
-        : '';
-
-      // responsáveis pendentes
-      const responsibles = (p.users || [])
-        .filter(u => !u.completed)
-        .map(u => u.name)
-        .join(', ');
-
-      const process = p.lawsuit
-        ? (p.lawsuit.process_number || p.lawsuit.protocol_number || `#${p.lawsuits_id}`)
-        : (p.lawsuits_id ? `#${p.lawsuits_id}` : '—');
-
-      return {
-        id: p.id,
-        date_deadline: p.date_deadline,
-        type: p.task || '',
-        client: clientName,
-        responsible: responsibles,
-        process,
-        lawsuit_id: p.lawsuits_id,
-        status,
-        daysOverdue
-      };
+        ? Math.floor((today.getTime() - dlTime) / 86400000) : 0;
+      return { ...d, status, daysOverdue };
     }).filter(Boolean);
 
-    const typeMatch = (type, keyword) =>
-      (type || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(keyword);
+    const typeMatch = (type, kw) =>
+      (type || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(kw);
 
     const summary = {
       today: classified.filter(d => d.status === 'today').length,
@@ -214,24 +243,57 @@ app.get('/api/deadlines', async (req, res) => {
       ).length
     };
 
-    const next7 = classified
-      .filter(d => ['today', 'tomorrow', 'this_week'].includes(d.status))
+    const overdue = classified.filter(d => d.status === 'overdue')
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+    const upcoming = classified.filter(d => d.status !== 'overdue')
       .sort((a, b) => new Date(a.date_deadline) - new Date(b.date_deadline));
 
-    const overdue = classified
-      .filter(d => d.status === 'overdue')
-      .sort((a, b) => b.daysOverdue - a.daysOverdue);
-
-    res.json({
+    deadlinesCache = {
       summary,
-      next7,
+      next7: classified.filter(d => ['today', 'tomorrow', 'this_week'].includes(d.status))
+        .sort((a, b) => new Date(a.date_deadline) - new Date(b.date_deadline)),
+      upcoming,
       overdue,
       total: classified.length,
-      totalFetched: allPosts.length,
-      pendingWithDeadline: pending.length
-    });
+      debug: {
+        totalPosts: allPosts.length,
+        postsWithDeadline: allPosts.filter(p => p.date_deadline).length,
+        prazoEntries: allDeadlines.length,
+        classified: classified.length
+      }
+    };
+    deadlinesFetchedAt = Date.now();
+    deadlinesLastError = 0;
+    console.log(`[Alice] Cache pronto: ${classified.length} prazos | ${deadlinesCache.overdue.length} atrasados`);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[Alice] Erro ao construir cache:', err.message);
+    deadlinesLastError = Date.now();
+  } finally {
+    deadlinesFetching = false;
+  }
+}
+
+// Inicia o cache logo após o servidor subir (pouquíssimas chamadas agora)
+setTimeout(() => buildDeadlinesCache(), 5000);
+
+// Rota de prazos — responde do cache instantaneamente
+app.get('/api/deadlines', (req, res) => {
+  const now = Date.now();
+  const isStale = !deadlinesFetchedAt || (now - deadlinesFetchedAt) > CACHE_TTL_MS;
+
+  if (isStale && !deadlinesFetching) {
+    buildDeadlinesCache(); // refresh em background
+  }
+
+  if (deadlinesCache) {
+    res.json({ ...deadlinesCache, cachedAt: new Date(deadlinesFetchedAt).toISOString() });
+  } else {
+    // Ainda carregando pela primeira vez
+    res.json({
+      loading: true,
+      summary: { today: 0, tomorrow: 0, audiencias_week: 0, pericias_week: 0 },
+      next7: [], overdue: [], total: 0
+    });
   }
 });
 

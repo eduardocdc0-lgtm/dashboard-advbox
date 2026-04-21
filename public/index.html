@@ -303,12 +303,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📅 Próximos 7 dias</div>
+        <div class="card-title" id="aliceProximosTitle">📅 Próximos prazos</div>
         <div id="aliceProximos"><div class="loading">Carregando prazos...</div></div>
       </div>
 
       <div class="card">
-        <div class="card-title">🚨 Atrasados</div>
+        <div class="card-title" id="aliceAtrasadosTitle">🚨 Atrasados</div>
         <div id="aliceAtrasados"><div class="loading">Carregando prazos...</div></div>
       </div>
     </div>
@@ -539,64 +539,102 @@
       } catch (e) { console.error('posts:', e); }
     }
 
+    let alicePollingTimer = null;
+
+    function renderDeadlineRow(d) {
+      const dateClass = d.status === 'today' ? 'today' : d.status === 'tomorrow' ? 'tomorrow' : '';
+      const badge = d.status === 'today'
+        ? '<span class="deadline-badge badge-today">HOJE</span>'
+        : d.status === 'tomorrow'
+        ? '<span class="deadline-badge badge-tomorrow">AMANHÃ</span>'
+        : '';
+      return `
+        <div class="deadline-row">
+          <div class="deadline-date ${dateClass}">${formatDate(d.date_deadline)}</div>
+          <div>
+            <div class="deadline-info-client">${d.client || '—'} ${badge}</div>
+            <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
+            <div class="deadline-info-process">${d.process}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderOverdueRow(d) {
+      return `
+        <div class="deadline-row">
+          <div class="deadline-date today">${formatDate(d.date_deadline)}</div>
+          <div>
+            <div class="deadline-info-client" style="color:#ef4444">
+              ${d.client || '—'}
+              <span class="deadline-badge badge-overdue">ATRASADO ${d.daysOverdue}d</span>
+            </div>
+            <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
+            <div class="deadline-info-process">${d.process}</div>
+          </div>
+        </div>`;
+    }
+
     async function loadDeadlines() {
       try {
         const data = await fetchJson('/api/deadlines');
 
-        document.getElementById('aliceHoje').textContent = data.summary.today;
-        document.getElementById('aliceAmanha').textContent = data.summary.tomorrow;
-        document.getElementById('aliceAudiencias').textContent = data.summary.audiencias_week;
-        document.getElementById('alicePericias').textContent = data.summary.pericias_week;
+        if (data.loading) {
+          // Cache ainda sendo construído — mostrar loading e reagendar
+          document.getElementById('aliceHoje').textContent = '…';
+          document.getElementById('aliceAmanha').textContent = '…';
+          document.getElementById('aliceAudiencias').textContent = '…';
+          document.getElementById('alicePericias').textContent = '…';
+          document.getElementById('aliceProximos').innerHTML =
+            '<div class="loading">⏳ Calculando prazos de todos os processos...<br><small style="color:#64748b">Isso leva cerca de 1 minuto na primeira vez. A página vai atualizar automaticamente.</small></div>';
+          document.getElementById('aliceAtrasados').innerHTML = '';
 
-        // Próximos 7 dias
-        const proxContainer = document.getElementById('aliceProximos');
-        if (!data.next7 || data.next7.length === 0) {
-          proxContainer.innerHTML = '<div class="empty">Nenhum prazo nos próximos 7 dias</div>';
-        } else {
-          proxContainer.innerHTML = data.next7.map(d => {
-            const dateClass = d.status === 'today' ? 'today' : d.status === 'tomorrow' ? 'tomorrow' : '';
-            const badge = d.status === 'today'
-              ? '<span class="deadline-badge badge-today">HOJE</span>'
-              : d.status === 'tomorrow'
-              ? '<span class="deadline-badge badge-tomorrow">AMANHÃ</span>'
-              : '';
-            return `
-              <div class="deadline-row">
-                <div class="deadline-date ${dateClass}">${formatDate(d.date_deadline)}</div>
-                <div>
-                  <div class="deadline-info-client">${d.client || '—'} ${badge}</div>
-                  <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
-                  <div class="deadline-info-process">${d.process}</div>
-                </div>
-              </div>
-            `;
-          }).join('');
+          if (!alicePollingTimer) {
+            alicePollingTimer = setInterval(async () => {
+              const fresh = await fetchJson('/api/deadlines').catch(() => null);
+              if (fresh && !fresh.loading) {
+                clearInterval(alicePollingTimer);
+                alicePollingTimer = null;
+                renderDeadlines(fresh);
+              }
+            }, 12000);
+          }
+          return;
         }
 
-        // Atrasados
-        const atrasContainer = document.getElementById('aliceAtrasados');
-        if (!data.overdue || data.overdue.length === 0) {
-          atrasContainer.innerHTML = '<div class="empty">Nenhum prazo atrasado</div>';
-        } else {
-          atrasContainer.innerHTML = data.overdue.map(d => `
-            <div class="deadline-row">
-              <div class="deadline-date today">${formatDate(d.date_deadline)}</div>
-              <div>
-                <div class="deadline-info-client" style="color:#ef4444">
-                  ${d.client || '—'}
-                  <span class="deadline-badge badge-overdue">ATRASADO ${d.daysOverdue}d</span>
-                </div>
-                <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
-                <div class="deadline-info-process">${d.process}</div>
-              </div>
-            </div>
-          `).join('');
-        }
+        if (alicePollingTimer) { clearInterval(alicePollingTimer); alicePollingTimer = null; }
+        renderDeadlines(data);
       } catch (e) {
         console.error('deadlines:', e);
         document.getElementById('aliceProximos').innerHTML = '<div class="empty">Erro ao carregar prazos</div>';
         document.getElementById('aliceAtrasados').innerHTML = '';
       }
+    }
+
+    function renderDeadlines(data) {
+      document.getElementById('aliceHoje').textContent = data.summary.today;
+      document.getElementById('aliceAmanha').textContent = data.summary.tomorrow;
+      document.getElementById('aliceAudiencias').textContent = data.summary.audiencias_week;
+      document.getElementById('alicePericias').textContent = data.summary.pericias_week;
+
+      const next7Items = data.next7 || [];
+      const overdueItems = data.overdue || [];
+      const totalUpcoming = data.upcoming ? data.upcoming.length : next7Items.length;
+
+      const proxTitle = document.getElementById('aliceProximosTitle');
+      if (proxTitle) proxTitle.textContent = `📅 Próximos 7 dias (${next7Items.length} de ${totalUpcoming} pendentes)`;
+
+      const atrasTitle = document.getElementById('aliceAtrasadosTitle');
+      if (atrasTitle) atrasTitle.textContent = `🚨 Atrasados (${overdueItems.length})`;
+
+      const proxContainer = document.getElementById('aliceProximos');
+      proxContainer.innerHTML = next7Items.length === 0
+        ? '<div class="empty">Nenhum prazo nos próximos 7 dias</div>'
+        : next7Items.map(renderDeadlineRow).join('');
+
+      const atrasContainer = document.getElementById('aliceAtrasados');
+      atrasContainer.innerHTML = overdueItems.length === 0
+        ? '<div class="empty">Nenhum prazo atrasado 🎉</div>'
+        : overdueItems.map(renderOverdueRow).join('');
     }
 
     // Carrega tudo quando a página abrir
