@@ -141,6 +141,50 @@
       background: #334155;
       color: #cbd5e1;
     }
+    .metric-card.red { background: #7f1d1d; }
+    .metric-card.orange { background: #78350f; }
+    .deadline-row {
+      padding: 12px 0;
+      border-bottom: 1px solid #334155;
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .deadline-row:last-child { border-bottom: none; }
+    .deadline-date {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .deadline-date.today { color: #ef4444; }
+    .deadline-date.tomorrow { color: #f59e0b; }
+    .deadline-info-client {
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+    .deadline-info-type {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+    .deadline-info-process {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .deadline-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-today { background: #ef4444; color: #fff; }
+    .badge-tomorrow { background: #f59e0b; color: #fff; }
+    .badge-overdue { background: #ef4444; color: #fff; }
   </style>
 </head>
 <body>
@@ -158,6 +202,7 @@
       <button class="tab" onclick="showTab('movements', event)">Movimentações</button>
       <button class="tab" onclick="showTab('financial', event)">Financeiro</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
+      <button class="tab" onclick="showTab('alice', event)">⚖️ Alice</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -235,6 +280,38 @@
         <div id="listaAniversariantes"><div class="loading">Carregando...</div></div>
       </div>
     </div>
+
+    <!-- ABA 6: ALICE - PRAZOS JUDICIAIS -->
+    <div id="alice" class="tab-content">
+      <div class="metrics">
+        <div class="metric-card red">
+          <div class="metric-label">Vencendo hoje</div>
+          <div class="metric-value" id="aliceHoje">-</div>
+        </div>
+        <div class="metric-card orange">
+          <div class="metric-label">Vencendo amanhã</div>
+          <div class="metric-value" id="aliceAmanha">-</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Audiências da semana</div>
+          <div class="metric-value" id="aliceAudiencias">-</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Perícias da semana</div>
+          <div class="metric-value" id="alicePericias">-</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📅 Próximos 7 dias</div>
+        <div id="aliceProximos"><div class="loading">Carregando prazos...</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🚨 Atrasados</div>
+        <div id="aliceAtrasados"><div class="loading">Carregando prazos...</div></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -268,6 +345,18 @@
       return data;
     }
 
+    function formatDate(str) {
+      if (!str) return '';
+      let d;
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) d = new Date(str.substring(0, 10) + 'T00:00:00');
+      else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+        const [day, mon, yr] = str.split('/');
+        d = new Date(`${yr}-${mon}-${day}T00:00:00`);
+      } else d = new Date(str);
+      if (isNaN(d)) return str;
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
     // Carrega tudo
     async function loadAll() {
       const btn = document.getElementById('refreshBtn');
@@ -283,7 +372,8 @@
           loadTransactions(),
           loadCustomers(),
           loadBirthdays(),
-          loadPosts()
+          loadPosts(),
+          loadDeadlines()
         ]);
       } catch (err) {
         showError(err.message);
@@ -447,6 +537,66 @@
         const pendentes = posts.filter(p => !p.completed_at && !p.completed).length;
         document.getElementById('tarefasPendentes').textContent = pendentes || posts.length;
       } catch (e) { console.error('posts:', e); }
+    }
+
+    async function loadDeadlines() {
+      try {
+        const data = await fetchJson('/api/deadlines');
+
+        document.getElementById('aliceHoje').textContent = data.summary.today;
+        document.getElementById('aliceAmanha').textContent = data.summary.tomorrow;
+        document.getElementById('aliceAudiencias').textContent = data.summary.audiencias_week;
+        document.getElementById('alicePericias').textContent = data.summary.pericias_week;
+
+        // Próximos 7 dias
+        const proxContainer = document.getElementById('aliceProximos');
+        if (!data.next7 || data.next7.length === 0) {
+          proxContainer.innerHTML = '<div class="empty">Nenhum prazo nos próximos 7 dias</div>';
+        } else {
+          proxContainer.innerHTML = data.next7.map(d => {
+            const dateClass = d.status === 'today' ? 'today' : d.status === 'tomorrow' ? 'tomorrow' : '';
+            const badge = d.status === 'today'
+              ? '<span class="deadline-badge badge-today">HOJE</span>'
+              : d.status === 'tomorrow'
+              ? '<span class="deadline-badge badge-tomorrow">AMANHÃ</span>'
+              : '';
+            return `
+              <div class="deadline-row">
+                <div class="deadline-date ${dateClass}">${formatDate(d.date_deadline)}</div>
+                <div>
+                  <div class="deadline-info-client">${d.client || '—'} ${badge}</div>
+                  <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
+                  <div class="deadline-info-process">${d.process}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Atrasados
+        const atrasContainer = document.getElementById('aliceAtrasados');
+        if (!data.overdue || data.overdue.length === 0) {
+          atrasContainer.innerHTML = '<div class="empty">Nenhum prazo atrasado</div>';
+        } else {
+          atrasContainer.innerHTML = data.overdue.map(d => `
+            <div class="deadline-row">
+              <div class="deadline-date today">${formatDate(d.date_deadline)}</div>
+              <div>
+                <div class="deadline-info-client" style="color:#ef4444">
+                  ${d.client || '—'}
+                  <span class="deadline-badge badge-overdue">ATRASADO ${d.daysOverdue}d</span>
+                </div>
+                <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
+                <div class="deadline-info-process">${d.process}</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('deadlines:', e);
+        document.getElementById('aliceProximos').innerHTML = '<div class="empty">Erro ao carregar prazos</div>';
+        document.getElementById('aliceAtrasados').innerHTML = '';
+      }
     }
 
     // Carrega tudo quando a página abrir
