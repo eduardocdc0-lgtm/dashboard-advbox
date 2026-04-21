@@ -297,6 +297,165 @@ app.get('/api/deadlines', (req, res) => {
   }
 });
 
+// ── Helpers de campo e normalização ──────────────────────────────────────────
+function norm(str) {
+  return (str || '').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function getField(obj, ...keys) {
+  for (const k of keys) {
+    if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+  }
+  return null;
+}
+
+// ── Cache de cadastros pendentes ──────────────────────────────────────────────
+let registrationsCache = null;
+let registrationsFetchedAt = null;
+let registrationsFetching = false;
+const REG_CACHE_TTL_MS = 20 * 60 * 1000; // 20 min
+
+const RESPONSAVEIS_VALIDOS = ['THIAGO', 'MARILIA', 'LETICIA', 'EDUARDO', 'TAMMYRES'];
+const BPC_TRIGGERS = ['BPC', 'BENEFICIO ASSISTENCIAL', 'AUXILIO DOENCA', 'AUXÍLIO DOENÇA', 'BENEFÍCIO ASSISTENCIAL'];
+const LAUDO_OPCOES = ['COM LAUDO', 'SEM LAUDO', 'LAUDO OK', 'FAZER LAUDO', 'AGUARDANDO LAUDO'];
+const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'ESCRITORIO', 'INDICACAO', 'INDICAÇÃO', 'ORGÂNICO', 'ESCRITÓRIO'];
+
+async function buildRegistrationsCache() {
+  if (registrationsFetching) return;
+  registrationsFetching = true;
+  console.log('[Cadastros] Buscando processos dos últimos 30 dias...');
+  try {
+    const data = await callAdvBox('/lawsuits?limit=1000');
+    const all = data.data || [];
+
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const results = [];
+
+    for (const l of all) {
+      // Detecta campo de data de cadastro
+      const dateStr = getField(l,
+        'created_at', 'date_cadastro', 'dt_cadastro',
+        'date_registration', 'registration_date', 'date', 'created'
+      );
+      if (!dateStr) continue;
+
+      const dateObj = parseDeadline(String(dateStr));
+      if (!dateObj || isNaN(dateObj) || dateObj < cutoff) continue;
+
+      // Anotações gerais (normalizado)
+      const rawNotes = getField(l,
+        'general_notes', 'annotations', 'notes',
+        'general_annotation', 'anotacoes', 'note', 'observation'
+      ) || '';
+      const notes = norm(rawNotes);
+
+      // Tipo de ação
+      const rawTipo = getField(l,
+        'type_of_action', 'action_type', 'tipo_acao',
+        'lawsuit_type', 'type', 'kind', 'action'
+      ) || '';
+      const tipoNorm = norm(rawTipo);
+
+      // Nome do cliente
+      const clientsArr = Array.isArray(l.customers) ? l.customers : [];
+      let clientName = '';
+      if (clientsArr.length > 0) {
+        const personal = clientsArr.find(c =>
+          c.name && !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i.test(norm(c.name))
+        );
+        clientName = (personal || clientsArr[0]).name || '';
+      } else {
+        clientName = getField(l, 'customer_name', 'client_name', 'customers_name') || '';
+      }
+
+      // Responsável
+      const responsible = getField(l,
+        'responsible', 'responsible_name', 'user_name', 'lawyer', 'attorney'
+      ) || '';
+
+      const problemas = [];
+
+      // ── Regra 1: FECHADO POR ──────────────────────────────────────────────
+      const hasFechadoPor = RESPONSAVEIS_VALIDOS.some(r =>
+        notes.includes(`FECHADO POR ${r}`) || notes.includes(`FECHADO POR: ${r}`)
+      );
+      if (!hasFechadoPor) {
+        problemas.push({ code: 'SEM_FECHADO_POR', label: 'Sem fechado por', severity: 'critical' });
+      }
+
+      // ── Regra 2: LAUDO (só BPC / Aux Doença) ─────────────────────────────
+      const isBpcAux = BPC_TRIGGERS.some(k => tipoNorm.includes(k));
+      if (isBpcAux) {
+        const hasLaudo = LAUDO_OPCOES.some(k => notes.includes(k));
+        if (!hasLaudo) {
+          problemas.push({ code: 'SEM_LAUDO', label: 'Sem laudo', severity: 'critical' });
+        }
+      }
+
+      // ── Regra 3: CAMPANHA (heurística) ───────────────────────────────────
+      // Só aplica se o processo já foi fechado (tem "FECHADO POR")
+      if (hasFechadoPor) {
+        const temOrigemOrganica = ORIGEM_ORGANICA.some(k => notes.includes(k));
+        const temCampanha = notes.includes('CAMPANHA');
+        if (!temOrigemOrganica && !temCampanha) {
+          problemas.push({ code: 'SEM_CAMPANHA', label: 'Sem campanha', severity: 'mild' });
+        }
+      }
+
+      const id = l.id || l.lawsuits_id;
+      const processNum = l.process_number || l.protocol_number || `#${id}`;
+      const severity = problemas.some(p => p.severity === 'critical')
+        ? 'critical' : problemas.length > 0 ? 'mild' : 'ok';
+
+      results.push({
+        id,
+        processo: processNum,
+        cliente: clientName,
+        tipo: rawTipo,
+        data: dateStr,
+        responsavel: responsible,
+        problemas,
+        severity
+      });
+    }
+
+    // Ordena: críticos > leves > ok, depois por data desc dentro de cada grupo
+    const order = { critical: 0, mild: 1, ok: 2 };
+    results.sort((a, b) => {
+      const d = order[a.severity] - order[b.severity];
+      if (d !== 0) return d;
+      return new Date(b.data) - new Date(a.data);
+    });
+
+    registrationsCache = { results };
+    registrationsFetchedAt = Date.now();
+    const crit = results.filter(r => r.severity === 'critical').length;
+    const mild = results.filter(r => r.severity === 'mild').length;
+    const ok   = results.filter(r => r.severity === 'ok').length;
+    console.log(`[Cadastros] Pronto: ${results.length} processos | ${crit} críticos | ${mild} leves | ${ok} ok`);
+  } catch (err) {
+    console.error('[Cadastros] Erro:', err.message);
+  } finally {
+    registrationsFetching = false;
+  }
+}
+
+app.get('/api/incomplete-registrations', (req, res) => {
+  const now = Date.now();
+  const isStale = !registrationsFetchedAt || (now - registrationsFetchedAt) > REG_CACHE_TTL_MS;
+  if (isStale && !registrationsFetching) buildRegistrationsCache();
+
+  if (registrationsCache) {
+    res.json({ ...registrationsCache, loading: false, cachedAt: new Date(registrationsFetchedAt).toISOString() });
+  } else {
+    res.json({ loading: true, results: [] });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {
