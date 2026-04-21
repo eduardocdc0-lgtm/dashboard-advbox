@@ -1,0 +1,54 @@
+Preciso redesenhar todo o visual do dashboard pra bater com a identidade 
+visual do escritório Eduardo Rodrigues Advocacia. Hoje tá azul escuro 
+e não combina.
+
+NOVA IDENTIDADE (preto/branco minimalista premium):
+
+PALETA:
+- Fundo principal: #FFFFFF (branco puro)
+- Fundo secundário (cards): #FAFAF8 (off-white)  
+- Texto principal: #000000 (preto puro)
+- Texto secundário: #6B6B6B (cinza médio)
+- Bordas: #D4D4D4 (cinza claro) - SEMPRE 1px fina
+- Hover: #F0F0EE (cinza muito claro)
+
+CORES FUNCIONAIS (uso mínimo, só em alertas):
+- Sucesso: #2D5F3F (verde escuro)
+- Alerta: #8B6914 (dourado)
+- Erro: #8B2828 (vinho)
+NÃO use vermelho berrante, verde fluorescente, azul royal.
+
+TIPOGRAFIA:
+- Importar Google Fonts: "DM Serif Display" (títulos) e "DM Sans" (corpo)
+- Títulos de página: DM Serif Display, 28-32px, peso 400
+- Subtítulos: DM Serif Display, 20-22px, peso 400
+- Cabeçalhos de tabela: DM Sans 11px, peso 500, UPPERCASE, 
+  letter-spacing: 0.05em, cor #6B6B6B
+- Corpo: DM Sans 14-15px, peso 400
+- Labels: DM Sans 12-13px, cor #6B6B6B
+
+LOGO (vou te passar depois, por enquanto usa texto):
+- Topo esquerdo, tamanho compacto
+- Texto placeholder: "Eduardo Rodrigues" (DM Serif Display bold) + 
+  abaixo "ADVOCACIA" (DM Sans 10px, uppercase, letter-spacing 0.15em, 
+  cor #6B6B6B)
+
+PRINCÍPIOS:
+- Muito espaço em branco (padding generoso, margins amplos)
+- Cards com bordas 1px #D4D4D4, radius 8-12px, sem sombra
+- Zero gradientes, zero sombras decorativas
+- Ícones: line-art simples, nunca coloridos/filled
+- Abas: estilo mínimo (texto com borda inferior sutil no ativo)
+- Botões: fundo preto + texto branco pro primário, ou texto preto 
+  com borda fina pro secundário
+
+IMPORTANTE:
+- Aplicar esse visual em TODAS as abas (Visão geral, Processos, 
+  Movimentações, Financeiro, Clientes, Alice, Busca CPF, 
+  Cadastros Pendentes)
+- Manter TODA a funcionalidade atual (dados da API, lógica, 
+  filtros, cálculos) — é só mudar o visual
+- Se tiver ícones emoji (tipo ⚖️ 📊 💰), trocar por SVG line-art 
+  preto ou manter sem ícone
+
+Me mostra como ficou depois pra eu validar.

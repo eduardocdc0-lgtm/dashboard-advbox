@@ -3,194 +3,315 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard AdvBox</title>
+  <title>Eduardo Rodrigues Advocacia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #FFFFFF;
+      --bg-card:   #FAFAF8;
+      --text:      #000000;
+      --text-2:    #6B6B6B;
+      --border:    #D4D4D4;
+      --hover:     #F0F0EE;
+      --success:   #2D5F3F;
+      --warning:   #8B6914;
+      --danger:    #8B2828;
+      --radius:    10px;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 24px;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
       min-height: 100vh;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 32px 48px;
+    }
+
+    /* ── HEADER ── */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #1e293b;
+      padding: 28px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
     }
-    h1 { font-size: 24px; font-weight: 600; }
-    .refresh-btn {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .refresh-btn:hover { background: #2563eb; }
-    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .logo-block { line-height: 1.1; }
+    .logo-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .logo-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-top: 1px;
+    }
+
+    .refresh-btn {
+      background: var(--text);
+      color: #fff;
+      border: none;
+      padding: 9px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: opacity 0.15s;
+    }
+    .refresh-btn:hover { opacity: 0.75; }
+    .refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── TABS ── */
     .tabs {
       display: flex;
-      gap: 4px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid #1e293b;
+      gap: 0;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
       overflow-x: auto;
     }
     .tab {
-      padding: 10px 16px;
+      padding: 10px 18px;
       background: transparent;
-      color: #94a3b8;
+      color: var(--text-2);
       border: none;
-      cursor: pointer;
-      font-size: 14px;
       border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      font-weight: 400;
       white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
     }
-    .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); font-weight: 500; border-bottom-color: var(--text); }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
+    /* ── METRICS GRID ── */
     .metrics {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
     }
     .metric-card {
-      background: #1e293b;
-      padding: 16px;
-      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 20px 22px;
+      border-radius: var(--radius);
     }
     .metric-label {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-bottom: 10px;
     }
     .metric-value {
-      font-size: 28px;
-      font-weight: 600;
-      color: #f1f5f9;
+      font-family: 'DM Serif Display', serif;
+      font-size: 30px;
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: -0.02em;
     }
-    .metric-value.warning { color: #f59e0b; }
-    .metric-value.success { color: #10b981; }
-    .metric-value.danger { color: #ef4444; }
+    .metric-value.warning { color: var(--warning); }
+    .metric-value.success { color: var(--success); }
+    .metric-value.danger  { color: var(--danger);  }
 
+    .metric-card.red    { border-left: 3px solid var(--danger); }
+    .metric-card.orange { border-left: 3px solid var(--warning); }
+
+    /* ── CARDS ── */
     .card {
-      background: #1e293b;
-      border-radius: 12px;
-      padding: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 26px;
       margin-bottom: 16px;
     }
     .card-title {
-      font-size: 16px;
-      font-weight: 500;
-      margin-bottom: 16px;
-      color: #f1f5f9;
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 20px;
     }
+
     .chart-container {
       position: relative;
       height: 280px;
     }
+
+    /* ── LISTS ── */
     .list-item {
-      padding: 12px 0;
-      border-bottom: 1px solid #334155;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 12px;
+      gap: 16px;
     }
     .list-item:last-child { border-bottom: none; }
-    .list-item-main { flex: 1; }
-    .list-item-title { font-weight: 500; margin-bottom: 2px; }
-    .list-item-subtitle { font-size: 13px; color: #94a3b8; }
-    .list-item-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
+    .list-item-main { flex: 1; min-width: 0; }
+    .list-item-title {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-item-subtitle {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .list-item-meta {
+      font-size: 12px;
+      color: var(--text-2);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
+    /* ── STATES ── */
     .loading {
       text-align: center;
-      padding: 40px;
-      color: #94a3b8;
+      padding: 40px 20px;
+      color: var(--text-2);
+      font-size: 14px;
     }
     .empty {
       text-align: center;
-      padding: 40px;
-      color: #64748b;
+      padding: 40px 20px;
+      color: var(--text-2);
       font-size: 14px;
     }
     .error {
-      background: #7f1d1d;
-      color: #fecaca;
+      background: #FFF4F4;
+      color: var(--danger);
+      border: 1px solid #F0CCCC;
       padding: 12px 16px;
-      border-radius: 8px;
+      border-radius: var(--radius);
       margin-bottom: 16px;
+      font-size: 13.5px;
     }
+
     .badge {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
       font-size: 11px;
       font-weight: 500;
-      background: #334155;
-      color: #cbd5e1;
+      background: var(--hover);
+      color: var(--text-2);
+      border: 1px solid var(--border);
     }
-    .metric-card.red { background: #7f1d1d; }
-    .metric-card.orange { background: #78350f; }
+
+    /* ── DEADLINE ROWS (Alice) ── */
     .deadline-row {
-      padding: 12px 0;
-      border-bottom: 1px solid #334155;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
       display: grid;
-      grid-template-columns: 90px 1fr auto;
-      gap: 12px;
+      grid-template-columns: 80px 1fr;
+      gap: 16px;
       align-items: start;
     }
     .deadline-row:last-child { border-bottom: none; }
+
     .deadline-date {
-      font-size: 13px;
-      font-weight: 600;
-      color: #94a3b8;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
       white-space: nowrap;
+      padding-top: 2px;
     }
-    .deadline-date.today { color: #ef4444; }
-    .deadline-date.tomorrow { color: #f59e0b; }
+    .deadline-date.today    { color: var(--danger);  font-weight: 600; }
+    .deadline-date.tomorrow { color: var(--warning); font-weight: 600; }
+
     .deadline-info-client {
       font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
       margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
+    .deadline-info-client.overdue-client { color: var(--danger); }
+
     .deadline-info-type {
-      font-size: 13px;
-      color: #94a3b8;
+      font-size: 12.5px;
+      color: var(--text-2);
       margin-bottom: 2px;
     }
     .deadline-info-process {
-      font-size: 12px;
-      color: #64748b;
+      font-size: 11.5px;
+      color: #A0A0A0;
+      font-weight: 300;
     }
+
     .deadline-badge {
       display: inline-flex;
       align-items: center;
-      padding: 3px 8px;
-      border-radius: 5px;
-      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
       font-weight: 600;
+      letter-spacing: 0.04em;
       white-space: nowrap;
+      text-transform: uppercase;
     }
-    .badge-today { background: #ef4444; color: #fff; }
-    .badge-tomorrow { background: #f59e0b; color: #fff; }
-    .badge-overdue { background: #ef4444; color: #fff; }
+    .badge-today   { background: var(--danger);  color: #fff; }
+    .badge-tomorrow{ background: var(--warning); color: #fff; }
+    .badge-overdue {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    /* ── ERROR BOX ── */
+    #errorBox:empty { display: none; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>⚖️ Dashboard AdvBox</h1>
+      <div class="logo-block">
+        <div class="logo-name">Eduardo Rodrigues</div>
+        <div class="logo-sub">Advocacia</div>
+      </div>
       <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">Atualizar dados</button>
     </header>
 
@@ -202,7 +323,7 @@
       <button class="tab" onclick="showTab('movements', event)">Movimentações</button>
       <button class="tab" onclick="showTab('financial', event)">Financeiro</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
-      <button class="tab" onclick="showTab('alice', event)">⚖️ Alice</button>
+      <button class="tab" onclick="showTab('alice', event)">Alice — Prazos</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -276,21 +397,21 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">🎂 Aniversariantes do mês</div>
+        <div class="card-title">Aniversariantes do mês</div>
         <div id="listaAniversariantes"><div class="loading">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- ABA 6: ALICE - PRAZOS JUDICIAIS -->
+    <!-- ABA 6: ALICE — CONTROLE DE PRAZOS -->
     <div id="alice" class="tab-content">
       <div class="metrics">
         <div class="metric-card red">
           <div class="metric-label">Vencendo hoje</div>
-          <div class="metric-value" id="aliceHoje">-</div>
+          <div class="metric-value danger" id="aliceHoje">-</div>
         </div>
         <div class="metric-card orange">
           <div class="metric-label">Vencendo amanhã</div>
-          <div class="metric-value" id="aliceAmanha">-</div>
+          <div class="metric-value warning" id="aliceAmanha">-</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Audiências da semana</div>
@@ -303,12 +424,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title" id="aliceProximosTitle">📅 Próximos prazos</div>
+        <div class="card-title" id="aliceProximosTitle">Próximos 7 dias</div>
         <div id="aliceProximos"><div class="loading">Carregando prazos...</div></div>
       </div>
 
       <div class="card">
-        <div class="card-title" id="aliceAtrasadosTitle">🚨 Atrasados</div>
+        <div class="card-title" id="aliceAtrasadosTitle">Atrasados</div>
         <div id="aliceAtrasados"><div class="loading">Carregando prazos...</div></div>
       </div>
     </div>
@@ -325,8 +446,8 @@
     }
 
     function showError(msg) {
-      document.getElementById('errorBox').innerHTML = 
-        `<div class="error">⚠️ ${msg}</div>`;
+      document.getElementById('errorBox').innerHTML =
+        `<div class="error">${msg}</div>`;
     }
 
     function clearError() {
@@ -357,7 +478,6 @@
       return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
     }
 
-    // Carrega tudo
     async function loadAll() {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
@@ -396,7 +516,6 @@
         const lawsuits = data.data || [];
         document.getElementById('totalProcessos').textContent = data.totalCount || lawsuits.length;
 
-        // Agrupa por fase
         const porFase = {};
         lawsuits.forEach(l => {
           const fase = l.stage || l.step || 'Sem fase';
@@ -414,16 +533,32 @@
             datasets: [{
               label: 'Processos',
               data: values,
-              backgroundColor: '#3b82f6'
+              backgroundColor: '#000000',
+              borderRadius: 3
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#000',
+                titleColor: '#fff',
+                bodyColor: '#ccc',
+                borderWidth: 0
+              }
+            },
             scales: {
-              y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-              x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#6B6B6B', font: { family: 'DM Sans', size: 11 } },
+                grid: { color: '#EBEBEB' }
+              },
+              x: {
+                ticks: { color: '#6B6B6B', font: { family: 'DM Sans', size: 11 } },
+                grid: { display: false }
+              }
             }
           }
         });
@@ -455,7 +590,7 @@
       try {
         const data = await fetchJson('/api/transactions');
         const trans = data.data || [];
-        
+
         let aReceber = 0, aPagar = 0, recebidoMes = 0, pagoMes = 0;
         const hoje = new Date();
         const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -465,7 +600,7 @@
           const valor = Number(t.amount || t.value || 0);
           const tipo = (t.type || '').toLowerCase();
           const pago = t.paid_at || t.paid;
-          
+
           if (!pago) {
             if (tipo.includes('credit') || tipo === 'receita' || tipo === 'income') aReceber += valor;
             else aPagar += valor;
@@ -544,9 +679,9 @@
     function renderDeadlineRow(d) {
       const dateClass = d.status === 'today' ? 'today' : d.status === 'tomorrow' ? 'tomorrow' : '';
       const badge = d.status === 'today'
-        ? '<span class="deadline-badge badge-today">HOJE</span>'
+        ? '<span class="deadline-badge badge-today">Hoje</span>'
         : d.status === 'tomorrow'
-        ? '<span class="deadline-badge badge-tomorrow">AMANHÃ</span>'
+        ? '<span class="deadline-badge badge-tomorrow">Amanhã</span>'
         : '';
       return `
         <div class="deadline-row">
@@ -564,9 +699,9 @@
         <div class="deadline-row">
           <div class="deadline-date today">${formatDate(d.date_deadline)}</div>
           <div>
-            <div class="deadline-info-client" style="color:#ef4444">
+            <div class="deadline-info-client overdue-client">
               ${d.client || '—'}
-              <span class="deadline-badge badge-overdue">ATRASADO ${d.daysOverdue}d</span>
+              <span class="deadline-badge badge-overdue">Atrasado ${d.daysOverdue}d</span>
             </div>
             <div class="deadline-info-type">${d.type || '—'}${d.responsible ? ' · ' + d.responsible : ''}</div>
             <div class="deadline-info-process">${d.process}</div>
@@ -579,13 +714,12 @@
         const data = await fetchJson('/api/deadlines');
 
         if (data.loading) {
-          // Cache ainda sendo construído — mostrar loading e reagendar
           document.getElementById('aliceHoje').textContent = '…';
           document.getElementById('aliceAmanha').textContent = '…';
           document.getElementById('aliceAudiencias').textContent = '…';
           document.getElementById('alicePericias').textContent = '…';
           document.getElementById('aliceProximos').innerHTML =
-            '<div class="loading">⏳ Calculando prazos de todos os processos...<br><small style="color:#64748b">Isso leva cerca de 1 minuto na primeira vez. A página vai atualizar automaticamente.</small></div>';
+            '<div class="loading">Calculando prazos...<br><small style="color:#A0A0A0;font-size:12px">Atualizará automaticamente em alguns segundos.</small></div>';
           document.getElementById('aliceAtrasados').innerHTML = '';
 
           if (!alicePollingTimer) {
@@ -621,10 +755,10 @@
       const totalUpcoming = data.upcoming ? data.upcoming.length : next7Items.length;
 
       const proxTitle = document.getElementById('aliceProximosTitle');
-      if (proxTitle) proxTitle.textContent = `📅 Próximos 7 dias (${next7Items.length} de ${totalUpcoming} pendentes)`;
+      if (proxTitle) proxTitle.textContent = `Próximos 7 dias — ${next7Items.length} de ${totalUpcoming} pendentes`;
 
       const atrasTitle = document.getElementById('aliceAtrasadosTitle');
-      if (atrasTitle) atrasTitle.textContent = `🚨 Atrasados (${overdueItems.length})`;
+      if (atrasTitle) atrasTitle.textContent = `Atrasados — ${overdueItems.length}`;
 
       const proxContainer = document.getElementById('aliceProximos');
       proxContainer.innerHTML = next7Items.length === 0
@@ -633,11 +767,10 @@
 
       const atrasContainer = document.getElementById('aliceAtrasados');
       atrasContainer.innerHTML = overdueItems.length === 0
-        ? '<div class="empty">Nenhum prazo atrasado 🎉</div>'
+        ? '<div class="empty">Nenhum prazo atrasado</div>'
         : overdueItems.map(renderOverdueRow).join('');
     }
 
-    // Carrega tudo quando a página abrir
     loadAll();
   </script>
 </body>

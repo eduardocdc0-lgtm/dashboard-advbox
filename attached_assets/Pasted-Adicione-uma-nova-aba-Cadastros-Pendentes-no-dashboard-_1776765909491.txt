@@ -1,0 +1,53 @@
+Adicione uma nova aba "Cadastros Pendentes" no dashboard, focada em detectar 
+processos cadastrados com Anotações Gerais incompletas.
+
+REGRAS DE VALIDAÇÃO:
+Para cada processo dos últimos 30 dias, checar nas Anotações Gerais:
+
+1. FECHADO POR: deve conter "FECHADO POR" seguido de THIAGO, MARILIA, 
+   LETICIA, EDUARDO ou TAMMYRES. Se não tiver → CRÍTICO.
+
+2. LAUDO (só pra BPC/Aux Doença): se o tipo_de_ação contém "BPC", 
+   "BENEFÍCIO ASSISTENCIAL" ou "AUXILIO DOENÇA", a anotação DEVE conter 
+   alguma dessas palavras: "COM LAUDO", "SEM LAUDO", "LAUDO OK", 
+   "FAZER LAUDO", "AGUARDANDO LAUDO". Se faltar → CRÍTICO.
+
+3. CAMPANHA (só pra tráfego pago): se a origem do contato (customer.origin) 
+   for "TRAFEGO PAGO", a anotação deve conter o nome de uma campanha 
+   (padrão: FECHADO POR X | CAMPANHA YYYY | ...). Se faltar → LEVE.
+
+LAYOUT DA ABA:
+
+1. Cards resumo no topo:
+   - "Críticos" (vermelho) - count de processos com problema crítico
+   - "Leves" (amarelo) - count com problema leve
+   - "OK" (verde) - count de cadastros 100% completos no período
+
+2. Filtro por responsável (dropdown): TODOS (padrão), Thiago, Tammyres, 
+   Marilia, Leticia, Eduardo
+
+3. Lista de processos pendentes, ordenada por data de cadastro (mais recente 
+   primeiro). Cada item mostra:
+   - Nome do cliente
+   - Tipo de ação
+   - Data de cadastro
+   - Badges do que está faltando (ex: "SEM FECHADO POR", "SEM LAUDO", "SEM CAMPANHA")
+   - Link que abre o processo no AdvBox (app.advbox.com.br/lawsuits/{id})
+
+IMPLEMENTAÇÃO TÉCNICA:
+
+- Criar nova rota backend GET /api/incomplete-registrations que:
+  - Consulta GET /lawsuits?limit=1000
+  - Pra cada processo com data_cadastro nos últimos 30 dias, roda as regras
+  - Retorna lista com { id, cliente, tipo, data, responsavel, origem, problemas[] }
+
+- Pra saber a origem do contato (customer.origin), vai precisar fazer um 
+  join: pegar customers_id do processo e consultar /customers/{id} — mas 
+  isso é caro. Alternativa: assumir que se nas anotações não aparece 
+  "ORGÂNICO"/"PARCERIA"/"ESCRITÓRIO", e também não aparece campanha, 
+  provavelmente é tráfego pago. Faça essa heurística simples primeiro.
+
+- Frontend: usar mesma estética das outras abas.
+
+MANTENHA todas as outras abas funcionando (Visão geral, Processos, 
+Movimentações, Financeiro, Clientes, Alice, Busca CPF).
