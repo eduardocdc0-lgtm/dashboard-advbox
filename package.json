@@ -1,0 +1,13 @@
+{
+  "name": "advbox-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard personalizado para AdvBox",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "node-fetch": "^2.7.0"
+  }
+}
