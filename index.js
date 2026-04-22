@@ -320,6 +320,7 @@ const RESPONSAVEIS_VALIDOS = ['THIAGO', 'MARILIA', 'LETICIA', 'EDUARDO', 'TAMMYR
 const BPC_TRIGGERS = ['BPC', 'BENEFICIO ASSISTENCIAL', 'AUXILIO DOENCA', 'AUXÍLIO DOENÇA', 'BENEFÍCIO ASSISTENCIAL'];
 const LAUDO_OPCOES = ['COM LAUDO', 'SEM LAUDO', 'LAUDO OK', 'FAZER LAUDO', 'AGUARDANDO LAUDO'];
 const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'ESCRITORIO', 'INDICACAO', 'INDICAÇÃO', 'ORGÂNICO', 'ESCRITÓRIO'];
+const CAMPANHAS_CONHECIDAS = ['LAUDO DO SUS'];
 
 async function buildRegistrationsCache() {
   if (registrationsFetching) return;
@@ -402,7 +403,7 @@ async function buildRegistrationsCache() {
       // Só aplica se o processo já foi fechado (tem "FECHADO POR")
       if (hasFechadoPor) {
         const temOrigemOrganica = ORIGEM_ORGANICA.some(k => notes.includes(k));
-        const temCampanha = notes.includes('CAMPANHA');
+        const temCampanha = notes.includes('CAMPANHA') || CAMPANHAS_CONHECIDAS.some(c => notes.includes(c));
         if (!temOrigemOrganica && !temCampanha) {
           problemas.push({ code: 'SEM_CAMPANHA', label: 'Sem campanha', severity: 'mild' });
         }
