@@ -308,6 +308,13 @@
       flex-wrap: wrap;
       gap: 10px;
     }
+    .reg-toolbar-left { flex: 1; }
+    .reg-toolbar-right {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .reg-toolbar-label {
       font-size: 11px;
       font-weight: 500;
@@ -315,6 +322,27 @@
       text-transform: uppercase;
       color: var(--text-2);
     }
+    .reg-custom-range {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .reg-date-sep {
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .reg-date-input {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .reg-date-input:hover { border-color: #A0A0A0; }
     .reg-filter {
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
@@ -543,22 +571,38 @@
           <div class="metric-value success" id="regOk">-</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Últimos 30 dias</div>
+          <div class="metric-label">Total do período</div>
           <div class="metric-value" id="regTotal">-</div>
         </div>
       </div>
 
       <div class="card">
         <div class="reg-toolbar">
-          <span class="reg-toolbar-label" id="regListTitle">Processos com pendências</span>
-          <select class="reg-filter" id="regFilterSelect" onchange="applyRegFilter()">
-            <option value="">Todos os responsáveis</option>
-            <option value="THIAGO">Thiago</option>
-            <option value="TAMMYRES">Tammyres</option>
-            <option value="MARILIA">Marilia</option>
-            <option value="LETICIA">Leticia</option>
-            <option value="EDUARDO">Eduardo</option>
-          </select>
+          <div class="reg-toolbar-left">
+            <span class="reg-toolbar-label" id="regListTitle">Processos com pendências</span>
+          </div>
+          <div class="reg-toolbar-right">
+            <select class="reg-filter" id="regPeriodSelect" onchange="onPeriodChange()">
+              <option value="this_month" selected>Este mês</option>
+              <option value="last_month">Mês passado</option>
+              <option value="last_7">Últimos 7 dias</option>
+              <option value="last_30">Últimos 30 dias</option>
+              <option value="custom">Personalizado</option>
+            </select>
+            <div id="regCustomRange" class="reg-custom-range" style="display:none">
+              <input type="date" id="regDateFrom" class="reg-date-input" onchange="applyRegFilter()">
+              <span class="reg-date-sep">até</span>
+              <input type="date" id="regDateTo" class="reg-date-input" onchange="applyRegFilter()">
+            </div>
+            <select class="reg-filter" id="regFilterSelect" onchange="applyRegFilter()">
+              <option value="">Todos os responsáveis</option>
+              <option value="THIAGO">Thiago</option>
+              <option value="TAMMYRES">Tammyres</option>
+              <option value="MARILIA">Marilia</option>
+              <option value="LETICIA">Leticia</option>
+              <option value="EDUARDO">Eduardo</option>
+            </select>
+          </div>
         </div>
         <div id="regList"><div class="loading">Carregando cadastros...</div></div>
       </div>
@@ -934,37 +978,85 @@
       }
     }
 
+    function getPeriodRange() {
+      const period = (document.getElementById('regPeriodSelect') || {}).value || 'this_month';
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      let from, to;
+
+      if (period === 'this_month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        to = today;
+      } else if (period === 'last_month') {
+        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        to = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+      } else if (period === 'last_7') {
+        from = new Date(today); from.setDate(from.getDate() - 6); from.setHours(0, 0, 0, 0);
+        to = today;
+      } else if (period === 'last_30') {
+        from = new Date(today); from.setDate(from.getDate() - 29); from.setHours(0, 0, 0, 0);
+        to = today;
+      } else if (period === 'custom') {
+        const fromVal = (document.getElementById('regDateFrom') || {}).value;
+        const toVal   = (document.getElementById('regDateTo')   || {}).value;
+        from = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+        to   = toVal   ? new Date(toVal   + 'T23:59:59') : null;
+      }
+      return { from, to };
+    }
+
+    function onPeriodChange() {
+      const period = (document.getElementById('regPeriodSelect') || {}).value;
+      const customRange = document.getElementById('regCustomRange');
+      if (customRange) customRange.style.display = period === 'custom' ? 'flex' : 'none';
+      applyRegFilter();
+    }
+
     function renderRegistrations(results) {
       regAllResults = results;
-      const crit  = results.filter(r => r.severity === 'critical').length;
-      const mild  = results.filter(r => r.severity === 'mild').length;
-      const ok    = results.filter(r => r.severity === 'ok').length;
-
-      document.getElementById('regCritical').textContent = crit;
-      document.getElementById('regMild').textContent = mild;
-      document.getElementById('regOk').textContent = ok;
-      document.getElementById('regTotal').textContent = results.length;
-
       applyRegFilter();
     }
 
     function applyRegFilter() {
-      const filter = (document.getElementById('regFilterSelect').value || '').toUpperCase();
-      const filtered = filter
-        ? regAllResults.filter(r => (r.responsavel || '').toUpperCase().includes(filter))
-        : regAllResults;
+      const { from, to } = getPeriodRange();
+
+      // Filtra por período
+      let byPeriod = regAllResults;
+      if (from || to) {
+        byPeriod = regAllResults.filter(r => {
+          const d = parseRegDate(r.data);
+          if (!d) return false;
+          if (from && d < from) return false;
+          if (to   && d > to)   return false;
+          return true;
+        });
+      }
+
+      // Atualiza cards de resumo com os dados do período
+      const crit = byPeriod.filter(r => r.severity === 'critical').length;
+      const mild = byPeriod.filter(r => r.severity === 'mild').length;
+      const ok   = byPeriod.filter(r => r.severity === 'ok').length;
+      document.getElementById('regCritical').textContent = crit;
+      document.getElementById('regMild').textContent = mild;
+      document.getElementById('regOk').textContent = ok;
+      document.getElementById('regTotal').textContent = byPeriod.length;
+
+      // Filtra por responsável
+      const resp = (document.getElementById('regFilterSelect').value || '').toUpperCase();
+      const filtered = resp
+        ? byPeriod.filter(r => (r.responsavel || '').toUpperCase().includes(resp))
+        : byPeriod;
 
       const withIssues = filtered.filter(r => r.severity !== 'ok');
       const title = document.getElementById('regListTitle');
       if (title) {
-        title.textContent = filter
-          ? `${withIssues.length} com pendência — ${filter.charAt(0) + filter.slice(1).toLowerCase()}`
+        title.textContent = resp
+          ? `${withIssues.length} com pendência — ${resp.charAt(0) + resp.slice(1).toLowerCase()}`
           : `${withIssues.length} com pendência`;
       }
 
       const container = document.getElementById('regList');
       if (filtered.length === 0) {
-        container.innerHTML = '<div class="empty">Nenhum processo encontrado</div>';
+        container.innerHTML = '<div class="empty">Nenhum processo no período selecionado</div>';
         return;
       }
       if (withIssues.length === 0) {
@@ -976,8 +1068,8 @@
         const badges = r.problemas.map(p =>
           `<span class="reg-badge ${p.severity}">${p.label}</span>`
         ).join('');
-        const resp = r.responsavel ? ` · ${r.responsavel}` : '';
-        const tipo = r.tipo ? ` · ${r.tipo}` : '';
+        const respLabel = r.responsavel ? ` · ${r.responsavel}` : '';
+        const tipoLabel = r.tipo ? ` · ${r.tipo}` : '';
         const link = r.id
           ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver processo ↗</a>`
           : '';
@@ -985,12 +1077,20 @@
           <div class="reg-item">
             <div>
               <div class="reg-item-name">${r.cliente || r.processo || '—'}</div>
-              <div class="reg-item-meta">${formatDate(r.data)}${tipo}${resp}</div>
+              <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${respLabel}</div>
               <div class="reg-badges">${badges}</div>
             </div>
             <div>${link}</div>
           </div>`;
       }).join('');
+    }
+
+    function parseRegDate(str) {
+      if (!str) return null;
+      // "2026-04-17 15:08:57" ou "2026-04-17T..."
+      const clean = str.substring(0, 10);
+      const d = new Date(clean + 'T00:00:00');
+      return isNaN(d) ? null : d;
     }
 
     loadAll();

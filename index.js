@@ -324,14 +324,10 @@ const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'ESCRITORIO', 'INDICACAO', 'IND
 async function buildRegistrationsCache() {
   if (registrationsFetching) return;
   registrationsFetching = true;
-  console.log('[Cadastros] Buscando processos dos últimos 30 dias...');
+  console.log('[Cadastros] Buscando processos para validação...');
   try {
     const data = await callAdvBox('/lawsuits?limit=1000');
     const all = data.data || [];
-
-    const now = new Date();
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 30);
 
     const results = [];
 
@@ -344,7 +340,7 @@ async function buildRegistrationsCache() {
       if (!dateStr) continue;
 
       const dateObj = parseDeadline(String(dateStr));
-      if (!dateObj || isNaN(dateObj) || dateObj < cutoff) continue;
+      if (!dateObj || isNaN(dateObj)) continue;
 
       // Anotações gerais (normalizado)
       const rawNotes = getField(l,
@@ -436,7 +432,7 @@ async function buildRegistrationsCache() {
     const crit = results.filter(r => r.severity === 'critical').length;
     const mild = results.filter(r => r.severity === 'mild').length;
     const ok   = results.filter(r => r.severity === 'ok').length;
-    console.log(`[Cadastros] Pronto: ${results.length} processos | ${crit} críticos | ${mild} leves | ${ok} ok`);
+    console.log(`[Cadastros] Pronto: ${results.length} processos com data | ${crit} críticos | ${mild} leves | ${ok} ok`);
   } catch (err) {
     console.error('[Cadastros] Erro:', err.message);
   } finally {
