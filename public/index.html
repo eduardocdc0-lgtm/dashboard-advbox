@@ -1234,14 +1234,18 @@
         const link = r.id
           ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver ↗</a>`
           : '';
-        const fechadoLabel = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : '';
-        const tipoLabel    = r.tipo       ? ` · ${r.tipo}` : '';
-        const laudoLabel   = r.laudoStatus && r.laudoStatus !== 'N/A' ? ` · ${r.laudoStatus}` : '';
+        const fechadoLabel  = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : '';
+        const tipoLabel     = r.tipo       ? ` · ${r.tipo}` : '';
+        const laudoLabel    = r.laudoStatus && r.laudoStatus !== 'N/A' ? ` · ${r.laudoStatus}` : '';
+        const campanhaTag   = canalSegmento === 'campanhas' && r.campanha
+          ? `<span class="reg-badge mild" style="font-size:11px;padding:2px 8px;">${r.campanha}</span>`
+          : '';
         return `
           <div class="reg-item">
             <div>
               <div class="reg-item-name">${r.cliente || r.processo || '—'}</div>
               <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${fechadoLabel}${laudoLabel}</div>
+              ${campanhaTag ? `<div style="margin-top:5px;">${campanhaTag}</div>` : ''}
             </div>
             <div>${link}</div>
           </div>`;

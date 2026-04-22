@@ -419,6 +419,19 @@ async function buildRegistrationsCache() {
         origem = 'CAMPANHA';
       }
 
+      // ── Extrai nome da campanha ───────────────────────────────────────────
+      let campanhaNome = '';
+      if (origem === 'CAMPANHA') {
+        const ci = notes.indexOf('CAMPANHA ');
+        if (ci >= 0) {
+          const after = notes.slice(ci + 9);
+          const end = after.search(/[,.|;]/);
+          campanhaNome = (end >= 0 ? after.slice(0, end) : after.slice(0, 50)).trim();
+        } else {
+          campanhaNome = CAMPANHAS_CONHECIDAS.find(c => notes.includes(c)) || '';
+        }
+      }
+
       // ── Classifica status do laudo (só BPC / Aux) ────────────────────────
       let laudoStatus = 'N/A';
       if (isBpcAux) {
@@ -455,6 +468,7 @@ async function buildRegistrationsCache() {
         responsavel: responsible,
         fechadoPor: fechadoPorNome,
         origem,
+        campanha: campanhaNome,
         laudoStatus,
         problemas,
         severity
