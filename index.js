@@ -377,7 +377,9 @@ async function buildRegistrationsCache() {
 
       // ── Regra 1: FECHADO POR ──────────────────────────────────────────────
       const hasFechadoPor = RESPONSAVEIS_VALIDOS.some(r =>
-        notes.includes(`FECHADO POR ${r}`) || notes.includes(`FECHADO POR: ${r}`)
+        notes.includes(`FECHADO POR ${r}`) ||
+        notes.includes(`FECHADO POR: ${r}`) ||
+        notes.includes(`FECHADO ${r}`)
       );
       if (!hasFechadoPor) {
         problemas.push({ code: 'SEM_FECHADO_POR', label: 'Sem fechado por', severity: 'critical' });
