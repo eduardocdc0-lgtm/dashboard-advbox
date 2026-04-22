@@ -623,22 +623,39 @@
 
     <!-- ABA 8: CANAIS -->
     <div id="canais" class="tab-content">
-      <div class="canal-pills">
-        <button class="canal-pill active" data-seg="parceiros" onclick="showCanal('parceiros', this)">
-          Parceiros <span class="pill-count" id="canalCntParceiros">—</span>
-        </button>
-        <button class="canal-pill" data-seg="organicos" onclick="showCanal('organicos', this)">
-          Orgânicos <span class="pill-count" id="canalCntOrganicos">—</span>
-        </button>
-        <button class="canal-pill" data-seg="campanhas" onclick="showCanal('campanhas', this)">
-          Campanhas <span class="pill-count" id="canalCntCampanhas">—</span>
-        </button>
-        <button class="canal-pill" data-seg="com_laudo" onclick="showCanal('com_laudo', this)">
-          Com Laudo <span class="pill-count" id="canalCntComLaudo">—</span>
-        </button>
-        <button class="canal-pill" data-seg="sem_laudo" onclick="showCanal('sem_laudo', this)">
-          Sem Laudo <span class="pill-count" id="canalCntSemLaudo">—</span>
-        </button>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div class="canal-pills" style="margin-bottom:0">
+          <button class="canal-pill active" data-seg="parceiros" onclick="showCanal('parceiros', this)">
+            Parceiros <span class="pill-count" id="canalCntParceiros">—</span>
+          </button>
+          <button class="canal-pill" data-seg="organicos" onclick="showCanal('organicos', this)">
+            Orgânicos <span class="pill-count" id="canalCntOrganicos">—</span>
+          </button>
+          <button class="canal-pill" data-seg="campanhas" onclick="showCanal('campanhas', this)">
+            Campanhas <span class="pill-count" id="canalCntCampanhas">—</span>
+          </button>
+          <button class="canal-pill" data-seg="com_laudo" onclick="showCanal('com_laudo', this)">
+            Com Laudo <span class="pill-count" id="canalCntComLaudo">—</span>
+          </button>
+          <button class="canal-pill" data-seg="sem_laudo" onclick="showCanal('sem_laudo', this)">
+            Sem Laudo <span class="pill-count" id="canalCntSemLaudo">—</span>
+          </button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <select class="reg-filter" id="canalPeriodSelect" onchange="onCanalPeriodChange()">
+            <option value="this_month" selected>Este mês</option>
+            <option value="last_month">Mês passado</option>
+            <option value="last_7">Últimos 7 dias</option>
+            <option value="last_30">Últimos 30 dias</option>
+            <option value="all">Todos</option>
+            <option value="custom">Personalizado</option>
+          </select>
+          <div id="canalCustomRange" class="reg-custom-range" style="display:none">
+            <input type="date" id="canalDateFrom" class="reg-date-input" onchange="applyCanalFilter()">
+            <span class="reg-date-sep">até</span>
+            <input type="date" id="canalDateTo" class="reg-date-input" onchange="applyCanalFilter()">
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="canal-title" id="canalListTitle">Parceiros</div>
@@ -1120,6 +1137,7 @@
     // ── CANAIS ─────────────────────────────────────────────────────────────────
     let canaisAllResults = [];
     let canalSegmento = 'parceiros';
+    let canalByPeriod = [];
 
     const CANAL_META = {
       parceiros:  { title: 'Parceiros',  sub: 'Processos captados via parceria ou parceiro' },
@@ -1129,19 +1147,61 @@
       sem_laudo:  { title: 'Sem Laudo',  sub: 'BPC / Aux Doença com laudo pendente ou ausente' },
     };
 
-    function renderCanais(results) {
-      canaisAllResults = results;
-      const p  = results.filter(r => r.origem === 'PARCEIRO').length;
-      const o  = results.filter(r => r.origem === 'ORGANICO').length;
-      const c  = results.filter(r => r.origem === 'CAMPANHA').length;
-      const cl = results.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus)).length;
-      const sl = results.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus)).length;
+    function getCanalPeriodRange() {
+      const period = (document.getElementById('canalPeriodSelect') || {}).value || 'this_month';
+      const now = new Date();
+      if (period === 'all') return { from: null, to: null };
+      if (period === 'custom') {
+        const f = document.getElementById('canalDateFrom').value;
+        const t = document.getElementById('canalDateTo').value;
+        return { from: f ? new Date(f + 'T00:00:00') : null, to: t ? new Date(t + 'T23:59:59') : null };
+      }
+      if (period === 'this_month') {
+        return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) };
+      }
+      if (period === 'last_month') {
+        const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        return { from: new Date(y, m, 1), to: new Date(y, m + 1, 0, 23, 59, 59) };
+      }
+      if (period === 'last_7')  { const f = new Date(now); f.setDate(f.getDate() - 6); f.setHours(0,0,0,0); return { from: f, to: now }; }
+      if (period === 'last_30') { const f = new Date(now); f.setDate(f.getDate() - 29); f.setHours(0,0,0,0); return { from: f, to: now }; }
+      return { from: null, to: null };
+    }
+
+    function onCanalPeriodChange() {
+      const period = (document.getElementById('canalPeriodSelect') || {}).value;
+      const cr = document.getElementById('canalCustomRange');
+      if (cr) cr.style.display = period === 'custom' ? 'flex' : 'none';
+      applyCanalFilter();
+    }
+
+    function applyCanalFilter() {
+      const { from, to } = getCanalPeriodRange();
+      canalByPeriod = canaisAllResults.filter(r => {
+        if (!from && !to) return true;
+        const d = parseRegDate(r.data);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to   && d > to)   return false;
+        return true;
+      });
+      const p  = canalByPeriod.filter(r => r.origem === 'PARCEIRO').length;
+      const o  = canalByPeriod.filter(r => r.origem === 'ORGANICO').length;
+      const c  = canalByPeriod.filter(r => r.origem === 'CAMPANHA').length;
+      const cl = canalByPeriod.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus)).length;
+      const sl = canalByPeriod.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus)).length;
       document.getElementById('canalCntParceiros').textContent  = p;
       document.getElementById('canalCntOrganicos').textContent  = o;
       document.getElementById('canalCntCampanhas').textContent  = c;
       document.getElementById('canalCntComLaudo').textContent   = cl;
       document.getElementById('canalCntSemLaudo').textContent   = sl;
       renderCanalList();
+    }
+
+    function renderCanais(results) {
+      canaisAllResults = results;
+      applyCanalFilter();
     }
 
     function showCanal(seg, btn) {
@@ -1163,13 +1223,12 @@
         sem_laudo: r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus),
       };
       const fn = segMap[canalSegmento];
-      const list = fn ? canaisAllResults.filter(fn) : [];
+      const list = fn ? canalByPeriod.filter(fn) : [];
       const container = document.getElementById('canalList');
       if (!list.length) {
-        container.innerHTML = '<div class="empty">Nenhum processo neste segmento</div>';
+        container.innerHTML = '<div class="empty">Nenhum processo neste segmento no período</div>';
         return;
       }
-      // Ordena por data desc
       list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
       container.innerHTML = list.map(r => {
         const link = r.id
