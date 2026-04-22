@@ -421,48 +421,102 @@
     }
     .reg-link:hover { border-color: var(--text); color: var(--text); }
 
-    /* ── CANAIS ── */
-    .canal-pills {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 28px;
-    }
-    .canal-pill {
+    /* ── CANAIS / KANBAN ── */
+    .kanban-toolbar {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 8px;
-      padding: 9px 20px;
+      margin-bottom: 20px;
+    }
+    .kanban-board {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      align-items: flex-start;
+      padding-bottom: 16px;
+    }
+    .kanban-col {
+      min-width: 230px;
+      flex: 1;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
       background: var(--bg-card);
-      color: var(--text-2);
-      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      max-height: 72vh;
     }
-    .canal-pill:hover { border-color: var(--text); color: var(--text); }
-    .canal-pill.active { background: var(--text); color: #FFF; border-color: var(--text); }
-    .canal-pill .pill-count {
+    .kanban-col-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .kanban-col-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .kanban-col-count {
       font-size: 11px;
-      font-weight: 400;
-      opacity: 0.7;
-      background: rgba(255,255,255,0.15);
-      padding: 2px 7px;
+      color: var(--text-2);
+      background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: 20px;
+      padding: 2px 8px;
     }
-    .canal-pill.active .pill-count { opacity: 0.8; }
-    .canal-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 18px;
+    .kanban-col-body {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .kanban-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      transition: border-color 0.15s;
+    }
+    .kanban-card:hover { border-color: #A0A0A0; }
+    .kanban-card-name {
+      font-weight: 500;
+      font-size: 13px;
       margin-bottom: 4px;
+      color: var(--text);
     }
-    .canal-subtitle {
+    .kanban-card-meta {
+      font-size: 11px;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+    .kanban-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 7px;
+    }
+    .kanban-tag {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      background: var(--bg-card);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+    }
+    .kanban-col-empty {
+      padding: 24px 12px;
+      text-align: center;
       font-size: 12px;
       color: var(--text-2);
-      margin-bottom: 24px;
     }
 
     .export-btn {
@@ -623,44 +677,57 @@
 
     <!-- ABA 8: CANAIS -->
     <div id="canais" class="tab-content">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-        <div class="canal-pills" style="margin-bottom:0">
-          <button class="canal-pill active" data-seg="parceiros" onclick="showCanal('parceiros', this)">
-            Parceiros <span class="pill-count" id="canalCntParceiros">—</span>
-          </button>
-          <button class="canal-pill" data-seg="organicos" onclick="showCanal('organicos', this)">
-            Orgânicos <span class="pill-count" id="canalCntOrganicos">—</span>
-          </button>
-          <button class="canal-pill" data-seg="campanhas" onclick="showCanal('campanhas', this)">
-            Campanhas <span class="pill-count" id="canalCntCampanhas">—</span>
-          </button>
-          <button class="canal-pill" data-seg="com_laudo" onclick="showCanal('com_laudo', this)">
-            Com Laudo <span class="pill-count" id="canalCntComLaudo">—</span>
-          </button>
-          <button class="canal-pill" data-seg="sem_laudo" onclick="showCanal('sem_laudo', this)">
-            Sem Laudo <span class="pill-count" id="canalCntSemLaudo">—</span>
-          </button>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <select class="reg-filter" id="canalPeriodSelect" onchange="onCanalPeriodChange()">
-            <option value="this_month" selected>Este mês</option>
-            <option value="last_month">Mês passado</option>
-            <option value="last_7">Últimos 7 dias</option>
-            <option value="last_30">Últimos 30 dias</option>
-            <option value="all">Todos</option>
-            <option value="custom">Personalizado</option>
-          </select>
-          <div id="canalCustomRange" class="reg-custom-range" style="display:none">
-            <input type="date" id="canalDateFrom" class="reg-date-input" onchange="applyCanalFilter()">
-            <span class="reg-date-sep">até</span>
-            <input type="date" id="canalDateTo" class="reg-date-input" onchange="applyCanalFilter()">
-          </div>
+      <div class="kanban-toolbar">
+        <select class="reg-filter" id="canalPeriodSelect" onchange="onCanalPeriodChange()">
+          <option value="this_month" selected>Este mês</option>
+          <option value="last_month">Mês passado</option>
+          <option value="last_7">Últimos 7 dias</option>
+          <option value="last_30">Últimos 30 dias</option>
+          <option value="all">Todos</option>
+          <option value="custom">Personalizado</option>
+        </select>
+        <div id="canalCustomRange" class="reg-custom-range" style="display:none">
+          <input type="date" id="canalDateFrom" class="reg-date-input" onchange="applyCanalFilter()">
+          <span class="reg-date-sep">até</span>
+          <input type="date" id="canalDateTo" class="reg-date-input" onchange="applyCanalFilter()">
         </div>
       </div>
-      <div class="card">
-        <div class="canal-title" id="canalListTitle">Parceiros</div>
-        <div class="canal-subtitle" id="canalListSubtitle">Processos captados via parceria</div>
-        <div id="canalList"><div class="loading">Aguardando dados...</div></div>
+      <div class="kanban-board">
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Parceiros</span>
+            <span class="kanban-col-count" id="kCntParceiros">—</span>
+          </div>
+          <div class="kanban-col-body" id="kColParceiros"><div class="kanban-col-empty">Aguardando...</div></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Orgânicos</span>
+            <span class="kanban-col-count" id="kCntOrganicos">—</span>
+          </div>
+          <div class="kanban-col-body" id="kColOrganicos"><div class="kanban-col-empty">Aguardando...</div></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Campanhas</span>
+            <span class="kanban-col-count" id="kCntCampanhas">—</span>
+          </div>
+          <div class="kanban-col-body" id="kColCampanhas"><div class="kanban-col-empty">Aguardando...</div></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Com Laudo</span>
+            <span class="kanban-col-count" id="kCntComLaudo">—</span>
+          </div>
+          <div class="kanban-col-body" id="kColComLaudo"><div class="kanban-col-empty">Aguardando...</div></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Sem Laudo</span>
+            <span class="kanban-col-count" id="kCntSemLaudo">—</span>
+          </div>
+          <div class="kanban-col-body" id="kColSemLaudo"><div class="kanban-col-empty">Aguardando...</div></div>
+        </div>
       </div>
     </div>
 
@@ -1134,18 +1201,9 @@
       applyRegFilter();
     }
 
-    // ── CANAIS ─────────────────────────────────────────────────────────────────
+    // ── CANAIS / KANBAN ────────────────────────────────────────────────────────
     let canaisAllResults = [];
-    let canalSegmento = 'parceiros';
-    let canalByPeriod = [];
-
-    const CANAL_META = {
-      parceiros:  { title: 'Parceiros',  sub: 'Processos captados via parceria ou parceiro' },
-      organicos:  { title: 'Orgânicos',  sub: 'Processos por indicação, escritório ou canal orgânico' },
-      campanhas:  { title: 'Campanhas',  sub: 'Processos vindos de campanhas de tráfego pago' },
-      com_laudo:  { title: 'Com Laudo',  sub: 'BPC / Aux Doença com laudo informado' },
-      sem_laudo:  { title: 'Sem Laudo',  sub: 'BPC / Aux Doença com laudo pendente ou ausente' },
-    };
+    let canalByPeriod   = [];
 
     function getCanalPeriodRange() {
       const period = (document.getElementById('canalPeriodSelect') || {}).value || 'this_month';
@@ -1156,9 +1214,7 @@
         const t = document.getElementById('canalDateTo').value;
         return { from: f ? new Date(f + 'T00:00:00') : null, to: t ? new Date(t + 'T23:59:59') : null };
       }
-      if (period === 'this_month') {
-        return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) };
-      }
+      if (period === 'this_month') return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) };
       if (period === 'last_month') {
         const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
         const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
@@ -1186,17 +1242,7 @@
         if (to   && d > to)   return false;
         return true;
       });
-      const p  = canalByPeriod.filter(r => r.origem === 'PARCEIRO').length;
-      const o  = canalByPeriod.filter(r => r.origem === 'ORGANICO').length;
-      const c  = canalByPeriod.filter(r => r.origem === 'CAMPANHA').length;
-      const cl = canalByPeriod.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus)).length;
-      const sl = canalByPeriod.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus)).length;
-      document.getElementById('canalCntParceiros').textContent  = p;
-      document.getElementById('canalCntOrganicos').textContent  = o;
-      document.getElementById('canalCntCampanhas').textContent  = c;
-      document.getElementById('canalCntComLaudo').textContent   = cl;
-      document.getElementById('canalCntSemLaudo').textContent   = sl;
-      renderCanalList();
+      renderKanban();
     }
 
     function renderCanais(results) {
@@ -1204,50 +1250,45 @@
       applyCanalFilter();
     }
 
-    function showCanal(seg, btn) {
-      canalSegmento = seg;
-      document.querySelectorAll('.canal-pill').forEach(p => p.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-      const meta = CANAL_META[seg] || {};
-      document.getElementById('canalListTitle').textContent    = meta.title || seg;
-      document.getElementById('canalListSubtitle').textContent = meta.sub || '';
-      renderCanalList();
+    function renderKanban() {
+      const parceiros = canalByPeriod.filter(r => r.origem === 'PARCEIRO');
+      const organicos = canalByPeriod.filter(r => r.origem === 'ORGANICO');
+      const campanhas = canalByPeriod.filter(r => r.origem === 'CAMPANHA');
+      const comLaudo  = canalByPeriod.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus));
+      const semLaudo  = canalByPeriod.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus));
+
+      renderKanbanCol('kColParceiros', 'kCntParceiros', parceiros, false);
+      renderKanbanCol('kColOrganicos', 'kCntOrganicos', organicos, false);
+      renderKanbanCol('kColCampanhas', 'kCntCampanhas', campanhas, true);
+      renderKanbanCol('kColComLaudo',  'kCntComLaudo',  comLaudo,  false);
+      renderKanbanCol('kColSemLaudo',  'kCntSemLaudo',  semLaudo,  false);
     }
 
-    function renderCanalList() {
-      const segMap = {
-        parceiros: r => r.origem === 'PARCEIRO',
-        organicos: r => r.origem === 'ORGANICO',
-        campanhas: r => r.origem === 'CAMPANHA',
-        com_laudo: r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus),
-        sem_laudo: r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus),
-      };
-      const fn = segMap[canalSegmento];
-      const list = fn ? canalByPeriod.filter(fn) : [];
-      const container = document.getElementById('canalList');
-      if (!list.length) {
-        container.innerHTML = '<div class="empty">Nenhum processo neste segmento no período</div>';
+    function renderKanbanCol(colId, cntId, items, showCampanha) {
+      document.getElementById(cntId).textContent = items.length;
+      const col = document.getElementById(colId);
+      if (!items.length) {
+        col.innerHTML = '<div class="kanban-col-empty">Nenhum processo no período</div>';
         return;
       }
-      list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-      container.innerHTML = list.map(r => {
-        const link = r.id
-          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver ↗</a>`
-          : '';
-        const fechadoLabel  = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : '';
-        const tipoLabel     = r.tipo       ? ` · ${r.tipo}` : '';
-        const laudoLabel    = r.laudoStatus && r.laudoStatus !== 'N/A' ? ` · ${r.laudoStatus}` : '';
-        const campanhaTag   = canalSegmento === 'campanhas' && r.campanha
-          ? `<span class="reg-badge mild" style="font-size:11px;padding:2px 8px;">${r.campanha}</span>`
-          : '';
+      items.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      col.innerHTML = items.map(r => {
+        const href  = r.id ? `href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener"` : '';
+        const link  = r.id ? `<a class="reg-link" ${href} style="font-size:10px;padding:3px 8px;">Ver ↗</a>` : '';
+        const tag   = showCampanha && r.campanha
+          ? `<span class="kanban-tag" title="${r.campanha}">${r.campanha}</span>` : '';
+        const fechado = r.fechadoPor ? `Fechado por ${r.fechadoPor}` : '';
+        const laudo   = r.laudoStatus && r.laudoStatus !== 'N/A' ? r.laudoStatus : '';
+        const meta    = [formatDate(r.data), fechado, laudo].filter(Boolean).join(' · ');
         return `
-          <div class="reg-item">
-            <div>
-              <div class="reg-item-name">${r.cliente || r.processo || '—'}</div>
-              <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${fechadoLabel}${laudoLabel}</div>
-              ${campanhaTag ? `<div style="margin-top:5px;">${campanhaTag}</div>` : ''}
+          <div class="kanban-card">
+            <div class="kanban-card-name">${r.cliente || r.processo || '—'}</div>
+            <div class="kanban-card-meta">${meta}</div>
+            ${r.tipo ? `<div class="kanban-card-meta" style="margin-top:2px;font-size:10px;">${r.tipo}</div>` : ''}
+            <div class="kanban-card-footer">
+              ${tag || '<span></span>'}
+              ${link}
             </div>
-            <div>${link}</div>
           </div>`;
       }).join('');
     }
