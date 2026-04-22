@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -419,6 +421,25 @@
     }
     .reg-link:hover { border-color: var(--text); color: var(--text); }
 
+    .export-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .export-btn:hover { border-color: var(--text); background: var(--hover); }
+    .export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -602,6 +623,10 @@
               <option value="LETICIA">Leticia</option>
               <option value="EDUARDO">Eduardo</option>
             </select>
+            <button class="export-btn" id="exportPdfBtn" onclick="exportPdf()" title="Exportar PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar PDF
+            </button>
           </div>
         </div>
         <div id="regList"><div class="loading">Carregando cadastros...</div></div>
@@ -1087,10 +1112,189 @@
 
     function parseRegDate(str) {
       if (!str) return null;
-      // "2026-04-17 15:08:57" ou "2026-04-17T..."
       const clean = str.substring(0, 10);
       const d = new Date(clean + 'T00:00:00');
       return isNaN(d) ? null : d;
+    }
+
+    function getPeriodLabel() {
+      const period = (document.getElementById('regPeriodSelect') || {}).value || 'this_month';
+      const now = new Date();
+      const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      if (period === 'this_month') {
+        return `Este mês — ${meses[now.getMonth()]} ${now.getFullYear()}`;
+      } else if (period === 'last_month') {
+        const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return `Mês passado — ${meses[d.getMonth()]} ${d.getFullYear()}`;
+      } else if (period === 'last_7') {
+        return 'Últimos 7 dias';
+      } else if (period === 'last_30') {
+        return 'Últimos 30 dias';
+      } else if (period === 'custom') {
+        const from = (document.getElementById('regDateFrom') || {}).value || '';
+        const to   = (document.getElementById('regDateTo')   || {}).value || '';
+        return `Período personalizado${from ? ': ' + formatDate(from) : ''}${to ? ' até ' + formatDate(to) : ''}`;
+      }
+      return 'Período selecionado';
+    }
+
+    function exportPdf() {
+      const btn = document.getElementById('exportPdfBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        const { from, to } = getPeriodRange();
+        let byPeriod = regAllResults;
+        if (from || to) {
+          byPeriod = regAllResults.filter(r => {
+            const d = parseRegDate(r.data);
+            if (!d) return false;
+            if (from && d < from) return false;
+            if (to   && d > to)   return false;
+            return true;
+          });
+        }
+        const resp = (document.getElementById('regFilterSelect').value || '').toUpperCase();
+        const filtered = resp ? byPeriod.filter(r => (r.responsavel || '').toUpperCase().includes(resp)) : byPeriod;
+        const withIssues = filtered.filter(r => r.severity !== 'ok');
+
+        const crit  = byPeriod.filter(r => r.severity === 'critical').length;
+        const mild  = byPeriod.filter(r => r.severity === 'mild').length;
+        const ok    = byPeriod.filter(r => r.severity === 'ok').length;
+        const total = byPeriod.length;
+
+        const periodLabel = getPeriodLabel();
+        const pageW = doc.internal.pageSize.getWidth();
+        let y = 18;
+
+        // ── Cabeçalho ──────────────────────────────────────────────────────
+        doc.setFont('times', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Eduardo Rodrigues Advocacia', pageW / 2, y, { align: 'center' });
+        y += 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Cadastros Pendentes — ${periodLabel}`, pageW / 2, y, { align: 'center' });
+        y += 5;
+
+        if (resp) {
+          doc.setFontSize(9);
+          doc.text(`Responsável: ${resp.charAt(0) + resp.slice(1).toLowerCase()}`, pageW / 2, y, { align: 'center' });
+          y += 5;
+        }
+
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, y, pageW - 14, y);
+        y += 6;
+
+        // ── Cards de resumo ─────────────────────────────────────────────────
+        const cardW = 44;
+        const cardH = 14;
+        const cardGap = 6;
+        const cardsX = 14;
+        const cards = [
+          { label: 'Críticos',       value: crit,  color: [139, 40, 40]  },
+          { label: 'Leves',          value: mild,  color: [139, 105, 20] },
+          { label: 'Completos',      value: ok,    color: [45, 95, 63]   },
+          { label: 'Total período',  value: total, color: [0, 0, 0]      },
+        ];
+        cards.forEach((card, i) => {
+          const cx = cardsX + i * (cardW + cardGap);
+          doc.setDrawColor(212, 212, 212);
+          doc.setFillColor(250, 250, 248);
+          doc.roundedRect(cx, y, cardW, cardH, 2, 2, 'FD');
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(107, 107, 107);
+          doc.text(card.label.toUpperCase(), cx + 3, y + 4.5);
+          doc.setFont('times', 'bold');
+          doc.setFontSize(16);
+          doc.setTextColor(...card.color);
+          doc.text(String(card.value), cx + 3, y + 11.5);
+        });
+        y += cardH + 8;
+
+        // ── Tabela ──────────────────────────────────────────────────────────
+        const tableRows = withIssues.map(r => [
+          r.cliente || '—',
+          r.tipo ? (r.tipo.length > 35 ? r.tipo.substring(0, 33) + '…' : r.tipo) : '—',
+          formatDate(r.data),
+          r.responsavel || '—',
+          r.problemas.map(p => p.label).join(', ') || '—'
+        ]);
+
+        doc.autoTable({
+          startY: y,
+          head: [['Cliente', 'Tipo de Ação', 'Data', 'Responsável', 'Pendências']],
+          body: tableRows,
+          theme: 'plain',
+          styles: {
+            font: 'helvetica',
+            fontSize: 8.5,
+            cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
+            textColor: [0, 0, 0],
+            lineColor: [212, 212, 212],
+            lineWidth: 0.2
+          },
+          headStyles: {
+            font: 'helvetica',
+            fontStyle: 'bold',
+            fontSize: 7.5,
+            fillColor: [255, 255, 255],
+            textColor: [107, 107, 107],
+            lineColor: [180, 180, 180],
+            lineWidth: 0.3
+          },
+          columnStyles: {
+            0: { cellWidth: 58 },
+            1: { cellWidth: 62 },
+            2: { cellWidth: 20, halign: 'center' },
+            3: { cellWidth: 36 },
+            4: { cellWidth: 'auto' }
+          },
+          didParseCell(data) {
+            if (data.section !== 'body') return;
+            const row = withIssues[data.row.index];
+            if (!row) return;
+            if (row.severity === 'critical') {
+              data.cell.styles.fillColor = [250, 242, 242];
+            } else if (row.severity === 'mild') {
+              data.cell.styles.fillColor = [252, 248, 237];
+            }
+          },
+          didDrawPage(data) {
+            const pW = doc.internal.pageSize.getWidth();
+            const pH = doc.internal.pageSize.getHeight();
+            const pg = doc.internal.getNumberOfPages();
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(160, 160, 160);
+            doc.text(
+              `Eduardo Rodrigues Advocacia · Cadastros Pendentes · Página ${pg}`,
+              pW / 2, pH - 6, { align: 'center' }
+            );
+            doc.text(
+              `Gerado em ${new Date().toLocaleDateString('pt-BR')}`,
+              pW - 14, pH - 6, { align: 'right' }
+            );
+          }
+        });
+
+        const today = new Date().toISOString().substring(0, 10);
+        doc.save(`cadastros-pendentes-${today}.pdf`);
+      } catch (err) {
+        console.error('Erro ao gerar PDF:', err);
+        alert('Erro ao gerar PDF. Tente novamente.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar PDF'; }
+      }
     }
 
     loadAll();
