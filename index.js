@@ -376,11 +376,15 @@ async function buildRegistrationsCache() {
       const problemas = [];
 
       // ── Regra 1: FECHADO POR ──────────────────────────────────────────────
-      const hasFechadoPor = RESPONSAVEIS_VALIDOS.some(r =>
-        notes.includes(`FECHADO POR ${r}`) ||
-        notes.includes(`FECHADO POR: ${r}`) ||
-        notes.includes(`FECHADO ${r}`)
-      );
+      const hasFechadoPor = RESPONSAVEIS_VALIDOS.some(r => {
+        if (notes.includes(`FECHADO POR ${r}`)) return true;
+        if (notes.includes(`FECHADO POR: ${r}`)) return true;
+        if (notes.includes(`FECHADO ${r}`)) return true;
+        // ex: "FECHADO POR ANA MARILIA" — responsável após outra palavra
+        const i = notes.indexOf('FECHADO POR ');
+        if (i >= 0 && notes.slice(i + 12, i + 40).includes(r)) return true;
+        return false;
+      });
       if (!hasFechadoPor) {
         problemas.push({ code: 'SEM_FECHADO_POR', label: 'Sem fechado por', severity: 'critical' });
       }
@@ -404,6 +408,22 @@ async function buildRegistrationsCache() {
         }
       }
 
+      // Extrai quem fechou das notas ("FECHADO POR ANA MARILIA, ..." → "ANA MARILIA")
+      let fechadoPorNome = '';
+      const fpIdx = notes.indexOf('FECHADO POR ');
+      if (fpIdx >= 0) {
+        const after = notes.slice(fpIdx + 12);
+        const end = after.search(/[,.|;]/);
+        fechadoPorNome = (end >= 0 ? after.slice(0, end) : after.slice(0, 35)).trim();
+      } else {
+        const fpIdx2 = notes.indexOf('FECHADO POR: ');
+        if (fpIdx2 >= 0) {
+          const after = notes.slice(fpIdx2 + 13);
+          const end = after.search(/[,.|;]/);
+          fechadoPorNome = (end >= 0 ? after.slice(0, end) : after.slice(0, 35)).trim();
+        }
+      }
+
       const id = l.id || l.lawsuits_id;
       const processNum = l.process_number || l.protocol_number || `#${id}`;
       const severity = problemas.some(p => p.severity === 'critical')
@@ -416,6 +436,7 @@ async function buildRegistrationsCache() {
         tipo: rawTipo,
         data: dateStr,
         responsavel: responsible,
+        fechadoPor: fechadoPorNome,
         problemas,
         severity
       });

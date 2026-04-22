@@ -1094,7 +1094,7 @@
         const badges = r.problemas.map(p =>
           `<span class="reg-badge ${p.severity}">${p.label}</span>`
         ).join('');
-        const respLabel = r.responsavel ? ` · ${r.responsavel}` : '';
+        const fechadoLabel = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : (r.responsavel ? ` · ${r.responsavel}` : '');
         const tipoLabel = r.tipo ? ` · ${r.tipo}` : '';
         const link = r.id
           ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver processo ↗</a>`
@@ -1103,7 +1103,7 @@
           <div class="reg-item">
             <div>
               <div class="reg-item-name">${r.cliente || r.processo || '—'}</div>
-              <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${respLabel}</div>
+              <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${fechadoLabel}</div>
               <div class="reg-badges">${badges}</div>
             </div>
             <div>${link}</div>
@@ -1227,7 +1227,7 @@
           r.cliente || '—',
           r.tipo ? (r.tipo.length > 35 ? r.tipo.substring(0, 33) + '…' : r.tipo) : '—',
           formatDate(r.data),
-          r.responsavel || '—',
+          r.fechadoPor || r.responsavel || '—',
           r.problemas.map(p => p.label).join(', ') || '—'
         ]);
 
