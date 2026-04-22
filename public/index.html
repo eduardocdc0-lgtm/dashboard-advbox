@@ -421,6 +421,50 @@
     }
     .reg-link:hover { border-color: var(--text); color: var(--text); }
 
+    /* ── CANAIS ── */
+    .canal-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .canal-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--bg-card);
+      color: var(--text-2);
+      transition: all 0.15s;
+    }
+    .canal-pill:hover { border-color: var(--text); color: var(--text); }
+    .canal-pill.active { background: var(--text); color: #FFF; border-color: var(--text); }
+    .canal-pill .pill-count {
+      font-size: 11px;
+      font-weight: 400;
+      opacity: 0.7;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+    .canal-pill.active .pill-count { opacity: 0.8; }
+    .canal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    .canal-subtitle {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 24px;
+    }
+
     .export-btn {
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
@@ -466,6 +510,7 @@
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('alice', event)">Alice — Prazos</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
+      <button class="tab" onclick="showTab('canais', event)">Canais</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -573,6 +618,32 @@
       <div class="card">
         <div class="card-title" id="aliceAtrasadosTitle">Atrasados</div>
         <div id="aliceAtrasados"><div class="loading">Carregando prazos...</div></div>
+      </div>
+    </div>
+
+    <!-- ABA 8: CANAIS -->
+    <div id="canais" class="tab-content">
+      <div class="canal-pills">
+        <button class="canal-pill active" data-seg="parceiros" onclick="showCanal('parceiros', this)">
+          Parceiros <span class="pill-count" id="canalCntParceiros">—</span>
+        </button>
+        <button class="canal-pill" data-seg="organicos" onclick="showCanal('organicos', this)">
+          Orgânicos <span class="pill-count" id="canalCntOrganicos">—</span>
+        </button>
+        <button class="canal-pill" data-seg="campanhas" onclick="showCanal('campanhas', this)">
+          Campanhas <span class="pill-count" id="canalCntCampanhas">—</span>
+        </button>
+        <button class="canal-pill" data-seg="com_laudo" onclick="showCanal('com_laudo', this)">
+          Com Laudo <span class="pill-count" id="canalCntComLaudo">—</span>
+        </button>
+        <button class="canal-pill" data-seg="sem_laudo" onclick="showCanal('sem_laudo', this)">
+          Sem Laudo <span class="pill-count" id="canalCntSemLaudo">—</span>
+        </button>
+      </div>
+      <div class="card">
+        <div class="canal-title" id="canalListTitle">Parceiros</div>
+        <div class="canal-subtitle" id="canalListSubtitle">Processos captados via parceria</div>
+        <div id="canalList"><div class="loading">Aguardando dados...</div></div>
       </div>
     </div>
 
@@ -989,7 +1060,9 @@
               if (fresh && !fresh.loading) {
                 clearInterval(regPollingTimer);
                 regPollingTimer = null;
-                renderRegistrations(fresh.results || []);
+                const res = fresh.results || [];
+                renderRegistrations(res);
+                renderCanais(res);
               }
             }, 8000);
           }
@@ -997,7 +1070,9 @@
         }
 
         if (regPollingTimer) { clearInterval(regPollingTimer); regPollingTimer = null; }
-        renderRegistrations(data.results || []);
+        const res = data.results || [];
+        renderRegistrations(res);
+        renderCanais(res);
       } catch (e) {
         console.error('registrations:', e);
         document.getElementById('regList').innerHTML = '<div class="empty">Erro ao carregar cadastros</div>';
@@ -1040,6 +1115,78 @@
     function renderRegistrations(results) {
       regAllResults = results;
       applyRegFilter();
+    }
+
+    // ── CANAIS ─────────────────────────────────────────────────────────────────
+    let canaisAllResults = [];
+    let canalSegmento = 'parceiros';
+
+    const CANAL_META = {
+      parceiros:  { title: 'Parceiros',  sub: 'Processos captados via parceria ou parceiro' },
+      organicos:  { title: 'Orgânicos',  sub: 'Processos por indicação, escritório ou canal orgânico' },
+      campanhas:  { title: 'Campanhas',  sub: 'Processos vindos de campanhas de tráfego pago' },
+      com_laudo:  { title: 'Com Laudo',  sub: 'BPC / Aux Doença com laudo informado' },
+      sem_laudo:  { title: 'Sem Laudo',  sub: 'BPC / Aux Doença com laudo pendente ou ausente' },
+    };
+
+    function renderCanais(results) {
+      canaisAllResults = results;
+      const p  = results.filter(r => r.origem === 'PARCEIRO').length;
+      const o  = results.filter(r => r.origem === 'ORGANICO').length;
+      const c  = results.filter(r => r.origem === 'CAMPANHA').length;
+      const cl = results.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus)).length;
+      const sl = results.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus)).length;
+      document.getElementById('canalCntParceiros').textContent  = p;
+      document.getElementById('canalCntOrganicos').textContent  = o;
+      document.getElementById('canalCntCampanhas').textContent  = c;
+      document.getElementById('canalCntComLaudo').textContent   = cl;
+      document.getElementById('canalCntSemLaudo').textContent   = sl;
+      renderCanalList();
+    }
+
+    function showCanal(seg, btn) {
+      canalSegmento = seg;
+      document.querySelectorAll('.canal-pill').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const meta = CANAL_META[seg] || {};
+      document.getElementById('canalListTitle').textContent    = meta.title || seg;
+      document.getElementById('canalListSubtitle').textContent = meta.sub || '';
+      renderCanalList();
+    }
+
+    function renderCanalList() {
+      const segMap = {
+        parceiros: r => r.origem === 'PARCEIRO',
+        organicos: r => r.origem === 'ORGANICO',
+        campanhas: r => r.origem === 'CAMPANHA',
+        com_laudo: r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus),
+        sem_laudo: r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus),
+      };
+      const fn = segMap[canalSegmento];
+      const list = fn ? canaisAllResults.filter(fn) : [];
+      const container = document.getElementById('canalList');
+      if (!list.length) {
+        container.innerHTML = '<div class="empty">Nenhum processo neste segmento</div>';
+        return;
+      }
+      // Ordena por data desc
+      list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      container.innerHTML = list.map(r => {
+        const link = r.id
+          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver ↗</a>`
+          : '';
+        const fechadoLabel = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : '';
+        const tipoLabel    = r.tipo       ? ` · ${r.tipo}` : '';
+        const laudoLabel   = r.laudoStatus && r.laudoStatus !== 'N/A' ? ` · ${r.laudoStatus}` : '';
+        return `
+          <div class="reg-item">
+            <div>
+              <div class="reg-item-name">${r.cliente || r.processo || '—'}</div>
+              <div class="reg-item-meta">${formatDate(r.data)}${tipoLabel}${fechadoLabel}${laudoLabel}</div>
+            </div>
+            <div>${link}</div>
+          </div>`;
+      }).join('');
     }
 
     function applyRegFilter() {

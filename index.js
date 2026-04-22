@@ -409,6 +409,22 @@ async function buildRegistrationsCache() {
         }
       }
 
+      // ── Classifica origem do processo ────────────────────────────────────
+      let origem = 'DESCONHECIDO';
+      if (['PARCERIA', 'PARCEIRO'].some(k => notes.includes(k))) {
+        origem = 'PARCEIRO';
+      } else if (['ORGANICO', 'ORGÂNICO', 'ESCRITORIO', 'ESCRITÓRIO', 'INDICACAO', 'INDICAÇÃO'].some(k => notes.includes(k))) {
+        origem = 'ORGANICO';
+      } else if (notes.includes('CAMPANHA') || CAMPANHAS_CONHECIDAS.some(c => notes.includes(c))) {
+        origem = 'CAMPANHA';
+      }
+
+      // ── Classifica status do laudo (só BPC / Aux) ────────────────────────
+      let laudoStatus = 'N/A';
+      if (isBpcAux) {
+        laudoStatus = LAUDO_OPCOES.find(k => notes.includes(k)) || 'PENDENTE';
+      }
+
       // Extrai quem fechou das notas ("FECHADO POR ANA MARILIA, ..." → "ANA MARILIA")
       let fechadoPorNome = '';
       const fpIdx = notes.indexOf('FECHADO POR ');
@@ -438,6 +454,8 @@ async function buildRegistrationsCache() {
         data: dateStr,
         responsavel: responsible,
         fechadoPor: fechadoPorNome,
+        origem,
+        laudoStatus,
         problemas,
         severity
       });
