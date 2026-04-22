@@ -453,7 +453,7 @@
         <div class="logo-name">Eduardo Rodrigues</div>
         <div class="logo-sub">Advocacia</div>
       </div>
-      <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">Atualizar dados</button>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadAll(true)">Atualizar dados</button>
     </header>
 
     <div id="errorBox"></div>
@@ -677,7 +677,7 @@
       return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
     }
 
-    async function loadAll() {
+    async function loadAll(force = false) {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
       btn.textContent = 'Carregando...';
@@ -693,7 +693,7 @@
           loadBirthdays(),
           loadPosts(),
           loadDeadlines(),
-          loadRegistrations()
+          loadRegistrations(force)
         ]);
       } catch (err) {
         showError(err.message);
@@ -975,9 +975,10 @@
     let regAllResults = [];
     let regPollingTimer = null;
 
-    async function loadRegistrations() {
+    async function loadRegistrations(force = false) {
       try {
-        const data = await fetchJson('/api/incomplete-registrations');
+        const url = force ? '/api/incomplete-registrations?force=1' : '/api/incomplete-registrations';
+        const data = await fetchJson(url);
 
         if (data.loading) {
           document.getElementById('regList').innerHTML =

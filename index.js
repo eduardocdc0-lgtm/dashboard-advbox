@@ -443,9 +443,17 @@ async function buildRegistrationsCache() {
 }
 
 app.get('/api/incomplete-registrations', (req, res) => {
+  const force = req.query.force === '1';
   const now = Date.now();
   const isStale = !registrationsFetchedAt || (now - registrationsFetchedAt) > REG_CACHE_TTL_MS;
-  if (isStale && !registrationsFetching) buildRegistrationsCache();
+
+  if ((force || isStale) && !registrationsFetching) {
+    if (force) {
+      registrationsCache = null;
+      registrationsFetchedAt = null;
+    }
+    buildRegistrationsCache();
+  }
 
   if (registrationsCache) {
     res.json({ ...registrationsCache, loading: false, cachedAt: new Date(registrationsFetchedAt).toISOString() });
