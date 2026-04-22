@@ -405,7 +405,7 @@ async function buildRegistrationsCache() {
         const temOrigemOrganica = ORIGEM_ORGANICA.some(k => notes.includes(k));
         const temCampanha = notes.includes('CAMPANHA') || CAMPANHAS_CONHECIDAS.some(c => notes.includes(c));
         if (!temOrigemOrganica && !temCampanha) {
-          problemas.push({ code: 'SEM_CAMPANHA', label: 'Sem campanha', severity: 'mild' });
+          problemas.push({ code: 'SEM_CAMPANHA', label: 'Canal não identificado', severity: 'mild' });
         }
       }
 
