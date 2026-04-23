@@ -16,7 +16,13 @@ const ADVBOX_TOKEN = process.env.ADVBOX_TOKEN || '';
 const ADVBOX_BASE_URL = 'https://app.advbox.com.br/api/v1';
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // serve o index.html
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
+    }
+  }
+}));
 
 // Função auxiliar que chama a API do AdvBox
 async function callAdvBox(endpoint) {
