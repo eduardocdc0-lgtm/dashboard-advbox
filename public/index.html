@@ -1797,6 +1797,17 @@
         const labels = Object.keys(porFase);
         const values = Object.values(porFase);
 
+        // A RECEBER = soma de fees_expec dos processos ativos (excluindo encerrados e etapas cat2)
+        const aReceberTotal = lawsuits
+          .filter(l => {
+            if (l.exit_production || l.exit_execution || l.status_closure) return false;
+            const etapa = (l.stage || l.step || '').toUpperCase();
+            if (FLUXO_CAT2_CONTAINS.some(k => etapa.includes(k))) return false;
+            return true;
+          })
+          .reduce((sum, l) => sum + Number(l.fees_expec || 0), 0);
+        document.getElementById('aReceber').textContent = formatMoney(aReceberTotal);
+
         if (chartFases) chartFases.destroy();
         chartFases = new Chart(document.getElementById('chartFases'), {
           type: 'bar',
@@ -1993,17 +2004,15 @@
         finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
         renderFinanceiro();
 
-        // Atualiza cards Visão Geral (a receber / a pagar — total geral)
-        let aReceber = 0, aPagar = 0;
+        // Atualiza card A PAGAR (a receber vem dos processos em loadLawsuits)
+        let aPagar = 0;
         transData.forEach(t => {
           if (!t.date_payment) {
             const v = Number(t.amount || 0);
-            if (t.entry_type === 'income')   aReceber += v;
-            else                              aPagar   += v;
+            if (t.entry_type !== 'income') aPagar += v;
           }
         });
-        document.getElementById('aReceber').textContent = formatMoney(aReceber);
-        document.getElementById('aPagar').textContent   = formatMoney(aPagar);
+        document.getElementById('aPagar').textContent = formatMoney(aPagar);
 
       } catch (e) { console.error('transactions:', e); }
     }
