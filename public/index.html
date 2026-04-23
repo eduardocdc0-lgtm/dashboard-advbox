@@ -529,6 +529,8 @@
     .fin-table th { text-align:left;padding:6px 8px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #eee;font-weight:500; }
     .fin-table td { padding:8px 8px;border-bottom:1px solid #f5f5f5;vertical-align:middle; }
     .fin-table tr:last-child td { border-bottom:none; }
+    .fin-table tr.clickable-row { cursor:pointer; }
+    .fin-table tr.clickable-row:hover td { background:#f7f7f7; }
     .fin-badge { display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.04em; }
     .fin-badge-R { background:#f0faf5;color:#2d6a4f; }
     .fin-badge-D { background:#fff0f0;color:#c0392b; }
@@ -1417,13 +1419,13 @@
         const cls  = l.diasParado > 90 ? 'danger' : l.diasParado > 30 ? 'warning' : '';
         const link = `https://app.advbox.com.br/${l.id}`;
         const nome = clientName(l);
-        return `<tr>
+        return `<tr class="clickable-row" onclick="window.open('${link}','_blank')">
           <td>${nome}</td>
           <td>${l.type || '—'}</td>
           <td>${l.stage || '—'}</td>
           <td class="${cls}" style="font-weight:600">${dias}d</td>
           <td>${l.responsible || '—'}</td>
-          <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
+          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">AdvBox ↗</a></td>
         </tr>`;
       }).join('');
       const total = sorted.length;
@@ -1542,9 +1544,9 @@
       const detail = document.getElementById('prodDetail');
       detail.classList.add('open');
       detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      // reset tabs
-      document.querySelectorAll('.prod-detail-tab').forEach((t,i) => t.classList.toggle('active', i===0));
-      renderProdDetailContent('mov');
+      // abre na aba "Parados +60d" por padrão (idx 1)
+      document.querySelectorAll('.prod-detail-tab').forEach((t,i) => t.classList.toggle('active', i===1));
+      renderProdDetailContent('par');
     }
 
     function closeProdDetail() {
@@ -1564,12 +1566,12 @@
         const nome = clientName(l);
         const link = `https://app.advbox.com.br/${l.id}`;
         const dias = l.diasParado === 9999 ? '?' : l.diasParado;
-        return `<tr>
+        return `<tr class="clickable-row" onclick="window.open('${link}','_blank')">
           <td>${nome}</td>
           <td>${l.type || '—'}</td>
           <td>${l.stage || '—'}</td>
           <td>${dias}d</td>
-          <td><a href="${link}" target="_blank" class="advbox-link">↗</a></td>
+          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
         </tr>`;
       }).join('');
       document.getElementById('prodDetailContent').innerHTML = list.length
@@ -1620,10 +1622,13 @@
         .sort((a,b) => b.completedAt.localeCompare(a.completedAt));
 
       const rows = recentes.map(t => {
-        const link = t.lawsuits_id ? `<a href="https://app.advbox.com.br/${t.lawsuits_id}" target="_blank" class="advbox-link">↗</a>` : '—';
+        const href = t.lawsuits_id ? `https://app.advbox.com.br/${t.lawsuits_id}` : null;
+        const linkCell = href ? `<a href="${href}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a>` : '—';
         const cliente = t.lawsuit?.customers?.[0]?.name || '—';
         const dt = t.completedAt ? t.completedAt.substring(0,10) : '—';
-        return `<tr><td>${t.user}</td><td>${dt}</td><td style="max-width:260px;white-space:normal">${t.task||'—'}</td><td>${cliente}</td><td>${link}</td></tr>`;
+        const rowClass = href ? 'clickable-row' : '';
+        const rowClick = href ? `onclick="window.open('${href}','_blank')"` : '';
+        return `<tr class="${rowClass}" ${rowClick}><td>${t.user}</td><td>${dt}</td><td style="max-width:260px;white-space:normal">${t.task||'—'}</td><td>${cliente}</td><td>${linkCell}</td></tr>`;
       }).join('');
 
       document.getElementById('tarefasSection').innerHTML = `
