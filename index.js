@@ -465,6 +465,15 @@ async function buildRegistrationsCache() {
       const severity = problemas.some(p => p.severity === 'critical')
         ? 'critical' : problemas.length > 0 ? 'mild' : 'ok';
 
+      // ── Campos financeiros ────────────────────────────────────────────────
+      const rawCauseValue  = getField(l, 'fees_expec');
+      const rawFees        = getField(l, 'fees_money');
+      const rawFeesPercent = getField(l, 'contingency');
+
+      const causeValue  = parseFloat(String(rawCauseValue  || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+      const feesValue   = parseFloat(String(rawFees        || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+      const feesPercent = parseFloat(String(rawFeesPercent || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+
       results.push({
         id,
         processo: processNum,
@@ -477,7 +486,10 @@ async function buildRegistrationsCache() {
         campanha: campanhaNome,
         laudoStatus,
         problemas,
-        severity
+        severity,
+        causeValue,
+        feesValue,
+        feesPercent
       });
     }
 
@@ -521,6 +533,7 @@ app.get('/api/incomplete-registrations', (req, res) => {
     res.json({ loading: true, results: [] });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);

@@ -692,6 +692,14 @@
           <input type="date" id="canalDateTo" class="reg-date-input" onchange="applyCanalFilter()">
         </div>
       </div>
+      <div class="metrics" style="margin-bottom:20px;">
+        <div class="metric-card" style="border:1.5px solid var(--text);">
+          <div class="metric-label">Valor total das causas</div>
+          <div class="metric-value" id="kValorTotal">—</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:4px;">Parceiros + Orgânicos + Campanhas</div>
+        </div>
+      </div>
+
       <div class="kanban-board">
         <div class="kanban-col">
           <div class="kanban-col-header">
@@ -1250,12 +1258,28 @@
       applyCanalFilter();
     }
 
+    function getBestValue(r) {
+      if (r.causeValue && r.causeValue > 0) return r.causeValue;
+      if (r.feesValue  && r.feesValue  > 0) return r.feesValue;
+      return 0;
+    }
+
+    function sumValues(arr) { return arr.reduce((s, r) => s + getBestValue(r), 0); }
+
     function renderKanban() {
       const parceiros = canalByPeriod.filter(r => r.origem === 'PARCEIRO');
       const organicos = canalByPeriod.filter(r => r.origem === 'ORGANICO');
       const campanhas = canalByPeriod.filter(r => r.origem === 'CAMPANHA');
       const comLaudo  = canalByPeriod.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus));
       const semLaudo  = canalByPeriod.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus));
+
+      const totalGeral = sumValues([...parceiros, ...organicos, ...campanhas]);
+      const fmtBRL = v => v > 0
+        ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '—';
+
+      const totalEl = document.getElementById('kValorTotal');
+      if (totalEl) totalEl.textContent = fmtBRL(totalGeral);
 
       renderKanbanCol('kColParceiros', 'kCntParceiros', parceiros, false);
       renderKanbanCol('kColOrganicos', 'kCntOrganicos', organicos, false);
@@ -1272,6 +1296,9 @@
         return;
       }
       items.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      const fmtBRL = v => v > 0
+        ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : null;
       col.innerHTML = items.map(r => {
         const href  = r.id ? `href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener"` : '';
         const link  = r.id ? `<a class="reg-link" ${href} style="font-size:10px;padding:3px 8px;">Ver ↗</a>` : '';
@@ -1280,13 +1307,15 @@
         const fechado = r.fechadoPor ? `Fechado por ${r.fechadoPor}` : '';
         const laudo   = r.laudoStatus && r.laudoStatus !== 'N/A' ? r.laudoStatus : '';
         const meta    = [formatDate(r.data), fechado, laudo].filter(Boolean).join(' · ');
+        const valor   = fmtBRL(getBestValue(r));
+        const valorTag = valor ? `<span style="font-size:10px;font-weight:600;color:var(--text);">${valor}</span>` : '<span></span>';
         return `
           <div class="kanban-card">
             <div class="kanban-card-name">${r.cliente || r.processo || '—'}</div>
             <div class="kanban-card-meta">${meta}</div>
             ${r.tipo ? `<div class="kanban-card-meta" style="margin-top:2px;font-size:10px;">${r.tipo}</div>` : ''}
             <div class="kanban-card-footer">
-              ${tag || '<span></span>'}
+              ${tag || valorTag}
               ${link}
             </div>
           </div>`;
