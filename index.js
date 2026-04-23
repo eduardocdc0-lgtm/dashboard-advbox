@@ -458,15 +458,20 @@ app.get('/api/distribution', async (req, res) => {
     const data = await fetchLawsuits(force);
     const all = data.data || [];
 
+    // Stages de arquivamento — mesmo critério do card "A RECEBER"
+    const STAGES_ARQUIVAMENTO = ['IGNORAR','ARQUIV','CANCELADO','AGUARDAR DATA','NÃO DISTRIBUÍDO'];
+
     // Agrupa por responsável — inclui todos os processos com classificação
-    // ativo   = sem exit_production E sem exit_execution
-    // encerrado = tem exit_production OU exit_execution
+    // ativo     = sem exit_production E sem exit_execution E stage não é de arquivamento
+    // encerrado = tem exit_production OU exit_execution OU stage é de arquivamento
     const grouped = {};
     for (const l of all) {
       const resp = (l.responsible || 'SEM RESPONSÁVEL').trim();
       if (!grouped[resp]) grouped[resp] = { responsible: resp, processes: [] };
 
-      const grupo = (l.exit_production || l.exit_execution) ? 'encerrado' : 'ativo';
+      const stageUp = (l.stage || '').toUpperCase();
+      const isArquivamento = STAGES_ARQUIVAMENTO.some(k => stageUp.includes(k));
+      const grupo = (l.exit_production || l.exit_execution || isArquivamento) ? 'encerrado' : 'ativo';
 
       const clientsArr = Array.isArray(l.customers) ? l.customers : [];
       const personal = clientsArr.find(c =>
