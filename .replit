@@ -32,3 +32,11 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+ADMIN_USER = "eduardorodrigues14"
+ADMIN_PASS = "mara142579"
+TEAM_USER = "colaboradores"
+TEAM_PASS = "Abcd2445@"

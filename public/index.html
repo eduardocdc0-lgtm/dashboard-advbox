@@ -786,11 +786,13 @@
     <div class="login-box">
       <div class="login-logo">Eduardo Rodrigues</div>
       <div class="login-sub">Advocacia · Dashboard</div>
-      <div class="login-label">Usuário</div>
-      <input class="login-input" id="loginUser" type="text" placeholder="seu usuário" autocomplete="username">
-      <div class="login-label">Senha</div>
-      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+      <form onsubmit="doLogin(); return false;" autocomplete="on">
+        <div class="login-label">Usuário</div>
+        <input class="login-input" id="loginUser" type="text" placeholder="seu usuário" autocomplete="username">
+        <div class="login-label">Senha</div>
+        <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+        <button class="login-btn" id="loginBtn" type="submit">Entrar</button>
+      </form>
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
