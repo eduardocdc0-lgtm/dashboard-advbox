@@ -264,8 +264,9 @@
       font-size: 18px; display: flex; align-items: center; justify-content: center;
       margin-bottom: 10px;
     }
-    .dist-card-name  { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin-bottom: 4px; }
-    .dist-card-count { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1; color: var(--text); margin-bottom: 12px; }
+    .dist-card-name      { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin-bottom: 4px; }
+    .dist-card-count     { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1; color: var(--text); }
+    .dist-card-encerrado { font-size: 11px; color: #c0c0c0; margin-bottom: 10px; margin-top: 3px; }
     .dist-bar-track  { height: 4px; border-radius: 2px; background: var(--border); }
     .dist-bar-fill   { height: 4px; border-radius: 2px; transition: width .3s; }
     .dist-bar-fill.green  { background: #22c55e; }
@@ -789,6 +790,11 @@
           <button class="dist-panel-close" onclick="closeDistPanel()">×</button>
         </div>
         <div class="dist-filters">
+          <select class="reg-filter" id="distGrupoFiltro" onchange="applyDistFilter()">
+            <option value="ativo">Ativos</option>
+            <option value="encerrado">Encerrados</option>
+            <option value="">Todos</option>
+          </select>
           <select class="reg-filter" id="distFaseFiltro" onchange="applyDistFilter()">
             <option value="">Todas as fases</option>
           </select>
@@ -1707,19 +1713,24 @@
         container.innerHTML = '<div class="empty">Nenhum dado disponível</div>';
         return;
       }
-      const max = distData[0].processes.length;
+      const maxAtivos = Math.max(...distData.map(r => r.processes.filter(p => p.grupo === 'ativo').length));
       container.innerHTML = distData.map((r, idx) => {
-        const n     = r.processes.length;
-        const cls   = distBarClass(n);
-        const w     = distBarWidth(n, max);
-        const fname = distFirstName(r.responsible);
-        const ini   = distInitial(r.responsible);
+        const nAtivo     = r.processes.filter(p => p.grupo === 'ativo').length;
+        const nEncerrado = r.processes.filter(p => p.grupo === 'encerrado').length;
+        const cls    = distBarClass(nAtivo);
+        const w      = distBarWidth(nAtivo, maxAtivos);
+        const fname  = distFirstName(r.responsible);
+        const ini    = distInitial(r.responsible);
         const active = distActiveResp === r.responsible ? ' active' : '';
+        const encStr = nEncerrado > 0
+          ? `<div class="dist-card-encerrado">${nEncerrado} encerrado${nEncerrado !== 1 ? 's' : ''}</div>`
+          : `<div class="dist-card-encerrado" style="visibility:hidden">0</div>`;
         return `
           <div class="dist-card${active}" data-idx="${idx}" onclick="openDistPanel(this.dataset.idx)">
             <div class="dist-avatar">${ini}</div>
             <div class="dist-card-name">${fname}</div>
-            <div class="dist-card-count">${n}</div>
+            <div class="dist-card-count">${nAtivo}</div>
+            ${encStr}
             <div class="dist-bar-track">
               <div class="dist-bar-fill ${cls}" style="width:${w}%"></div>
             </div>
@@ -1737,14 +1748,17 @@
       const panel = document.getElementById('distPanel');
       panel.style.display = 'block';
 
+      const nAtivo     = entry.processes.filter(p => p.grupo === 'ativo').length;
+      const nEncerrado = entry.processes.filter(p => p.grupo === 'encerrado').length;
       document.getElementById('distPanelTitle').textContent =
-        `${distFirstName(entry.responsible)} — ${entry.processes.length} processos`;
+        `${distFirstName(entry.responsible)} — ${nAtivo} ativos · ${nEncerrado} encerrados`;
 
-      // Popula dropdown de fases
+      // Popula dropdown de fases (de todos os processos)
       const fases = [...new Set(entry.processes.map(p => p.fase).filter(Boolean))].sort();
       const sel = document.getElementById('distFaseFiltro');
       sel.innerHTML = '<option value="">Todas as fases</option>' +
         fases.map(f => `<option value="${f}">${f}</option>`).join('');
+      document.getElementById('distGrupoFiltro').value = 'ativo';
       document.getElementById('distIdadeFiltro').value = '';
       document.getElementById('distCheckAll').checked = false;
 
@@ -1763,12 +1777,14 @@
       const entry = distData.find(r => r.responsible === distActiveResp);
       if (!entry) return;
 
+      const grupo = document.getElementById('distGrupoFiltro').value;
       const fase  = document.getElementById('distFaseFiltro').value;
       const idade = document.getElementById('distIdadeFiltro').value;
 
       let rows = entry.processes.map(p => ({ ...p, dias: distDias(p.created_at) }));
 
-      if (fase) rows = rows.filter(r => r.fase === fase);
+      if (grupo) rows = rows.filter(r => r.grupo === grupo);
+      if (fase)  rows = rows.filter(r => r.fase === fase);
       if (idade === '90')      rows = rows.filter(r => r.dias !== null && r.dias < 90);
       if (idade === '90-180')  rows = rows.filter(r => r.dias !== null && r.dias >= 90  && r.dias < 180);
       if (idade === '180-365') rows = rows.filter(r => r.dias !== null && r.dias >= 180 && r.dias < 365);

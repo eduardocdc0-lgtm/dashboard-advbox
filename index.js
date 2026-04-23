@@ -410,19 +410,15 @@ app.get('/api/distribution', async (req, res) => {
     const data = await fetchLawsuits(force);
     const all = data.data || [];
 
-    // Processos ativos: sem status de encerramento
-    const FECHADOS = ['TRANSITADO', 'TRANSITO', 'ARQUIVADO', 'ENCERRADO', 'CANCELADO', 'EXTINTO'];
-    const active = all.filter(l => {
-      if (!l.status_closure) return true;
-      const sc = norm(String(l.status_closure));
-      return !FECHADOS.some(k => sc.includes(k));
-    });
-
-    // Agrupa por responsável
+    // Agrupa por responsável — inclui todos os processos com classificação
+    // ativo   = sem exit_production E sem exit_execution
+    // encerrado = tem exit_production OU exit_execution
     const grouped = {};
-    for (const l of active) {
+    for (const l of all) {
       const resp = (l.responsible || 'SEM RESPONSÁVEL').trim();
       if (!grouped[resp]) grouped[resp] = { responsible: resp, processes: [] };
+
+      const grupo = (l.exit_production || l.exit_execution) ? 'encerrado' : 'ativo';
 
       const clientsArr = Array.isArray(l.customers) ? l.customers : [];
       const personal = clientsArr.find(c =>
@@ -431,13 +427,14 @@ app.get('/api/distribution', async (req, res) => {
       const clientName = (personal || clientsArr[0] || {}).name || '';
 
       grouped[resp].processes.push({
-        id:        l.id,
-        processo:  l.process_number || l.protocol_number || `#${l.id}`,
-        cliente:   clientName,
-        tipo:      l.type || '',
-        fase:      l.stage || '',
-        etapa:     l.step  || '',
-        created_at: l.created_at || ''
+        id:         l.id,
+        processo:   l.process_number || l.protocol_number || `#${l.id}`,
+        cliente:    clientName,
+        tipo:       l.type || '',
+        fase:       l.stage || '',
+        etapa:      l.step  || '',
+        created_at: l.created_at || '',
+        grupo:      grupo
       });
     }
 
@@ -446,11 +443,18 @@ app.get('/api/distribution', async (req, res) => {
       g.processes.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     );
 
-    // Ordena responsáveis: mais carregado primeiro
+    // Ordena responsáveis: mais ativos primeiro
     const responsaveis = Object.values(grouped)
-      .sort((a, b) => b.processes.length - a.processes.length);
+      .sort((a, b) => {
+        const aAtivos = a.processes.filter(p => p.grupo === 'ativo').length;
+        const bAtivos = b.processes.filter(p => p.grupo === 'ativo').length;
+        return bAtivos - aAtivos;
+      });
 
-    distCache = { responsaveis, total: active.length, cachedAt: new Date().toISOString() };
+    const totalAtivos = responsaveis.reduce((s, r) =>
+      s + r.processes.filter(p => p.grupo === 'ativo').length, 0);
+
+    distCache = { responsaveis, total: totalAtivos, cachedAt: new Date().toISOString() };
     distFetchedAt = Date.now();
     res.json(distCache);
   } catch (err) {
