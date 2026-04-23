@@ -40,3 +40,7 @@ ADMIN_USER = "eduardorodrigues14"
 ADMIN_PASS = "mara142579"
 TEAM_USER = "colaboradores"
 TEAM_PASS = "Abcd2445@"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "index.js"]

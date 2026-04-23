@@ -7,7 +7,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,15 +27,13 @@ const USERS = {
   }
 };
 
-// ── Sessão ───────────────────────────────────────────────────────────────────
-app.use(session({
+// ── Sessão (cookie assinado — funciona em autoscale/Cloud Run) ────────────────
+app.use(cookieSession({
+  name:   'advsess',
   secret: process.env.SESSION_SECRET || 'advbox-sess-secret-2025',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    maxAge: 12 * 60 * 60 * 1000   // 12 horas
-  }
+  maxAge: 12 * 60 * 60 * 1000,   // 12 horas
+  httpOnly: true,
+  sameSite: 'lax'
 }));
 
 app.use(express.json());
@@ -65,7 +63,8 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  req.session = null;
+  res.json({ ok: true });
 });
 
 app.get('/api/me', (req, res) => {
