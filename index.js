@@ -368,6 +368,72 @@ app.get('/api/incomplete-registrations', (req, res) => {
 });
 
 
+// ── Distribuição por Responsável ─────────────────────────────────────────────
+let distCache = null;
+let distFetchedAt = null;
+const DIST_TTL_MS = 20 * 60 * 1000;
+
+app.get('/api/distribution', async (req, res) => {
+  const force = req.query.force === '1';
+  const now = Date.now();
+  const stale = !distFetchedAt || (now - distFetchedAt) > DIST_TTL_MS;
+
+  if (!force && !stale && distCache) {
+    return res.json(distCache);
+  }
+
+  try {
+    const data = await callAdvBox('/lawsuits?limit=1000');
+    const all = data.data || [];
+
+    // Processos ativos: sem status de encerramento
+    const FECHADOS = ['TRANSITADO', 'TRANSITO', 'ARQUIVADO', 'ENCERRADO', 'CANCELADO', 'EXTINTO'];
+    const active = all.filter(l => {
+      if (!l.status_closure) return true;
+      const sc = norm(String(l.status_closure));
+      return !FECHADOS.some(k => sc.includes(k));
+    });
+
+    // Agrupa por responsável
+    const grouped = {};
+    for (const l of active) {
+      const resp = (l.responsible || 'SEM RESPONSÁVEL').trim();
+      if (!grouped[resp]) grouped[resp] = { responsible: resp, processes: [] };
+
+      const clientsArr = Array.isArray(l.customers) ? l.customers : [];
+      const personal = clientsArr.find(c =>
+        c.name && !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i.test(norm(c.name))
+      );
+      const clientName = (personal || clientsArr[0] || {}).name || '';
+
+      grouped[resp].processes.push({
+        id:        l.id,
+        processo:  l.process_number || l.protocol_number || `#${l.id}`,
+        cliente:   clientName,
+        tipo:      l.type || '',
+        fase:      l.stage || '',
+        etapa:     l.step  || '',
+        created_at: l.created_at || ''
+      });
+    }
+
+    // Ordena processos: mais antigo primeiro
+    Object.values(grouped).forEach(g =>
+      g.processes.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    );
+
+    // Ordena responsáveis: mais carregado primeiro
+    const responsaveis = Object.values(grouped)
+      .sort((a, b) => b.processes.length - a.processes.length);
+
+    distCache = { responsaveis, total: active.length, cachedAt: new Date().toISOString() };
+    distFetchedAt = Date.now();
+    res.json(distCache);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {

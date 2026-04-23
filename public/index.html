@@ -235,6 +235,98 @@
     }
 
 
+    /* ── DISTRIBUIÇÃO ── */
+    .dist-cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .dist-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px 14px;
+      cursor: pointer;
+      min-width: 160px;
+      flex: 1 1 160px;
+      max-width: 220px;
+      transition: border-color .15s, box-shadow .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .dist-card:hover  { border-color: var(--text); box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .dist-card.active { border-color: var(--text); background: var(--hover); }
+    .dist-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--text); color: var(--bg);
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .dist-card-name  { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin-bottom: 4px; }
+    .dist-card-count { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1; color: var(--text); margin-bottom: 12px; }
+    .dist-bar-track  { height: 4px; border-radius: 2px; background: var(--border); }
+    .dist-bar-fill   { height: 4px; border-radius: 2px; transition: width .3s; }
+    .dist-bar-fill.green  { background: #22c55e; }
+    .dist-bar-fill.yellow { background: #f59e0b; }
+    .dist-bar-fill.red    { background: var(--danger); }
+
+    .dist-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .dist-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px; flex-wrap: wrap;
+    }
+    .dist-panel-title { font-family: 'DM Serif Display', serif; font-size: 18px; }
+    .dist-panel-close {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 18px; cursor: pointer; padding: 2px 10px; color: var(--text);
+    }
+    .dist-panel-close:hover { background: var(--hover); }
+    .dist-filters {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--hover);
+    }
+    .dist-export-btn {
+      margin-left: auto;
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 6px;
+      font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; letter-spacing: .03em;
+    }
+    .dist-export-btn:hover { opacity: .85; }
+    .dist-table-wrap { overflow-x: auto; }
+    table.dist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.dist-table th {
+      text-align: left; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-2); white-space: nowrap;
+    }
+    table.dist-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    table.dist-table tr:last-child td { border-bottom: none; }
+    table.dist-table tr:hover td { background: var(--hover); }
+    .dist-dias-badge {
+      display: inline-block; padding: 2px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 600;
+    }
+    .dist-dias-badge.ok     { background: #dcfce7; color: #166534; }
+    .dist-dias-badge.mid    { background: #fef3c7; color: #92400e; }
+    .dist-dias-badge.old    { background: #fee2e2; color: #991b1b; }
+    .dist-dias-badge.velho  { background: #fce7f3; color: #9d174d; }
+    .dist-empty { padding: 40px; text-align: center; color: var(--text-2); font-size: 14px; }
+
     /* ── ERROR BOX ── */
     #errorBox:empty { display: none; }
 
@@ -501,6 +593,7 @@
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
+      <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -644,6 +737,48 @@
       </div>
     </div>
 
+    <!-- ABA 9: DISTRIBUIÇÃO -->
+    <div id="distribuicao" class="tab-content">
+      <div class="dist-cards-row" id="distCards">
+        <div class="loading">Carregando distribuição...</div>
+      </div>
+      <div id="distPanel" style="display:none" class="dist-panel">
+        <div class="dist-panel-header">
+          <span class="dist-panel-title" id="distPanelTitle">—</span>
+          <button class="dist-panel-close" onclick="closeDistPanel()">×</button>
+        </div>
+        <div class="dist-filters">
+          <select class="reg-filter" id="distFaseFiltro" onchange="applyDistFilter()">
+            <option value="">Todas as fases</option>
+          </select>
+          <select class="reg-filter" id="distIdadeFiltro" onchange="applyDistFilter()">
+            <option value="">Qualquer idade</option>
+            <option value="90">Menos de 90 dias</option>
+            <option value="90-180">90 – 180 dias</option>
+            <option value="180-365">180 – 365 dias</option>
+            <option value="365+">Mais de 1 ano</option>
+          </select>
+          <button class="dist-export-btn" onclick="exportDistCSV()">Exportar CSV</button>
+        </div>
+        <div class="dist-table-wrap">
+          <table class="dist-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="distCheckAll" onchange="distToggleAll(this.checked)"></th>
+                <th>Cliente</th>
+                <th>Tipo de ação</th>
+                <th>Fase</th>
+                <th>Etapa</th>
+                <th>Dias</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="distTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ABA 7: CADASTROS PENDENTES -->
     <div id="registrations" class="tab-content">
       <div class="metrics">
@@ -762,6 +897,9 @@
           loadPosts(),
           loadRegistrations(force)
         ]);
+        // Distribuição usa o mesmo endpoint de lawsuits — executa após as outras para
+        // evitar rate limit simultâneo
+        setTimeout(() => loadDistribuicao(), 2000);
       } catch (err) {
         showError(err.message);
       } finally {
@@ -1382,6 +1520,174 @@
         alert('Erro ao gerar PDF. Tente novamente.');
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar PDF'; }
+      }
+    }
+
+    // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
+    let distData = [];
+    let distActiveResp = null;
+
+    function distFirstName(fullName) {
+      return (fullName || '').split(' ')[0];
+    }
+
+    function distInitial(fullName) {
+      return (fullName || '?')[0].toUpperCase();
+    }
+
+    function distBarClass(n) {
+      if (n <= 60)  return 'green';
+      if (n <= 100) return 'yellow';
+      return 'red';
+    }
+
+    function distBarWidth(n, max) {
+      return Math.min(100, Math.round((n / Math.max(max, 1)) * 100));
+    }
+
+    function distDias(created_at) {
+      if (!created_at) return null;
+      const d = new Date(created_at);
+      if (isNaN(d)) return null;
+      return Math.floor((Date.now() - d.getTime()) / 86400000);
+    }
+
+    function distDiasBadge(dias) {
+      if (dias === null) return '<span style="color:var(--text-2)">—</span>';
+      if (dias < 90)   return `<span class="dist-dias-badge ok">${dias}d</span>`;
+      if (dias < 180)  return `<span class="dist-dias-badge mid">${dias}d</span>`;
+      if (dias < 365)  return `<span class="dist-dias-badge old">${dias}d</span>`;
+      return `<span class="dist-dias-badge velho">${dias}d</span>`;
+    }
+
+    function renderDistCards() {
+      const container = document.getElementById('distCards');
+      if (!distData.length) {
+        container.innerHTML = '<div class="empty">Nenhum dado disponível</div>';
+        return;
+      }
+      const max = distData[0].processes.length;
+      container.innerHTML = distData.map(r => {
+        const n     = r.processes.length;
+        const cls   = distBarClass(n);
+        const w     = distBarWidth(n, max);
+        const fname = distFirstName(r.responsible);
+        const ini   = distInitial(r.responsible);
+        const active = distActiveResp === r.responsible ? ' active' : '';
+        return `
+          <div class="dist-card${active}" onclick="openDistPanel(${JSON.stringify(r.responsible)})">
+            <div class="dist-avatar">${ini}</div>
+            <div class="dist-card-name">${fname}</div>
+            <div class="dist-card-count">${n}</div>
+            <div class="dist-bar-track">
+              <div class="dist-bar-fill ${cls}" style="width:${w}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function openDistPanel(responsible) {
+      distActiveResp = responsible;
+      renderDistCards();
+      const panel = document.getElementById('distPanel');
+      panel.style.display = 'block';
+
+      const entry = distData.find(r => r.responsible === responsible);
+      if (!entry) return;
+
+      document.getElementById('distPanelTitle').textContent =
+        `${distFirstName(responsible)} — ${entry.processes.length} processos`;
+
+      // Popula dropdown de fases
+      const fases = [...new Set(entry.processes.map(p => p.fase).filter(Boolean))].sort();
+      const sel = document.getElementById('distFaseFiltro');
+      sel.innerHTML = '<option value="">Todas as fases</option>' +
+        fases.map(f => `<option value="${f}">${f}</option>`).join('');
+      document.getElementById('distIdadeFiltro').value = '';
+      document.getElementById('distCheckAll').checked = false;
+
+      applyDistFilter();
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeDistPanel() {
+      distActiveResp = null;
+      renderDistCards();
+      document.getElementById('distPanel').style.display = 'none';
+    }
+
+    function applyDistFilter() {
+      if (!distActiveResp) return;
+      const entry = distData.find(r => r.responsible === distActiveResp);
+      if (!entry) return;
+
+      const fase  = document.getElementById('distFaseFiltro').value;
+      const idade = document.getElementById('distIdadeFiltro').value;
+
+      let rows = entry.processes.map(p => ({ ...p, dias: distDias(p.created_at) }));
+
+      if (fase) rows = rows.filter(r => r.fase === fase);
+      if (idade === '90')      rows = rows.filter(r => r.dias !== null && r.dias < 90);
+      if (idade === '90-180')  rows = rows.filter(r => r.dias !== null && r.dias >= 90  && r.dias < 180);
+      if (idade === '180-365') rows = rows.filter(r => r.dias !== null && r.dias >= 180 && r.dias < 365);
+      if (idade === '365+')    rows = rows.filter(r => r.dias !== null && r.dias >= 365);
+
+      // Já ordenado pelo backend: mais antigo primeiro
+      const tbody = document.getElementById('distTableBody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="dist-empty">Nenhum processo neste filtro</td></tr>`;
+        return;
+      }
+      document.getElementById('distCheckAll').checked = false;
+      tbody.innerHTML = rows.map(r => {
+        const link = r.id
+          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener" style="font-size:10px;padding:3px 8px;">Ver ↗</a>`
+          : '';
+        return `
+          <tr>
+            <td><input type="checkbox" class="dist-chk" data-processo="${r.processo}" data-cliente="${r.cliente}"></td>
+            <td>${r.cliente || '—'}</td>
+            <td style="color:var(--text-2);font-size:12px">${r.tipo || '—'}</td>
+            <td style="color:var(--text-2);font-size:12px">${r.fase || '—'}</td>
+            <td style="color:var(--text-2);font-size:12px">${r.etapa || '—'}</td>
+            <td>${distDiasBadge(r.dias)}</td>
+            <td>${link}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function distToggleAll(checked) {
+      document.querySelectorAll('.dist-chk').forEach(cb => cb.checked = checked);
+    }
+
+    function exportDistCSV() {
+      const checkboxes = document.querySelectorAll('.dist-chk');
+      const selected = [...checkboxes].filter(cb => cb.checked);
+      const rows = selected.length > 0 ? selected : [...checkboxes];
+      if (!rows.length) { alert('Nenhum processo para exportar.'); return; }
+
+      const lines = ['Processo,Cliente'];
+      rows.forEach(cb => {
+        const proc = (cb.dataset.processo || '').replace(/,/g, ' ');
+        const cli  = (cb.dataset.cliente  || '').replace(/,/g, ' ');
+        lines.push(`${proc},${cli}`);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `distribuicao-${distActiveResp || 'processos'}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadDistribuicao() {
+      try {
+        const data = await fetchJson('/api/distribution');
+        distData = data.responsaveis || [];
+        renderDistCards();
+      } catch (e) {
+        console.error('distribuicao:', e);
+        document.getElementById('distCards').innerHTML = '<div class="empty">Erro ao carregar distribuição</div>';
       }
     }
 
