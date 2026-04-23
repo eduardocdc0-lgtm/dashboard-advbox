@@ -325,7 +325,7 @@ const REG_CACHE_TTL_MS = 20 * 60 * 1000; // 20 min
 const RESPONSAVEIS_VALIDOS = ['THIAGO', 'MARILIA', 'LETICIA', 'EDUARDO', 'TAMMYRES'];
 const BPC_TRIGGERS = ['BPC', 'BENEFICIO ASSISTENCIAL', 'AUXILIO DOENCA', 'AUXÍLIO DOENÇA', 'BENEFÍCIO ASSISTENCIAL'];
 const LAUDO_OPCOES = ['COM LAUDO', 'SEM LAUDO', 'LAUDO OK', 'FAZER LAUDO', 'AGUARDANDO LAUDO'];
-const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'PARCEIRO', 'ESCRITORIO', 'INDICACAO', 'INDICAÇÃO', 'ORGÂNICO', 'ESCRITÓRIO'];
+const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'PARCEIRO', 'PARCEIRA', 'ESCRITORIO', 'INDICACAO', 'INDICAÇÃO', 'ORGÂNICO', 'ESCRITÓRIO'];
 const CAMPANHAS_CONHECIDAS = ['LAUDO DO SUS'];
 
 async function buildRegistrationsCache() {
@@ -417,7 +417,7 @@ async function buildRegistrationsCache() {
 
       // ── Classifica origem do processo ────────────────────────────────────
       let origem = 'DESCONHECIDO';
-      if (['PARCERIA', 'PARCEIRO'].some(k => notes.includes(k))) {
+      if (['PARCERIA', 'PARCEIRO', 'PARCEIRA'].some(k => notes.includes(k))) {
         origem = 'PARCEIRO';
       } else if (['ORGANICO', 'ORGÂNICO', 'ESCRITORIO', 'ESCRITÓRIO', 'INDICACAO', 'INDICAÇÃO'].some(k => notes.includes(k))) {
         origem = 'ORGANICO';
