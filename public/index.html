@@ -531,6 +531,10 @@
     .fin-table tr:last-child td { border-bottom:none; }
     .fin-table tr.clickable-row { cursor:pointer; }
     .fin-table tr.clickable-row:hover td { background:#f7f7f7; }
+    .fin-table tr.clickable-row td a.cell-link {
+      display:block; color:inherit; text-decoration:none;
+      margin:-8px; padding:8px;
+    }
     .fin-badge { display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.04em; }
     .fin-badge-R { background:#f0faf5;color:#2d6a4f; }
     .fin-badge-D { background:#fff0f0;color:#c0392b; }
@@ -1419,13 +1423,13 @@
         const cls  = l.diasParado > 90 ? 'danger' : l.diasParado > 30 ? 'warning' : '';
         const link = `https://app.advbox.com.br/${l.id}`;
         const nome = clientName(l);
-        return `<tr class="clickable-row" onclick="window.open('${link}','_blank')">
-          <td>${nome}</td>
-          <td>${l.type || '—'}</td>
-          <td>${l.stage || '—'}</td>
-          <td class="${cls}" style="font-weight:600">${dias}d</td>
-          <td>${l.responsible || '—'}</td>
-          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">AdvBox ↗</a></td>
+        return `<tr class="clickable-row">
+          <td><a class="cell-link" href="${link}" target="_blank">${nome}</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${l.type || '—'}</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${l.stage || '—'}</a></td>
+          <td class="${cls}" style="font-weight:600"><a class="cell-link" href="${link}" target="_blank">${dias}d</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${l.responsible || '—'}</a></td>
+          <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
         </tr>`;
       }).join('');
       const total = sorted.length;
@@ -1566,12 +1570,12 @@
         const nome = clientName(l);
         const link = `https://app.advbox.com.br/${l.id}`;
         const dias = l.diasParado === 9999 ? '?' : l.diasParado;
-        return `<tr class="clickable-row" onclick="window.open('${link}','_blank')">
-          <td>${nome}</td>
-          <td>${l.type || '—'}</td>
-          <td>${l.stage || '—'}</td>
-          <td>${dias}d</td>
-          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
+        return `<tr class="clickable-row">
+          <td><a class="cell-link" href="${link}" target="_blank">${nome}</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${l.type || '—'}</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${l.stage || '—'}</a></td>
+          <td><a class="cell-link" href="${link}" target="_blank">${dias}d</a></td>
+          <td><a href="${link}" target="_blank" class="advbox-link">↗</a></td>
         </tr>`;
       }).join('');
       document.getElementById('prodDetailContent').innerHTML = list.length
@@ -1623,12 +1627,18 @@
 
       const rows = recentes.map(t => {
         const href = t.lawsuits_id ? `https://app.advbox.com.br/${t.lawsuits_id}` : null;
-        const linkCell = href ? `<a href="${href}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a>` : '—';
+        const rowClass = href ? 'clickable-row' : '';
         const cliente = t.lawsuit?.customers?.[0]?.name || '—';
         const dt = t.completedAt ? t.completedAt.substring(0,10) : '—';
-        const rowClass = href ? 'clickable-row' : '';
-        const rowClick = href ? `onclick="window.open('${href}','_blank')"` : '';
-        return `<tr class="${rowClass}" ${rowClick}><td>${t.user}</td><td>${dt}</td><td style="max-width:260px;white-space:normal">${t.task||'—'}</td><td>${cliente}</td><td>${linkCell}</td></tr>`;
+        const c = (v) => href ? `<a class="cell-link" href="${href}" target="_blank">${v}</a>` : v;
+        const linkCell = href ? `<a href="${href}" target="_blank" class="advbox-link">↗</a>` : '—';
+        return `<tr class="${rowClass}">
+          <td>${c(t.user)}</td>
+          <td>${c(dt)}</td>
+          <td style="max-width:260px;white-space:normal">${c(t.task||'—')}</td>
+          <td>${c(cliente)}</td>
+          <td>${linkCell}</td>
+        </tr>`;
       }).join('');
 
       document.getElementById('tarefasSection').innerHTML = `
