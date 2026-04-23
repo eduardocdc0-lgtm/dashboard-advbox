@@ -1838,10 +1838,11 @@
         const labels = Object.keys(porFase);
         const values = Object.values(porFase);
 
-        // A RECEBER = soma de fees_money dos processos que NÃO estão em "IGNORAR" ou "ARQUIVADO"
+        // A RECEBER = soma de fees_money — exclui todas as etapas de arquivamento/encerramento
+        const _EXCLUIR_RECEBER = ['IGNORAR','ARQUIV','CANCELADO','AGUARDAR DATA','NÃO DISTRIBUÍDO'];
         _aReceberLawsuits = lawsuits.filter(l => {
           const etapa = (l.stage || l.step || '').toUpperCase();
-          return !etapa.includes('IGNORAR') && !etapa.includes('ARQUIV');
+          return !_EXCLUIR_RECEBER.some(k => etapa.includes(k));
         }).sort((a, b) => Number(b.fees_money || 0) - Number(a.fees_money || 0));
         const aReceberTotal = _aReceberLawsuits.reduce((sum, l) => sum + Number(l.fees_money || 0), 0);
         document.getElementById('aReceber').textContent = formatMoney(aReceberTotal);
