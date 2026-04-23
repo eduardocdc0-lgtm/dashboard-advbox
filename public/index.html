@@ -1244,7 +1244,7 @@
       'AGUARDANDO JULGAMENTO DO RECURSO','COM PRAZO','PROTOCOLADO JUDICIAL',
       'PROTOCOLADO','SALARIO MATERNIDADE 3~ 5 MESES','SALARIO MATERNIDADE 3~5 MESES'
     ];
-    const FLUXO_CAT2_CONTAINS = ['ARQUIVAD','ENCERRAD'];
+    const FLUXO_CAT2_CONTAINS = ['ARQUIV','ENCERR','FINALIZAD','CONCLU','BAIXADO','IMPLANTAD'];
 
     function fluxoNorm(s) {
       return (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -1268,8 +1268,12 @@
         if (!lastMov[lid] || m.date > lastMov[lid]) lastMov[lid] = m.date;
       });
 
-      // Filtra processos que o AdvBox já marcou como encerrados (exit_*)
-      const base = allLawsuitsData.filter(l => !l.exit_production && !l.exit_execution);
+      // Filtra processos que o AdvBox já marcou como encerrados (exit_* ou status_closure)
+      const total = allLawsuitsData.length;
+      const base = allLawsuitsData.filter(l =>
+        !l.exit_production && !l.exit_execution && !l.status_closure
+      );
+      const exclAdvbox = total - base.length;
 
       // Enriquece com diasParado + categoria
       const enriched = base.map(l => ({
@@ -1282,7 +1286,18 @@
       // Separa categorias
       const cat3 = enriched.filter(l => l.cat === 3); // parados de verdade
       const cat1 = enriched.filter(l => l.cat === 1); // espera externa
-      const cat2 = enriched.filter(l => l.cat === 2); // encerrados (etapa)
+      const cat2 = enriched.filter(l => l.cat === 2); // encerrados pela etapa
+
+      // Log de validação
+      console.log(
+        `[Fluxo] Total: ${total} | Excluídos pelo AdvBox (exit/closure): ${exclAdvbox} | ` +
+        `Excluídos pela etapa (cat2): ${cat2.length} | ` +
+        `Espera externa (cat1): ${cat1.length} | ` +
+        `Ação do escritório (cat3): ${cat3.length}`
+      );
+      // Mostra etapas que cayam no cat2 para auditoria
+      const etapasCat2 = [...new Set(cat2.map(l => l.step || l.stage || '(sem etapa)'))].sort();
+      console.log('[Fluxo] Etapas excluídas por cat2:', etapasCat2);
 
       fluxoLawsuitsParados = cat3; // usado pelo filtro e CSV
 
