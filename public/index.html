@@ -664,6 +664,44 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── MODAL A RECEBER ── */
+    .ar-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center;
+    }
+    .ar-overlay.open { display: flex; }
+    .ar-modal {
+      background: var(--bg); border-radius: 12px; width: 90%; max-width: 860px;
+      max-height: 88vh; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .ar-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+    }
+    .ar-modal-header h2 { font-family: 'DM Serif Display', serif; font-size: 18px; margin: 0; }
+    .ar-modal-close {
+      background: none; border: none; font-size: 22px; cursor: pointer;
+      color: var(--text-2); line-height: 1; padding: 2px 6px; border-radius: 4px;
+    }
+    .ar-modal-close:hover { background: var(--hover); }
+    .ar-modal-body { overflow-y: auto; padding: 0; flex: 1; }
+    .ar-modal-footer {
+      padding: 12px 22px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-2); display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .ar-search {
+      padding: 8px 22px 10px; border-bottom: 1px solid var(--border);
+    }
+    .ar-search input {
+      width: 100%; padding: 7px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+      border: 1px solid var(--border); border-radius: 6px; background: var(--hover);
+      color: var(--text); outline: none;
+    }
+    .ar-search input:focus { border-color: #999; }
   </style>
 </head>
 <body>
@@ -701,8 +739,8 @@
           <div class="metric-label">Tarefas pendentes</div>
           <div class="metric-value warning" id="tarefasPendentes">-</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">A receber</div>
+        <div class="metric-card" onclick="openAReceberModal()" style="cursor:pointer;" title="Clique para ver os processos">
+          <div class="metric-label">A receber <span style="font-size:10px;color:#bbb;">↗</span></div>
           <div class="metric-value success" id="aReceber">-</div>
           <div style="font-size:10px;color:#aaa;margin-top:2px;">honorários contratados — excl. arquivados e ignorados</div>
         </div>
@@ -1782,6 +1820,7 @@
     }
 
     let allLawsuitsData = [];
+    let _aReceberLawsuits = [];
 
     async function loadLawsuits() {
       try {
@@ -1800,12 +1839,11 @@
         const values = Object.values(porFase);
 
         // A RECEBER = soma de fees_money dos processos que NÃO estão em "IGNORAR" ou "ARQUIVADO"
-        const aReceberTotal = lawsuits
-          .filter(l => {
-            const etapa = (l.stage || l.step || '').toUpperCase();
-            return !etapa.includes('IGNORAR') && !etapa.includes('ARQUIV');
-          })
-          .reduce((sum, l) => sum + Number(l.fees_money || 0), 0);
+        _aReceberLawsuits = lawsuits.filter(l => {
+          const etapa = (l.stage || l.step || '').toUpperCase();
+          return !etapa.includes('IGNORAR') && !etapa.includes('ARQUIV');
+        }).sort((a, b) => Number(b.fees_money || 0) - Number(a.fees_money || 0));
+        const aReceberTotal = _aReceberLawsuits.reduce((sum, l) => sum + Number(l.fees_money || 0), 0);
         document.getElementById('aReceber').textContent = formatMoney(aReceberTotal);
 
         if (chartFases) chartFases.destroy();
@@ -2682,7 +2720,83 @@
       }
     }
 
+    // ── MODAL A RECEBER ──────────────────────────────────────────────────────
+    function openAReceberModal() {
+      if (!_aReceberLawsuits.length) return;
+      _arRenderTable('');
+      document.getElementById('arOverlay').classList.add('open');
+      document.getElementById('arSearch').focus();
+    }
+
+    function closeAReceberModal() {
+      document.getElementById('arOverlay').classList.remove('open');
+    }
+
+    function _arRenderTable(q) {
+      const term = q.toLowerCase();
+      const lista = _aReceberLawsuits.filter(l => {
+        if (!term) return true;
+        const cliente = (l.customers?.[0]?.name || '').toLowerCase();
+        const etapa   = (l.stage || l.step || '').toLowerCase();
+        const resp    = (l.responsible || '').toLowerCase();
+        return cliente.includes(term) || etapa.includes(term) || resp.includes(term);
+      });
+
+      const total = lista.reduce((s, l) => s + Number(l.fees_money || 0), 0);
+      const rows  = lista.map(l => {
+        const href    = l.id ? `https://app.advbox.com.br/${l.id}` : null;
+        const cliente = l.customers?.[0]?.name || '—';
+        const etapa   = l.stage || l.step || '—';
+        const resp    = l.responsible || '—';
+        const valor   = Number(l.fees_money || 0);
+        const c       = v => href ? `<a class="cell-link" href="${href}" target="_blank">${v}</a>` : v;
+        const link    = href ? `<a href="${href}" target="_blank" class="advbox-link">↗</a>` : '';
+        return `<tr class="${href ? 'clickable-row' : ''}">
+          <td style="max-width:220px;white-space:normal">${c(cliente)}</td>
+          <td>${c(etapa)}</td>
+          <td>${c(resp)}</td>
+          <td style="text-align:right">${c(valor > 0 ? formatMoney(valor) : '—')}</td>
+          <td style="width:32px">${link}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('arTableWrap').innerHTML = `
+        <table class="fin-table" style="width:100%">
+          <thead><tr>
+            <th>Cliente</th><th>Fase</th><th>Responsável</th>
+            <th style="text-align:right">Honorários</th><th></th>
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:24px">Nenhum resultado</td></tr>'}</tbody>
+        </table>`;
+
+      document.getElementById('arFooterCount').textContent =
+        lista.length + ' processo' + (lista.length !== 1 ? 's' : '');
+      document.getElementById('arFooterTotal').textContent =
+        'Total: ' + formatMoney(total);
+    }
+
     loadAll();
   </script>
+
+  <!-- Modal A Receber -->
+  <div class="ar-overlay" id="arOverlay" onclick="if(event.target===this)closeAReceberModal()">
+    <div class="ar-modal">
+      <div class="ar-modal-header">
+        <h2>Processos — A Receber</h2>
+        <button class="ar-modal-close" onclick="closeAReceberModal()">×</button>
+      </div>
+      <div class="ar-search">
+        <input id="arSearch" type="text" placeholder="Buscar por cliente, fase ou responsável…"
+          oninput="_arRenderTable(this.value)">
+      </div>
+      <div class="ar-modal-body">
+        <div id="arTableWrap"></div>
+      </div>
+      <div class="ar-modal-footer">
+        <span id="arFooterCount"></span>
+        <strong id="arFooterTotal"></strong>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
