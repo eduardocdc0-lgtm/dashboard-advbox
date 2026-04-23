@@ -1360,7 +1360,7 @@
 
       renderGargalos(cat3, cat1);
       renderParadosTable(cat3);
-      renderProdutividade(cat3, cat1);
+      renderProdutividade(cat3, cat1, posts);
       renderTarefas(posts);
     }
 
@@ -1459,44 +1459,75 @@
       a.click();
     }
 
-    function renderProdutividade(cat3, cat1) {
-      // Agrupa cat3 por responsável (ação do escritório)
+    function renderProdutividade(cat3, cat1, posts) {
+      // ── Tarefas concluídas por responsável (semana / mês) ──────────────────
+      const now30 = Date.now() - 30*86400000;
+      const now7  = Date.now() - 7*86400000;
+      const tfByUser = {}; // chave = primeiro nome em maiúsculo
+      (posts || []).flatMap(p =>
+        (p.users || []).filter(u => u.completed).map(u => ({ user: u.name, at: u.completed }))
+      ).forEach(t => {
+        const key = (t.user || '').toUpperCase().split(' ')[0].trim();
+        if (!tfByUser[key]) tfByUser[key] = { semana: 0, mes: 0 };
+        const dt = new Date(t.at).getTime();
+        if (dt >= now7)  tfByUser[key].semana++;
+        if (dt >= now30) tfByUser[key].mes++;
+      });
+
+      // ── Agrupa cat3 por responsável ────────────────────────────────────────
       const byResp = {};
       cat3.forEach(l => {
         const r = l.responsible || '(sem responsável)';
-        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, espera60: 0, list: [] };
+        if (!byResp[r]) byResp[r] = { name: r, par60: 0, espera60: 0, list: [] };
         byResp[r].list.push(l);
-        if (l.diasParado <= 7)  byResp[r].semana++;
-        if (l.diasParado <= 30) byResp[r].mes++;
-        if (l.diasParado > 60)  byResp[r].par60++;
+        if (l.diasParado > 60) byResp[r].par60++;
       });
-      // Soma espera externa por responsável (não conta no score, mas exibe)
       cat1.forEach(l => {
         const r = l.responsible || '(sem responsável)';
-        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, espera60: 0, list: [] };
+        if (!byResp[r]) byResp[r] = { name: r, par60: 0, espera60: 0, list: [] };
         if (l.diasParado > 60) byResp[r].espera60++;
       });
 
       const cards = Object.values(byResp).sort((a,b) => b.list.length - a.list.length);
+
       const html = cards.map((p, idx) => {
-        const ratio = p.par60 === 0 ? 99 : p.mes / p.par60;
-        const saude = ratio > 1 ? 'green' : ratio >= 0.5 ? 'yellow' : 'red';
+        const key = p.name.toUpperCase().split(' ')[0].trim();
+        const tf  = tfByUser[key] || { semana: 0, mes: 0 };
+
+        // Andamentos tribunal (contagem de processos que moveram recentemente)
+        const tribSemana = p.list.filter(l => l.diasParado <= 7).length;
+        const tribMes    = p.list.filter(l => l.diasParado <= 30).length;
+
+        // Barra de saúde: tarefas concluídas no mês vs parados +60d
+        const ratio = p.par60 === 0 ? 99 : tf.mes / p.par60;
+        const saude = ratio >= 0.5 ? 'green' : ratio >= 0.2 ? 'yellow' : 'red';
+
         const esperaLine = p.espera60 > 0
-          ? `<div class="prod-stat" style="color:var(--text-2);font-size:11px"><span>+ ${p.espera60} em espera externa (não conta)</span></div>`
+          ? `<div class="prod-stat" style="color:var(--text-2);font-size:11px"><span>+ ${p.espera60} em espera externa</span></div>`
           : '';
+
         return `<div class="prod-card" onclick="openProdDetail(${idx})">
           <div class="prod-card-name">${p.name}</div>
           <div class="prod-card-stats">
-            <div class="prod-stat"><span class="prod-stat-label">Moveu esta semana</span><strong>${p.semana}</strong></div>
-            <div class="prod-stat"><span class="prod-stat-label">Moveu este mês</span><strong>${p.mes}</strong></div>
-            <div class="prod-stat"><span class="prod-stat-label">Parados +60d (ação)</span><strong>${p.par60}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Tarefas concluídas na semana</span><strong>${tf.semana}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Tarefas concluídas no mês</span><strong>${tf.mes}</strong></div>
+            <div class="prod-stat" style="color:var(--text-2);font-size:11px"><span class="prod-stat-label">Andamentos na semana (tribunal)</span><strong>${tribSemana}</strong></div>
+            <div class="prod-stat" style="color:var(--text-2);font-size:11px"><span class="prod-stat-label">Andamentos no mês (tribunal)</span><strong>${tribMes}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Sob responsabilidade +60d</span><strong>${p.par60}</strong></div>
             ${esperaLine}
             <div class="prod-stat"><span class="prod-stat-label">Total com ação pendente</span><strong>${p.list.length}</strong></div>
           </div>
-          <div class="prod-health ${saude}"></div>
+          <div class="prod-health ${saude}" title="Saúde: tarefas concluídas no mês (${tf.mes}) vs parados +60d (${p.par60})"></div>
         </div>`;
       });
-      document.getElementById('prodGrid').innerHTML = html.join('') || '<div class="loading">Sem dados</div>';
+
+      const nota = `<div class="fluxo-notice" style="margin-bottom:16px;font-size:12px;color:var(--text-2);">
+        Cards baseados nas tarefas concluídas registradas no AdvBox. Quem não marca concluído aparece com contagem baixa.
+        Andamentos (tribunal) refletem movimentações processuais externas.
+      </div>`;
+
+      document.getElementById('prodGrid').innerHTML =
+        nota + (html.join('') || '<div class="loading">Sem dados</div>');
       window._prodCards = cards;
     }
 
