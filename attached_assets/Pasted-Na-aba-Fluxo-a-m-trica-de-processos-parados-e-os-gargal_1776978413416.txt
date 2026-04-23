@@ -1,0 +1,66 @@
+Na aba "Fluxo", a métrica de "processos parados" e os gargalos estão 
+inflados porque incluem etapas que não são gargalo real. Precisa 
+separar em 3 categorias:
+
+CATEGORIA 1 — EM ESPERA EXTERNA (não contar como parado):
+Nestas etapas, o escritório não pode fazer nada além de aguardar. 
+NÃO contar como "processo parado" nem em gargalo:
+- PERICIAS MARCADAS
+- PERICIA MEDICA MARCADA
+- PERICIA SOCIAL MARCADA  
+- PERICIA MARCADA/SEM DATA DE AVALIAÇÃO
+- EM ANALISE PERICIAS FEITAS
+- AGUARDANDO JULGAMENTO DO RECURSO
+- COM PRAZO
+- PROTOCOLADO JUDICIAL (já foi protocolado, aguarda juiz distribuir)
+- PROTOCOLADO (mesma lógica)
+- SALARIO MATERNIDADE 3~ 5 MESES (aguardando mãe atingir mês certo)
+
+CATEGORIA 2 — ENCERRADOS (remover completamente das contagens):
+Qualquer processo com:
+- Data de arquivamento preenchida
+- Data de trânsito em julgado preenchida (SEM estar "SENTENÇA PROCEDENTE A IMPLANTAR" — porque esse ainda tem ação pendente)
+- Etapa contendo "ARQUIVAD" (ex: "ARQUIVADO", "ARQUIVAMENTO")
+- Etapa contendo "ENCERRAD"
+
+Esses processos NÃO devem aparecer em:
+- Cards de "parados +30d / +90d / +60d"
+- Lista de gargalos por etapa
+- Top 20 mais parados
+- Cards de "parados +60d" na Seção 2 (produtividade)
+
+CATEGORIA 3 — PARADOS DE VERDADE (essas sim entram na conta):
+Etapas onde o escritório tem responsabilidade ativa e processo não andou:
+- ELABORAR PETIÇÃO INICIAL
+- PARA DAR ENTRADA
+- FALTA LAUDO - FAZER PREVDOC
+- PROCESSOS SEM LAUDOS
+- SENTENÇA PROCEDENTE A IMPLANTAR (precisa implantar)
+- RECURSO PROTOCOLADO/INICIADO (precisa acompanhar)
+- RECURSO JULGADO (ENTRE EM CONTATO CONOSCO)
+- ADM PARCELADO (acompanhar parcelas)
+- SALARIO MATERNIDADE PARCELADO
+- SALARIO MATERNIDADE GUIA PAGA
+- TRABALHISTA (se está ativo)
+- Qualquer outra etapa NÃO listada nas categorias 1 e 2
+
+MUDANÇAS NA INTERFACE:
+
+1. Nos cards de topo, adicionar uma seção informativa abaixo:
+   "X em espera externa (perícia marcada, aguardando juiz)"
+   "Y encerrados (excluídos da contagem)"
+   Isso explica pra quem lê.
+
+2. No gargalo por etapa, adicionar uma pequena tag na barra:
+   - 🔴 "Ação do escritório" (categoria 3)
+   - 🟡 "Espera externa" (categoria 1)
+   - Etapas categoria 2 simplesmente não aparecem
+
+3. Manter a categoria 1 visível mas SEPARADA, porque ainda é bom 
+   saber (ex: "tem 65 perícias marcadas, precisa acompanhar datas").
+
+4. Na Seção 2 (produtividade), "parados +60d" só conta categoria 3.
+   Adicionar um número menor embaixo: "X em espera externa 
+   (não contabilizado)".
+
+Não mexa em mais nada no dashboard.

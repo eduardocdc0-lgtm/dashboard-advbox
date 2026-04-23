@@ -176,6 +176,15 @@
     /* Nota de limitação */
     .fluxo-notice { font-size: 12px; color: var(--text-2); background: #f9f9f9; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-top: 14px; }
     .fluxo-notice strong { color: var(--text); }
+    /* Info row abaixo dos cards */
+    .fluxo-info-row { display: flex; gap: 10px; margin: 10px 0 0; flex-wrap: wrap; }
+    .fluxo-info-tag { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+    .fluxo-info-tag.cat1 { background: #fff8e1; color: #7a5000; border: 1px solid #ffe082; }
+    .fluxo-info-tag.cat2 { background: #f5f5f5; color: #666; border: 1px solid #ddd; }
+    /* Tags de categoria no gargalo */
+    .gargalo-tag { font-size: 10px; padding: 2px 6px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+    .gargalo-tag.acao { background: #fde8e8; color: #c0392b; }
+    .gargalo-tag.espera { background: #fff8e1; color: #7a5000; }
 
     .metric-label {
       font-size: 11px;
@@ -938,22 +947,29 @@
         </div>
       </div>
 
+      <!-- Info row -->
+      <div class="fluxo-info-row" id="flxInfoRow" style="display:none">
+        <span class="fluxo-info-tag cat1" id="flxInfoCat1">—</span>
+        <span class="fluxo-info-tag cat2" id="flxInfoCat2">—</span>
+      </div>
+
       <div class="fluxo-notice">
-        <strong>Como é calculado:</strong> "Movimentação" = presença nos andamentos tribunais retornados pela API AdvBox. Processos sem registro de andamento nos últimos 500 captados são classificados como parados — pode haver andamentos internos não refletidos aqui.
+        <strong>Como é calculado:</strong> "Movimentação" = presença nos andamentos tribunais. "Parado de verdade" = etapa com responsabilidade ativa do escritório, excluindo esperas externas e encerrados.
       </div>
 
       <!-- Gargalos -->
-      <div class="fluxo-section-title">Gargalos por etapa</div>
+      <div class="fluxo-section-title">Gargalos por etapa (ação do escritório + espera externa)</div>
       <div class="card" style="padding:0 18px;">
         <div id="gargaloList"><div class="loading">Carregando...</div></div>
       </div>
 
       <!-- Top 20 parados -->
-      <div class="fluxo-section-title">
-        Top 20 processos mais parados
-        <select class="reg-filter" id="flxRespFiltro" onchange="applyFlxFilter()" style="margin-left:16px;font-size:11px;">
+      <div class="fluxo-section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>Processos parados (ação do escritório)</span>
+        <select class="reg-filter" id="flxRespFiltro" onchange="applyFlxFilter()" style="font-size:11px;">
           <option value="">Todos os responsáveis</option>
         </select>
+        <button class="dist-export-btn" onclick="exportFluxoCsv()" style="margin-left:auto;">Exportar CSV</button>
       </div>
       <div class="card" style="padding:0;">
         <table class="fin-table">
@@ -1221,10 +1237,28 @@
       }
     }
 
+    // ── Categorização de etapas ──────────────────────────────────────────────
+    const FLUXO_CAT1_ETAPAS = [
+      'PERICIAS MARCADAS','PERICIA MEDICA MARCADA','PERICIA SOCIAL MARCADA',
+      'PERICIA MARCADA/SEM DATA DE AVALIACAO','EM ANALISE PERICIAS FEITAS',
+      'AGUARDANDO JULGAMENTO DO RECURSO','COM PRAZO','PROTOCOLADO JUDICIAL',
+      'PROTOCOLADO','SALARIO MATERNIDADE 3~ 5 MESES','SALARIO MATERNIDADE 3~5 MESES'
+    ];
+    const FLUXO_CAT2_CONTAINS = ['ARQUIVAD','ENCERRAD'];
+
+    function fluxoNorm(s) {
+      return (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    }
+    function fluxoCat(l) {
+      const etapa = fluxoNorm(l.step || l.stage || '');
+      if (FLUXO_CAT2_CONTAINS.some(k => etapa.includes(k))) return 2;
+      if (FLUXO_CAT1_ETAPAS.some(k => fluxoNorm(k) === etapa)) return 1;
+      return 3;
+    }
+
     function renderFluxo() {
       if (!fluxoData || !allLawsuitsData.length) return;
       const { movements, posts } = fluxoData;
-      const now = Date.now();
 
       // Mapa lawsuit_id → data mais recente de andamento
       const lastMov = {};
@@ -1234,60 +1268,87 @@
         if (!lastMov[lid] || m.date > lastMov[lid]) lastMov[lid] = m.date;
       });
 
-      // Filtra apenas processos ativos (não encerrados)
-      const ativos = allLawsuitsData.filter(l => !l.exit_production && !l.exit_execution);
+      // Filtra processos que o AdvBox já marcou como encerrados (exit_*)
+      const base = allLawsuitsData.filter(l => !l.exit_production && !l.exit_execution);
 
-      // Enriquece cada processo com diasParado
-      const paradosList = ativos.map(l => {
-        const d = daysDiff(lastMov[l.id]);
-        return { ...l, diasParado: d, lastMovDate: lastMov[l.id] || null };
-      });
+      // Enriquece com diasParado + categoria
+      const enriched = base.map(l => ({
+        ...l,
+        diasParado: daysDiff(lastMov[l.id]),
+        lastMovDate: lastMov[l.id] || null,
+        cat: fluxoCat(l)
+      }));
 
-      fluxoLawsuitsParados = paradosList;
+      // Separa categorias
+      const cat3 = enriched.filter(l => l.cat === 3); // parados de verdade
+      const cat1 = enriched.filter(l => l.cat === 1); // espera externa
+      const cat2 = enriched.filter(l => l.cat === 2); // encerrados (etapa)
 
-      // Cards
-      const semana = paradosList.filter(l => l.diasParado <= 7).length;
-      const mes    = paradosList.filter(l => l.diasParado <= 30).length;
-      const p30    = paradosList.filter(l => l.diasParado > 30).length;
-      const p90    = paradosList.filter(l => l.diasParado > 90).length;
-      document.getElementById('flxSemana').textContent = semana;
-      document.getElementById('flxMes').textContent    = mes;
-      document.getElementById('flxP30').textContent    = p30;
-      document.getElementById('flxP90').textContent    = p90;
+      fluxoLawsuitsParados = cat3; // usado pelo filtro e CSV
 
-      // Responsáveis para filtro
-      const resps = [...new Set(ativos.map(l => l.responsible).filter(Boolean))].sort();
+      // Cards — baseados apenas em cat3
+      document.getElementById('flxSemana').textContent = cat3.filter(l => l.diasParado <= 7).length;
+      document.getElementById('flxMes').textContent    = cat3.filter(l => l.diasParado <= 30).length;
+      document.getElementById('flxP30').textContent    = cat3.filter(l => l.diasParado > 30).length;
+      document.getElementById('flxP90').textContent    = cat3.filter(l => l.diasParado > 90).length;
+
+      // Info row
+      const infoRow = document.getElementById('flxInfoRow');
+      document.getElementById('flxInfoCat1').textContent =
+        `${cat1.length} em espera externa (perícia marcada, aguardando juiz)`;
+      document.getElementById('flxInfoCat2').textContent =
+        `${cat2.length} encerrados pela etapa (excluídos da contagem)`;
+      infoRow.style.display = 'flex';
+
+      // Filtro de responsáveis (cat3)
+      const resps = [...new Set(cat3.map(l => l.responsible).filter(Boolean))].sort();
       const sel = document.getElementById('flxRespFiltro');
       sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
         resps.map(r => `<option>${r}</option>`).join('');
 
-      // Renderiza gargalos e tabela
-      renderGargalos(paradosList);
-      renderParadosTable(paradosList);
-      renderProdutividade(paradosList);
+      renderGargalos(cat3, cat1);
+      renderParadosTable(cat3);
+      renderProdutividade(cat3, cat1);
       renderTarefas(posts);
     }
 
-    function renderGargalos(paradosList) {
-      // Agrupa por etapa
-      const stepMap = {};
-      paradosList.forEach(l => {
-        const s = l.step || l.stage || '(sem etapa)';
-        if (!stepMap[s]) stepMap[s] = { cnt: 0, diasTotal: 0 };
-        stepMap[s].cnt++;
-        stepMap[s].diasTotal += l.diasParado === 9999 ? 180 : l.diasParado;
-      });
-      const rows = Object.entries(stepMap)
-        .map(([s, v]) => ({ etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal / v.cnt) }))
-        .sort((a, b) => b.cnt - a.cnt)
-        .slice(0, 15);
-      const maxCnt = rows[0]?.cnt || 1;
-      const html = rows.map(r => {
+    function renderGargalos(cat3, cat1) {
+      function buildMap(list, catNum) {
+        const m = {};
+        list.forEach(l => {
+          const s = l.step || l.stage || '(sem etapa)';
+          if (!m[s]) m[s] = { cnt: 0, diasTotal: 0, cat: catNum };
+          m[s].cnt++;
+          m[s].diasTotal += l.diasParado === 9999 ? 180 : l.diasParado;
+        });
+        return m;
+      }
+      const map3 = buildMap(cat3, 3);
+      const map1 = buildMap(cat1, 1);
+
+      // Junta: cat3 primeiro (ação), depois cat1 (espera)
+      const rows3 = Object.entries(map3).map(([s,v]) => ({
+        etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal/v.cnt), cat: 3
+      })).sort((a,b) => b.cnt - a.cnt).slice(0, 12);
+
+      const rows1 = Object.entries(map1).map(([s,v]) => ({
+        etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal/v.cnt), cat: 1
+      })).sort((a,b) => b.cnt - a.cnt).slice(0, 5);
+
+      const allRows = [...rows3, ...rows1];
+      const maxCnt = Math.max(...allRows.map(r => r.cnt), 1);
+
+      const html = allRows.map(r => {
         const pct = (r.cnt / maxCnt * 100).toFixed(1);
         const avgTxt = r.avg >= 9999 ? '—' : `média ${r.avg}d`;
+        const barColor = r.cat === 3 ? '#c0392b' : '#f39c12';
+        const tag = r.cat === 3
+          ? `<span class="gargalo-tag acao">Ação do escritório</span>`
+          : `<span class="gargalo-tag espera">Espera externa</span>`;
         return `<div class="gargalo-row">
           <div class="gargalo-etapa" title="${r.etapa}">${r.etapa}</div>
-          <div class="gargalo-bar-wrap"><div class="gargalo-bar-fill" style="width:${pct}%"></div></div>
+          ${tag}
+          <div class="gargalo-bar-wrap"><div class="gargalo-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
           <div class="gargalo-cnt">${r.cnt}</div>
           <div class="gargalo-days">${avgTxt}</div>
         </div>`;
@@ -1295,11 +1356,11 @@
       document.getElementById('gargaloList').innerHTML = html || '<div class="loading">Sem dados</div>';
     }
 
-    function renderParadosTable(paradosList, filtroResp) {
-      let lista = [...paradosList].sort((a, b) => b.diasParado - a.diasParado);
-      if (filtroResp) lista = lista.filter(l => l.responsible === filtroResp);
-      lista = lista.slice(0, 20);
-      const rows = lista.map(l => {
+    function renderParadosTable(lista, filtroResp) {
+      let sorted = [...lista].sort((a, b) => b.diasParado - a.diasParado);
+      if (filtroResp) sorted = sorted.filter(l => l.responsible === filtroResp);
+      const top = sorted.slice(0, 20);
+      const rows = top.map(l => {
         const dias = l.diasParado === 9999 ? '?' : l.diasParado;
         const cls  = l.diasParado > 90 ? 'danger' : l.diasParado > 30 ? 'warning' : '';
         const link = `https://app.advbox.com.br/${l.id}`;
@@ -1313,7 +1374,12 @@
           <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
         </tr>`;
       }).join('');
-      document.getElementById('flxParadosBody').innerHTML = rows || '<tr><td colspan="6">Nenhum processo</td></tr>';
+      const total = sorted.length;
+      const footer = total > 20
+        ? `<tr><td colspan="6" style="text-align:center;font-size:11px;color:var(--text-2);padding:10px">Mostrando 20 de ${total} — use "Exportar CSV" para ver todos</td></tr>`
+        : '';
+      document.getElementById('flxParadosBody').innerHTML =
+        rows ? rows + footer : '<tr><td colspan="6">Nenhum processo</td></tr>';
     }
 
     function applyFlxFilter() {
@@ -1321,27 +1387,59 @@
       renderParadosTable(fluxoLawsuitsParados, v);
     }
 
-    function renderProdutividade(paradosList) {
+    function exportFluxoCsv() {
+      const lista = [...fluxoLawsuitsParados].sort((a, b) => b.diasParado - a.diasParado);
+      const rows = [['Cliente','Tipo','Etapa','Responsável','Dias parado','Link AdvBox']];
+      lista.forEach(l => {
+        rows.push([
+          clientName(l),
+          l.type || '',
+          l.step || l.stage || '',
+          l.responsible || '',
+          l.diasParado === 9999 ? '' : l.diasParado,
+          `https://app.advbox.com.br/${l.id}`
+        ]);
+      });
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'processos_parados_escritorio.csv';
+      a.click();
+    }
+
+    function renderProdutividade(cat3, cat1) {
+      // Agrupa cat3 por responsável (ação do escritório)
       const byResp = {};
-      paradosList.forEach(l => {
+      cat3.forEach(l => {
         const r = l.responsible || '(sem responsável)';
-        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, list: [] };
+        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, espera60: 0, list: [] };
         byResp[r].list.push(l);
         if (l.diasParado <= 7)  byResp[r].semana++;
         if (l.diasParado <= 30) byResp[r].mes++;
         if (l.diasParado > 60)  byResp[r].par60++;
       });
+      // Soma espera externa por responsável (não conta no score, mas exibe)
+      cat1.forEach(l => {
+        const r = l.responsible || '(sem responsável)';
+        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, espera60: 0, list: [] };
+        if (l.diasParado > 60) byResp[r].espera60++;
+      });
+
       const cards = Object.values(byResp).sort((a,b) => b.list.length - a.list.length);
       const html = cards.map((p, idx) => {
         const ratio = p.par60 === 0 ? 99 : p.mes / p.par60;
         const saude = ratio > 1 ? 'green' : ratio >= 0.5 ? 'yellow' : 'red';
+        const esperaLine = p.espera60 > 0
+          ? `<div class="prod-stat" style="color:var(--text-2);font-size:11px"><span>+ ${p.espera60} em espera externa (não conta)</span></div>`
+          : '';
         return `<div class="prod-card" onclick="openProdDetail(${idx})">
           <div class="prod-card-name">${p.name}</div>
           <div class="prod-card-stats">
             <div class="prod-stat"><span class="prod-stat-label">Moveu esta semana</span><strong>${p.semana}</strong></div>
             <div class="prod-stat"><span class="prod-stat-label">Moveu este mês</span><strong>${p.mes}</strong></div>
-            <div class="prod-stat"><span class="prod-stat-label">Parados +60d</span><strong>${p.par60}</strong></div>
-            <div class="prod-stat"><span class="prod-stat-label">Total ativos</span><strong>${p.list.length}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Parados +60d (ação)</span><strong>${p.par60}</strong></div>
+            ${esperaLine}
+            <div class="prod-stat"><span class="prod-stat-label">Total com ação pendente</span><strong>${p.list.length}</strong></div>
           </div>
           <div class="prod-health ${saude}"></div>
         </div>`;
