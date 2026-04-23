@@ -358,14 +358,33 @@
       padding: 12px 20px; border-bottom: 1px solid var(--border);
       background: var(--hover);
     }
+    .dist-top-bar {
+      display: flex; justify-content: flex-end; padding: 12px 0 8px;
+    }
+    .dist-export-all-btn {
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 6px;
+      font-size: 12px; font-weight: 600; padding: 7px 16px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; letter-spacing: .03em;
+    }
+    .dist-export-all-btn:hover { opacity: .82; }
     .dist-export-btn {
-      margin-left: auto;
       background: var(--text); color: var(--bg);
       border: none; border-radius: 6px;
       font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer;
       font-family: 'DM Sans', sans-serif; letter-spacing: .03em;
+      white-space: nowrap;
     }
     .dist-export-btn:hover { opacity: .85; }
+    .dist-card-export-btn {
+      position: absolute; bottom: 10px; right: 8px;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      font-size: 11px; font-weight: 600; padding: 3px 8px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; opacity: 0;
+      transition: opacity .15s;
+    }
+    .dist-card:hover .dist-card-export-btn { opacity: 1; }
     .dist-table-wrap { overflow-x: auto; }
     table.dist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     table.dist-table th {
@@ -926,13 +945,19 @@
 
     <!-- ABA 9: DISTRIBUIÇÃO -->
     <div id="distribuicao" class="tab-content">
+      <div class="dist-top-bar">
+        <button class="dist-export-all-btn" onclick="exportDistTodos()">⬇ Exportar Todos</button>
+      </div>
       <div class="dist-cards-row" id="distCards">
         <div class="loading">Carregando distribuição...</div>
       </div>
       <div id="distPanel" style="display:none" class="dist-panel">
         <div class="dist-panel-header">
           <span class="dist-panel-title" id="distPanelTitle">—</span>
-          <button class="dist-panel-close" onclick="closeDistPanel()">×</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="dist-export-btn" onclick="exportDistCSV()">⬇ Exportar lista</button>
+            <button class="dist-panel-close" onclick="closeDistPanel()">×</button>
+          </div>
         </div>
         <div class="dist-filters">
           <select class="reg-filter" id="distGrupoFiltro" onchange="applyDistFilter()">
@@ -950,7 +975,6 @@
             <option value="180-365">180 – 365 dias</option>
             <option value="365+">Mais de 1 ano</option>
           </select>
-          <button class="dist-export-btn" onclick="exportDistCSV()">Exportar CSV</button>
         </div>
         <div class="dist-table-wrap">
           <table class="dist-table">
@@ -2579,6 +2603,8 @@
       return `<span class="dist-dias-badge velho">${dias}d</span>`;
     }
 
+    let _distCurrentRows = [];
+
     function renderDistCards() {
       const container = document.getElementById('distCards');
       if (!distData.length) {
@@ -2606,6 +2632,8 @@
             <div class="dist-bar-track">
               <div class="dist-bar-fill ${cls}" style="width:${w}%"></div>
             </div>
+            <button class="dist-card-export-btn" title="Exportar processos ativos"
+              onclick="event.stopPropagation();exportDistCard(${idx})">⬇</button>
           </div>`;
       }).join('');
     }
@@ -2663,6 +2691,7 @@
       if (idade === '365+')    rows = rows.filter(r => r.dias !== null && r.dias >= 365);
 
       // Já ordenado pelo backend: mais antigo primeiro
+      _distCurrentRows = rows;
       const tbody = document.getElementById('distTableBody');
       if (!rows.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="dist-empty">Nenhum processo neste filtro</td></tr>`;
@@ -2690,24 +2719,82 @@
       document.querySelectorAll('.dist-chk').forEach(cb => cb.checked = checked);
     }
 
-    function exportDistCSV() {
-      const checkboxes = document.querySelectorAll('.dist-chk');
-      const selected = [...checkboxes].filter(cb => cb.checked);
-      const rows = selected.length > 0 ? selected : [...checkboxes];
-      if (!rows.length) { alert('Nenhum processo para exportar.'); return; }
+    function _csvEscape(v) {
+      const s = String(v == null ? '' : v);
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s;
+    }
 
-      const lines = ['Processo,Cliente'];
-      rows.forEach(cb => {
-        const proc = (cb.dataset.processo || '').replace(/,/g, ' ');
-        const cli  = (cb.dataset.cliente  || '').replace(/,/g, ' ');
-        lines.push(`${proc},${cli}`);
+    function _buildDistCSV(rows, responsible) {
+      const BOM = '\uFEFF';
+      const header = ['Responsável','Cliente','Nº Processo','Tipo','Fase','Etapa','Dias','Link'].map(_csvEscape).join(',');
+      const lines = [header];
+      rows.forEach(r => {
+        const link = r.id ? `https://app.advbox.com.br/lawsuits/${r.id}` : '';
+        lines.push([
+          responsible || distActiveResp || '',
+          r.cliente || '',
+          r.processo || '',
+          r.tipo || '',
+          r.fase || '',
+          r.etapa || '',
+          r.dias != null ? r.dias : '',
+          link
+        ].map(_csvEscape).join(','));
       });
-      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      return BOM + lines.join('\n');
+    }
+
+    function _downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href = url; a.download = `distribuicao-${distActiveResp || 'processos'}.csv`;
-      a.click();
+      a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function exportDistCSV() {
+      if (!_distCurrentRows.length) { alert('Nenhum processo para exportar.'); return; }
+      const fname = distFirstName(distActiveResp || 'processos').toLowerCase().replace(/\s+/g, '-');
+      _downloadCSV(_buildDistCSV(_distCurrentRows, distActiveResp), `processos-${fname}.csv`);
+    }
+
+    function exportDistCard(idx) {
+      const entry = distData[idx];
+      if (!entry) return;
+      const rows = entry.processes
+        .filter(p => p.grupo === 'ativo')
+        .map(p => ({ ...p, dias: distDias(p.created_at) }));
+      if (!rows.length) { alert('Sem processos ativos para exportar.'); return; }
+      const fname = distFirstName(entry.responsible).toLowerCase().replace(/\s+/g, '-');
+      _downloadCSV(_buildDistCSV(rows, entry.responsible), `processos-${fname}.csv`);
+    }
+
+    function exportDistTodos() {
+      if (!distData.length) { alert('Dados ainda não carregados.'); return; }
+      const BOM = '\uFEFF';
+      const header = ['Responsável','Cliente','Nº Processo','Tipo','Fase','Etapa','Dias','Link'].map(_csvEscape).join(',');
+      const lines = [header];
+      distData.forEach(entry => {
+        const rows = entry.processes
+          .filter(p => p.grupo === 'ativo')
+          .map(p => ({ ...p, dias: distDias(p.created_at) }));
+        rows.forEach(r => {
+          const link = r.id ? `https://app.advbox.com.br/lawsuits/${r.id}` : '';
+          lines.push([
+            entry.responsible,
+            r.cliente || '',
+            r.processo || '',
+            r.tipo || '',
+            r.fase || '',
+            r.etapa || '',
+            r.dias != null ? r.dias : '',
+            link
+          ].map(_csvEscape).join(','));
+        });
+      });
+      _downloadCSV(BOM + lines.join('\n'), 'distribuicao-todos.csv');
     }
 
     async function loadDistribuicao() {
