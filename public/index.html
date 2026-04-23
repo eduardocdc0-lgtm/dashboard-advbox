@@ -655,7 +655,7 @@
       <!-- Evolução -->
       <div class="evo-section">
         <div class="evo-card">
-          <div class="evo-card-title">Novos contratos</div>
+          <div class="evo-card-title">Honorários contratados</div>
           <div class="evo-periods">
             <div>
               <div class="evo-period-label">Últimos 3 meses vs 3 anteriores</div>
@@ -993,14 +993,15 @@
     function renderEvolucao() {
       const currentMes = evoMesKey(new Date());
 
-      // Contratos por mês (created_at)
+      // Honorários contratados por mês (fees_money ou fees_expec, agrupados por created_at)
       const cByMes = {};
       allLawsuitsData.forEach(l => {
         if (!l.created_at) return;
         const d = new Date(l.created_at);
         if (isNaN(d)) return;
         const k = evoMesKey(d);
-        cByMes[k] = (cByMes[k] || 0) + 1;
+        const val = Number(l.fees_money || l.fees_expec || 0);
+        cByMes[k] = (cByMes[k] || 0) + val;
       });
 
       // Faturamento recebido por mês (income pago, by competence)
@@ -1037,8 +1038,8 @@
       const c3 = calcEvo(cByMes, 3); const c6 = calcEvo(cByMes, 6);
       const f3 = calcEvo(fByMes, 3); const f6 = calcEvo(fByMes, 6);
 
-      setPct('evoPct3C', c3.pct); setCmp('evoCmp3C', c3.sumA, c3.sumB, false);
-      setPct('evoPct6C', c6.pct); setCmp('evoCmp6C', c6.sumA, c6.sumB, false);
+      setPct('evoPct3C', c3.pct); setCmp('evoCmp3C', c3.sumA, c3.sumB, true);
+      setPct('evoPct6C', c6.pct); setCmp('evoCmp6C', c6.sumA, c6.sumB, true);
       setPct('evoPct3F', f3.pct); setCmp('evoCmp3F', f3.sumA, f3.sumB, true);
       setPct('evoPct6F', f6.pct); setCmp('evoCmp6F', f6.sumA, f6.sumB, true);
 
@@ -1061,7 +1062,7 @@
       chartEvoC = new Chart(document.getElementById('chartEvoC'), {
         type: 'bar',
         data: { labels: labels6, datasets: [{ data: dataC6, backgroundColor: dataC6.map((_, i) => i === 5 ? '#111' : '#d0d0d0'), borderRadius: 3 }] },
-        options: chartOpts(ctx => ` ${ctx.raw} contratos`)
+        options: chartOpts(ctx => ` ${formatMoney(ctx.raw)}`)
       });
 
       if (chartEvoF) chartEvoF.destroy();
