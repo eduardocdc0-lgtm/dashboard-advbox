@@ -704,7 +704,7 @@
         <div class="metric-card">
           <div class="metric-label">A receber</div>
           <div class="metric-value success" id="aReceber">-</div>
-          <div style="font-size:10px;color:#aaa;margin-top:2px;">honorários dos processos ativos</div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px;">honorários contratados — excl. arquivados e ignorados</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">A pagar</div>
@@ -1799,13 +1799,11 @@
         const labels = Object.keys(porFase);
         const values = Object.values(porFase);
 
-        // A RECEBER = soma de fees_money (honorários contratados) dos processos ativos
+        // A RECEBER = soma de fees_money dos processos que NÃO estão em "IGNORAR" ou "ARQUIVADO"
         const aReceberTotal = lawsuits
           .filter(l => {
-            if (l.exit_production || l.exit_execution || l.status_closure) return false;
             const etapa = (l.stage || l.step || '').toUpperCase();
-            if (FLUXO_CAT2_CONTAINS.some(k => etapa.includes(k))) return false;
-            return true;
+            return !etapa.includes('IGNORAR') && !etapa.includes('ARQUIV');
           })
           .reduce((sum, l) => sum + Number(l.fees_money || 0), 0);
         document.getElementById('aReceber').textContent = formatMoney(aReceberTotal);
