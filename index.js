@@ -7,13 +7,36 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// O token fica guardado aqui, como variável de ambiente (mais seguro)
-const ADVBOX_TOKEN = process.env.ADVBOX_TOKEN || '';
+const ADVBOX_TOKEN    = process.env.ADVBOX_TOKEN || '';
 const ADVBOX_BASE_URL = 'https://app.advbox.com.br/api/v1';
+
+// ── Credenciais ──────────────────────────────────────────────────────────────
+const USERS = {
+  [process.env.ADMIN_USER || 'eduardo']: {
+    password: process.env.ADMIN_PASS || '',
+    role: 'admin'
+  },
+  [process.env.TEAM_USER || 'time']: {
+    password: process.env.TEAM_PASS || '',
+    role: 'team'
+  }
+};
+
+// ── Sessão ───────────────────────────────────────────────────────────────────
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'advbox-sess-secret-2025',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    maxAge: 12 * 60 * 60 * 1000   // 12 horas
+  }
+}));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -23,6 +46,42 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
   }
 }));
+
+// ── Auth middleware ──────────────────────────────────────────────────────────
+function requireAuth(req, res, next) {
+  if (req.session && req.session.user) return next();
+  res.status(401).json({ error: 'não autenticado' });
+}
+
+// ── Login / Logout / Me ──────────────────────────────────────────────────────
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+  const user = USERS[username];
+  if (!user || user.password === '' || user.password !== password) {
+    return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
+  }
+  req.session.user = { username, role: user.role };
+  res.json({ ok: true, role: user.role });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/me', (req, res) => {
+  if (req.session && req.session.user) {
+    return res.json({ loggedIn: true, role: req.session.user.role, username: req.session.user.username });
+  }
+  res.json({ loggedIn: false });
+});
+
+// Protege todas as demais rotas /api/* — precisa estar logado
+app.use('/api', (req, res, next) => {
+  const open = ['/api/login', '/api/logout', '/api/me'];
+  if (open.includes(req.path)) return next();
+  if (req.session && req.session.user) return next();
+  res.status(401).json({ error: 'não autenticado' });
+});
 
 // Função auxiliar que chama a API do AdvBox
 async function callAdvBox(endpoint) {

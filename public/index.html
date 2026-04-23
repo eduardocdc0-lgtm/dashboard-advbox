@@ -85,6 +85,62 @@
     .refresh-btn:hover { opacity: 0.75; }
     .refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .logout-btn {
+      background: transparent; color: var(--text-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 7px 14px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+      transition: all .15s;
+    }
+    .logout-btn:hover { border-color: var(--text); color: var(--text); }
+    .user-chip {
+      font-size: 11px; font-weight: 500; letter-spacing: .05em;
+      color: var(--text-2); text-transform: uppercase;
+    }
+
+    /* ── LOGIN OVERLAY ── */
+    #loginOverlay {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .login-box {
+      width: 100%; max-width: 380px; padding: 48px 40px;
+      border: 1px solid var(--border); border-radius: 16px;
+    }
+    .login-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px; color: var(--text); margin-bottom: 4px;
+    }
+    .login-sub {
+      font-size: 10px; font-weight: 500; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 40px;
+    }
+    .login-label {
+      font-size: 11px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 6px;
+    }
+    .login-input {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      background: var(--bg); color: var(--text); margin-bottom: 16px;
+      outline: none; transition: border-color .15s;
+    }
+    .login-input:focus { border-color: var(--text); }
+    .login-btn {
+      width: 100%; background: var(--text); color: #fff;
+      border: none; border-radius: 8px; padding: 13px;
+      font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: opacity .15s; margin-top: 4px;
+    }
+    .login-btn:hover { opacity: .82; }
+    .login-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .login-error {
+      font-size: 12px; color: var(--danger); margin-top: 12px;
+      text-align: center; min-height: 18px;
+    }
+
     /* ── TABS ── */
     .tabs {
       display: flex;
@@ -724,22 +780,41 @@
   </style>
 </head>
 <body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <div class="login-logo">Eduardo Rodrigues</div>
+      <div class="login-sub">Advocacia · Dashboard</div>
+      <div class="login-label">Usuário</div>
+      <input class="login-input" id="loginUser" type="text" placeholder="seu usuário" autocomplete="username">
+      <div class="login-label">Senha</div>
+      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
   <div class="container">
     <header>
       <div class="logo-block">
         <div class="logo-name">Eduardo Rodrigues</div>
         <div class="logo-sub">Advocacia</div>
       </div>
-      <button class="refresh-btn" id="refreshBtn" onclick="loadAll(true)">Atualizar dados</button>
+      <div class="header-right">
+        <span class="user-chip" id="userChip"></span>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadAll(true)">Atualizar dados</button>
+        <button class="logout-btn" onclick="doLogout()">Sair</button>
+      </div>
     </header>
 
     <div id="errorBox"></div>
 
     <div class="tabs">
-      <button class="tab active" onclick="showTab('overview', event)">Visão geral</button>
-      <button class="tab" onclick="showTab('processes', event)">Processos</button>
-      <button class="tab" onclick="showTab('movements', event)">Movimentações</button>
-      <button class="tab" onclick="showTab('financial', event)">Financeiro</button>
+      <button class="tab active admin-tab" onclick="showTab('overview', event)">Visão geral</button>
+      <button class="tab admin-tab" onclick="showTab('processes', event)">Processos</button>
+      <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
+      <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
@@ -2863,7 +2938,84 @@
         'Total: ' + formatMoney(total);
     }
 
-    loadAll();
+    // ── AUTH ────────────────────────────────────────────────────────────────
+    let _userRole = null;
+
+    function applyRole(role) {
+      _userRole = role;
+      const isTeam = role === 'team';
+      // Esconde abas admin-only para o time
+      document.querySelectorAll('.admin-tab').forEach(btn => {
+        btn.style.display = isTeam ? 'none' : '';
+      });
+      // Time começa na aba Clientes
+      if (isTeam) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        const clientsTab = document.querySelector('.tab:not(.admin-tab)');
+        if (clientsTab) {
+          clientsTab.classList.add('active');
+          const tabName = clientsTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+          const content = document.getElementById(tabName);
+          if (content) content.classList.add('active');
+        }
+      }
+    }
+
+    async function doLogin() {
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value;
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('loginError');
+      if (!username || !password) { err.textContent = 'Preencha usuário e senha.'; return; }
+      btn.disabled = true; btn.textContent = 'Entrando...'; err.textContent = '';
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await r.json();
+        if (!r.ok) { err.textContent = data.error || 'Erro ao entrar.'; return; }
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('userChip').textContent = username;
+        applyRole(data.role);
+        loadAll();
+      } catch (e) {
+        err.textContent = 'Erro de conexão.';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Entrar';
+      }
+    }
+
+    async function doLogout() {
+      await fetch('/api/logout', { method: 'POST' });
+      location.reload();
+    }
+
+    // Enter no campo de senha faz login
+    document.getElementById('loginPass').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('loginUser').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('loginPass').focus();
+    });
+
+    // ── INIT ─────────────────────────────────────────────────────────────────
+    (async function init() {
+      try {
+        const me = await fetch('/api/me').then(r => r.json());
+        if (me.loggedIn) {
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('userChip').textContent = me.username;
+          applyRole(me.role);
+          loadAll();
+        }
+        // Se não logado, overlay já está visível — aguarda o usuário fazer login
+      } catch (e) {
+        // silencioso — overlay continua visível
+      }
+    })();
   </script>
 
   <!-- Modal A Receber -->
