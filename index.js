@@ -143,19 +143,41 @@ let flowCache = null;
 let flowCacheAt = null;
 const FLOW_TTL_MS = 20 * 60 * 1000;
 
+// Busca todas as páginas de posts até esgotar ou atingir maxPages
+async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 800) {
+  const all = [];
+  for (let page = 0; page < maxPages; page++) {
+    const offset = page * limitPerPage;
+    const endpoint = `/posts?limit=${limitPerPage}&offset=${offset}`;
+    let data;
+    try {
+      data = await callAdvBox(endpoint);
+    } catch (e) {
+      if (e.message === 'RATE_LIMIT' && page > 0) break; // temos dados parciais
+      throw e;
+    }
+    const items = Array.isArray(data) ? data : (data.data || []);
+    all.push(...items);
+    console.log(`[Posts] página ${page + 1}: ${items.length} posts (total acumulado: ${all.length})`);
+    if (items.length < limitPerPage) break; // última página
+    if (page < maxPages - 1) await new Promise(r => setTimeout(r, delayMs));
+  }
+  return all;
+}
+
 app.get('/api/flow', async (req, res) => {
   try {
     const now = Date.now();
     if (flowCache && flowCacheAt && (now - flowCacheAt) < FLOW_TTL_MS) {
       return res.json(flowCache);
     }
-    const [movData, postsData] = await Promise.all([
+    const [movData, posts] = await Promise.all([
       callAdvBox('/last_movements?limit=500'),
-      callAdvBox('/posts?limit=500')
+      fetchAllPosts()
     ]);
     flowCache = {
       movements: Array.isArray(movData) ? movData : (movData.data || []),
-      posts: Array.isArray(postsData) ? postsData : (postsData.data || [])
+      posts
     };
     flowCacheAt = now;
     res.json(flowCache);
