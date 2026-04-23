@@ -126,6 +126,16 @@
       padding: 20px 22px;
       border-radius: var(--radius);
     }
+    /* ── EVOLUÇÃO ── */
+    .evo-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+    @media (max-width: 700px) { .evo-section { grid-template-columns: 1fr; } }
+    .evo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .evo-card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); margin-bottom: 16px; }
+    .evo-periods { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 18px; }
+    .evo-period-label { font-size: 11px; color: var(--text-2); margin-bottom: 6px; }
+    .evo-pct-num { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1; }
+    .evo-compare { font-size: 11px; color: #aaa; margin-top: 4px; }
+    .evo-chart-wrap { height: 68px; }
     .metric-label {
       font-size: 11px;
       font-weight: 500;
@@ -641,6 +651,42 @@
           <div class="metric-value danger" id="aPagar">-</div>
         </div>
       </div>
+
+      <!-- Evolução -->
+      <div class="evo-section">
+        <div class="evo-card">
+          <div class="evo-card-title">Novos contratos</div>
+          <div class="evo-periods">
+            <div>
+              <div class="evo-period-label">Últimos 3 meses vs 3 anteriores</div>
+              <div class="evo-pct-num" id="evoPct3C">—</div>
+              <div class="evo-compare" id="evoCmp3C">—</div>
+            </div>
+            <div>
+              <div class="evo-period-label">Últimos 6 meses vs 6 anteriores</div>
+              <div class="evo-pct-num" id="evoPct6C">—</div>
+              <div class="evo-compare" id="evoCmp6C">—</div>
+            </div>
+          </div>
+          <div class="evo-chart-wrap"><canvas id="chartEvoC"></canvas></div>
+        </div>
+        <div class="evo-card">
+          <div class="evo-card-title">Faturamento recebido</div>
+          <div class="evo-periods">
+            <div>
+              <div class="evo-period-label">Últimos 3 meses vs 3 anteriores</div>
+              <div class="evo-pct-num" id="evoPct3F">—</div>
+              <div class="evo-compare" id="evoCmp3F">—</div>
+            </div>
+            <div>
+              <div class="evo-period-label">Últimos 6 meses vs 6 anteriores</div>
+              <div class="evo-pct-num" id="evoPct6F">—</div>
+              <div class="evo-compare" id="evoCmp6F">—</div>
+            </div>
+          </div>
+          <div class="evo-chart-wrap"><canvas id="chartEvoF"></canvas></div>
+        </div>
+      </div>
     </div>
 
     <!-- ABA 2: PROCESSOS -->
@@ -927,6 +973,105 @@
       return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
     }
 
+    // ── Evolução mensal ────────────────────────────────────────────────────────
+    let chartEvoC = null;
+    let chartEvoF = null;
+
+    function evoMesKey(d) {
+      return String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+    function evoMesOffset(base, delta) {
+      const [mm, yyyy] = base.split('/').map(Number);
+      const d = new Date(yyyy, mm - 1 + delta, 1);
+      return evoMesKey(d);
+    }
+    function evoMesAbrev(key) {
+      const [mm] = key.split('/').map(Number);
+      return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mm - 1];
+    }
+
+    function renderEvolucao() {
+      const currentMes = evoMesKey(new Date());
+
+      // Contratos por mês (created_at)
+      const cByMes = {};
+      allLawsuitsData.forEach(l => {
+        if (!l.created_at) return;
+        const d = new Date(l.created_at);
+        if (isNaN(d)) return;
+        const k = evoMesKey(d);
+        cByMes[k] = (cByMes[k] || 0) + 1;
+      });
+
+      // Faturamento recebido por mês (income pago, by competence)
+      const fByMes = {};
+      transData.forEach(t => {
+        if (t.entry_type !== 'income' || !t.date_payment || !t.competence) return;
+        fByMes[t.competence] = (fByMes[t.competence] || 0) + Number(t.amount || 0);
+      });
+
+      function calcEvo(byMes, n) {
+        let sumA = 0, sumB = 0;
+        for (let i = 0; i < n; i++) {
+          sumA += byMes[evoMesOffset(currentMes, -i)]       || 0;
+          sumB += byMes[evoMesOffset(currentMes, -(n + i))] || 0;
+        }
+        const pct = sumB > 0 ? (sumA - sumB) / sumB * 100 : null;
+        return { sumA, sumB, pct };
+      }
+
+      function setPct(id, pct) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (pct === null) { el.textContent = '—'; el.className = 'evo-pct-num'; return; }
+        el.className = 'evo-pct-num ' + (pct >= 0 ? 'success' : 'danger');
+        el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      }
+      function setCmp(id, sumA, sumB, isMoney) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const fmt = isMoney ? formatMoney : n => n.toString();
+        el.textContent = fmt(Math.round(sumB)) + ' → ' + fmt(Math.round(sumA));
+      }
+
+      const c3 = calcEvo(cByMes, 3); const c6 = calcEvo(cByMes, 6);
+      const f3 = calcEvo(fByMes, 3); const f6 = calcEvo(fByMes, 6);
+
+      setPct('evoPct3C', c3.pct); setCmp('evoCmp3C', c3.sumA, c3.sumB, false);
+      setPct('evoPct6C', c6.pct); setCmp('evoCmp6C', c6.sumA, c6.sumB, false);
+      setPct('evoPct3F', f3.pct); setCmp('evoCmp3F', f3.sumA, f3.sumB, true);
+      setPct('evoPct6F', f6.pct); setCmp('evoCmp6F', f6.sumA, f6.sumB, true);
+
+      // Mini charts — últimos 6 meses
+      const meses6 = Array.from({ length: 6 }, (_, i) => evoMesOffset(currentMes, -(5 - i)));
+      const labels6 = meses6.map(evoMesAbrev);
+      const dataC6  = meses6.map(m => cByMes[m] || 0);
+      const dataF6  = meses6.map(m => fByMes[m] || 0);
+
+      const chartOpts = (tooltipFmt) => ({
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: tooltipFmt } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#999' } },
+          y: { display: false }
+        }
+      });
+
+      if (chartEvoC) chartEvoC.destroy();
+      chartEvoC = new Chart(document.getElementById('chartEvoC'), {
+        type: 'bar',
+        data: { labels: labels6, datasets: [{ data: dataC6, backgroundColor: dataC6.map((_, i) => i === 5 ? '#111' : '#d0d0d0'), borderRadius: 3 }] },
+        options: chartOpts(ctx => ` ${ctx.raw} contratos`)
+      });
+
+      if (chartEvoF) chartEvoF.destroy();
+      chartEvoF = new Chart(document.getElementById('chartEvoF'), {
+        type: 'bar',
+        data: { labels: labels6, datasets: [{ data: dataF6, backgroundColor: dataF6.map((_, i) => i === 5 ? '#111' : '#d0d0d0'), borderRadius: 3 }] },
+        options: chartOpts(ctx => ` ${formatMoney(ctx.raw)}`)
+      });
+    }
+
     async function loadAll(force = false) {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
@@ -944,6 +1089,7 @@
           loadPosts(),
           loadRegistrations(force)
         ]);
+        renderEvolucao();
         // Distribuição usa o mesmo endpoint de lawsuits — executa após as outras para
         // evitar rate limit simultâneo
         setTimeout(() => loadDistribuicao(), 2000);
@@ -962,10 +1108,13 @@
       } catch (e) { console.error('settings:', e); }
     }
 
+    let allLawsuitsData = [];
+
     async function loadLawsuits() {
       try {
         const data = await fetchJson('/api/lawsuits');
         const lawsuits = data.data || [];
+        allLawsuitsData = lawsuits;
         document.getElementById('totalProcessos').textContent = data.totalCount || lawsuits.length;
 
         const porFase = {};
