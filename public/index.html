@@ -1567,7 +1567,7 @@
         return;
       }
       const max = distData[0].processes.length;
-      container.innerHTML = distData.map(r => {
+      container.innerHTML = distData.map((r, idx) => {
         const n     = r.processes.length;
         const cls   = distBarClass(n);
         const w     = distBarWidth(n, max);
@@ -1575,7 +1575,7 @@
         const ini   = distInitial(r.responsible);
         const active = distActiveResp === r.responsible ? ' active' : '';
         return `
-          <div class="dist-card${active}" onclick="openDistPanel(${JSON.stringify(r.responsible)})">
+          <div class="dist-card${active}" data-idx="${idx}" onclick="openDistPanel(this.dataset.idx)">
             <div class="dist-avatar">${ini}</div>
             <div class="dist-card-name">${fname}</div>
             <div class="dist-card-count">${n}</div>
@@ -1586,17 +1586,18 @@
       }).join('');
     }
 
-    function openDistPanel(responsible) {
-      distActiveResp = responsible;
+    function openDistPanel(idxOrName) {
+      const entry = typeof idxOrName === 'string' && !isNaN(idxOrName)
+        ? distData[parseInt(idxOrName, 10)]
+        : distData.find(r => r.responsible === idxOrName);
+      if (!entry) return;
+      distActiveResp = entry.responsible;
       renderDistCards();
       const panel = document.getElementById('distPanel');
       panel.style.display = 'block';
 
-      const entry = distData.find(r => r.responsible === responsible);
-      if (!entry) return;
-
       document.getElementById('distPanelTitle').textContent =
-        `${distFirstName(responsible)} — ${entry.processes.length} processos`;
+        `${distFirstName(entry.responsible)} — ${entry.processes.length} processos`;
 
       // Popula dropdown de fases
       const fases = [...new Set(entry.processes.map(p => p.fase).filter(Boolean))].sort();
