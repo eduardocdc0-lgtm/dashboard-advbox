@@ -1648,13 +1648,15 @@
 
       // Pessoas únicas com tarefas
       const users = [...new Set(_tarefasAll.map(t => t.user))].sort();
+      // Guarda lista global para lookup seguro por índice (evita aspas em onclick)
+      window._tfUserList = ['', ...users]; // índice 0 = Todos
 
       // Datas padrão: últimos 30 dias
       const today = new Date().toISOString().substring(0, 10);
       const ago30 = new Date(Date.now() - 30*86400000).toISOString().substring(0, 10);
 
       const tabsHtml = ['Todos', ...users].map((u, i) =>
-        `<button class="prod-detail-tab${i === 0 ? ' active' : ''}" onclick="setTfUser(${JSON.stringify(u === 'Todos' ? '' : u)},this)">${u}</button>`
+        `<button class="prod-detail-tab${i === 0 ? ' active' : ''}" onclick="setTfUser(${i},this)">${u}</button>`
       ).join('');
 
       document.getElementById('tarefasSection').innerHTML = `
@@ -1682,8 +1684,8 @@
       filterTarefas();
     }
 
-    function setTfUser(user, btn) {
-      _tarefasUser = user;
+    function setTfUser(idx, btn) {
+      _tarefasUser = (window._tfUserList || [])[idx] || '';
       document.querySelectorAll('#tarefasSection .prod-detail-tab')
         .forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
