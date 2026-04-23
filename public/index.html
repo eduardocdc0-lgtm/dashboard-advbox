@@ -1626,6 +1626,7 @@
     }
 
     function renderTarefas(posts) {
+
       _tarefasAll = posts.flatMap(p =>
         (p.users || [])
           .filter(u => u.completed)
@@ -1651,9 +1652,7 @@
       // Guarda lista global para lookup seguro por índice (evita aspas em onclick)
       window._tfUserList = ['', ...users]; // índice 0 = Todos
 
-      // Datas padrão: últimos 30 dias
       const today = new Date().toISOString().substring(0, 10);
-      const ago30 = new Date(Date.now() - 30*86400000).toISOString().substring(0, 10);
 
       const tabsHtml = ['Todos', ...users].map((u, i) =>
         `<button class="prod-detail-tab${i === 0 ? ' active' : ''}" onclick="setTfUser(${i},this)">${u}</button>`
@@ -1666,7 +1665,7 @@
         <div class="card" style="padding:14px 18px 12px;margin-bottom:14px;">
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
             <span style="font-size:12px;color:#888;font-weight:500;">Período:</span>
-            <input type="date" id="tfDataDe" value="${ago30}" onchange="filterTarefas()"
+            <input type="date" id="tfDataDe" value="" onchange="filterTarefas()"
               style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
             <span style="font-size:12px;color:#aaa;">até</span>
             <input type="date" id="tfDataAte" value="${today}" onchange="filterTarefas()"
