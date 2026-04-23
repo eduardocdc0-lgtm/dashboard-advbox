@@ -1221,6 +1221,8 @@
     let fluxoLawsuitsParados = []; // todos os processos com lastMovDate
     let prodDetailData = null; // { mov: [], par: [] } do responsável aberto
     let filtroFase = ''; // fase selecionada no gargalo
+    let _tarefasAll = []; // todas as tarefas concluídas (para refiltragem)
+    let _tarefasUser = ''; // aba ativa de pessoa
 
     function daysDiff(dateStr) {
       if (!dateStr) return 9999;
@@ -1624,7 +1626,7 @@
     }
 
     function renderTarefas(posts) {
-      const completed = posts.flatMap(p =>
+      _tarefasAll = posts.flatMap(p =>
         (p.users || [])
           .filter(u => u.completed)
           .map(u => ({
@@ -1636,62 +1638,107 @@
           }))
       );
 
-      if (completed.length === 0) {
+      if (_tarefasAll.length === 0) {
         document.getElementById('tarefasSection').innerHTML = `
           <div class="fluxo-notice">
-            <strong>Tarefas não estão sendo registradas de forma confiável no AdvBox</strong> — apenas ${completed.length} conclusões encontradas em ${posts.length} tarefas. Considere adotar um padrão de marcação de conclusão para aproveitar essa visão.
+            <strong>Sem tarefas concluídas registradas</strong> — ${posts.length} tarefas carregadas sem conclusões. Adote o padrão de marcar conclusão no AdvBox para usar essa visão.
           </div>`;
         return;
       }
 
-      // Stats por pessoa (semana e mês)
-      const now30 = Date.now() - 30*86400000;
-      const now7  = Date.now() - 7*86400000;
-      const byUser = {};
-      completed.forEach(t => {
-        const u = t.user;
-        if (!byUser[u]) byUser[u] = { semana: 0, mes: 0 };
-        const dt = new Date(t.completedAt).getTime();
-        if (dt >= now7)  byUser[u].semana++;
-        if (dt >= now30) byUser[u].mes++;
-      });
+      // Pessoas únicas com tarefas
+      const users = [...new Set(_tarefasAll.map(t => t.user))].sort();
 
-      const statsHtml = Object.entries(byUser).map(([u, v]) =>
-        `<div class="prod-stat" style="max-width:300px"><span class="prod-stat-label">${u}</span> <strong>${v.mes} no mês / ${v.semana} na semana</strong></div>`
+      // Datas padrão: últimos 30 dias
+      const today = new Date().toISOString().substring(0, 10);
+      const ago30 = new Date(Date.now() - 30*86400000).toISOString().substring(0, 10);
+
+      const tabsHtml = ['Todos', ...users].map((u, i) =>
+        `<button class="prod-detail-tab${i === 0 ? ' active' : ''}" onclick="setTfUser(${JSON.stringify(u === 'Todos' ? '' : u)},this)">${u}</button>`
       ).join('');
 
-      // Tabela últimos 30 dias
-      const recentes = completed
-        .filter(t => new Date(t.completedAt).getTime() >= now30)
-        .sort((a,b) => b.completedAt.localeCompare(a.completedAt));
+      document.getElementById('tarefasSection').innerHTML = `
+        <div class="fluxo-notice" style="margin-bottom:14px;">
+          <strong>Cobertura:</strong> ${_tarefasAll.length} conclusões em ${posts.length} tarefas carregadas (API retorna as 500 mais recentes).
+        </div>
+        <div class="card" style="padding:14px 18px 12px;margin-bottom:14px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+            <span style="font-size:12px;color:#888;font-weight:500;">Período:</span>
+            <input type="date" id="tfDataDe" value="${ago30}" onchange="filterTarefas()"
+              style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+            <span style="font-size:12px;color:#aaa;">até</span>
+            <input type="date" id="tfDataAte" value="${today}" onchange="filterTarefas()"
+              style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+            <button onclick="resetTfDatas()"
+              style="font-size:11px;padding:5px 12px;background:#f0f0f0;border:none;border-radius:4px;cursor:pointer;color:#555;">
+              Últimos 30d
+            </button>
+          </div>
+          <div class="prod-detail-tabs" style="margin:0;">${tabsHtml}</div>
+        </div>
+        <div id="tfTableWrap"></div>`;
 
-      const rows = recentes.map(t => {
+      _tarefasUser = '';
+      filterTarefas();
+    }
+
+    function setTfUser(user, btn) {
+      _tarefasUser = user;
+      document.querySelectorAll('#tarefasSection .prod-detail-tab')
+        .forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      filterTarefas();
+    }
+
+    function resetTfDatas() {
+      const today = new Date().toISOString().substring(0, 10);
+      const ago30 = new Date(Date.now() - 30*86400000).toISOString().substring(0, 10);
+      document.getElementById('tfDataDe').value = ago30;
+      document.getElementById('tfDataAte').value = today;
+      filterTarefas();
+    }
+
+    function filterTarefas() {
+      const de  = document.getElementById('tfDataDe')?.value || '';
+      const ate = document.getElementById('tfDataAte')?.value || '';
+      let lista = [..._tarefasAll];
+      if (_tarefasUser) lista = lista.filter(t => t.user === _tarefasUser);
+      if (de)  lista = lista.filter(t => (t.completedAt || '').substring(0, 10) >= de);
+      if (ate) lista = lista.filter(t => (t.completedAt || '').substring(0, 10) <= ate);
+      lista.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+
+      const wrap = document.getElementById('tfTableWrap');
+      if (!wrap) return;
+
+      if (lista.length === 0) {
+        wrap.innerHTML = '<div class="fluxo-notice">Nenhuma tarefa nesse período.</div>';
+        return;
+      }
+
+      const rows = lista.map(t => {
         const href = t.lawsuits_id ? `https://app.advbox.com.br/${t.lawsuits_id}` : null;
         const rowClass = href ? 'clickable-row' : '';
         const cliente = t.lawsuit?.customers?.[0]?.name || '—';
-        const dt = t.completedAt ? t.completedAt.substring(0,10) : '—';
+        const dt = t.completedAt ? t.completedAt.substring(0, 10) : '—';
         const c = (v) => href ? `<a class="cell-link" href="${href}" target="_blank">${v}</a>` : v;
         const linkCell = href ? `<a href="${href}" target="_blank" class="advbox-link">↗</a>` : '—';
         return `<tr class="${rowClass}">
           <td>${c(t.user)}</td>
           <td>${c(dt)}</td>
-          <td style="max-width:260px;white-space:normal">${c(t.task||'—')}</td>
+          <td style="max-width:260px;white-space:normal">${c(t.task || '—')}</td>
           <td>${c(cliente)}</td>
           <td>${linkCell}</td>
         </tr>`;
       }).join('');
 
-      document.getElementById('tarefasSection').innerHTML = `
-        <div class="fluxo-notice" style="margin-bottom:14px;">
-          <strong>Cobertura:</strong> ${completed.length} conclusões registradas em ${posts.length} tarefas carregadas (API retorna as 500 mais recentes).
-        </div>
-        <div class="prod-card-stats" style="margin-bottom:18px;">${statsHtml}</div>
+      wrap.innerHTML = `
         <div class="card" style="padding:0">
           <table class="fin-table">
             <thead><tr><th>Responsável</th><th>Concluída em</th><th>Tarefa</th><th>Cliente</th><th></th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>`;
+        </div>
+        <div style="font-size:11px;color:#aaa;padding:8px 4px;">${lista.length} tarefa${lista.length === 1 ? '' : 's'} encontrada${lista.length === 1 ? '' : 's'}</div>`;
     }
 
     async function loadAll(force = false) {
