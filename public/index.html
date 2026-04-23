@@ -147,7 +147,9 @@
     .fluxo-card-value.danger { color: #c0392b; }
     .fluxo-card-value.warning { color: #a86000; }
     /* Gargalos */
-    .gargalo-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .gargalo-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; border-radius: 4px; padding-left: 6px; }
+    .gargalo-row:hover { background: #f7f7f7; }
+    .gargalo-row.active { background: #f0f0f0; box-shadow: inset 3px 0 0 #111; }
     .gargalo-row:last-child { border-bottom: none; }
     .gargalo-etapa { flex: 0 0 240px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .gargalo-bar-wrap { flex: 1; background: #f0f0f0; border-radius: 3px; height: 8px; }
@@ -975,6 +977,7 @@
         <select class="reg-filter" id="flxRespFiltro" onchange="applyFlxFilter()" style="font-size:11px;">
           <option value="">Todos os responsáveis</option>
         </select>
+        <span id="flxFaseLabel" style="display:none;font-size:11px;background:#111;color:#fff;padding:2px 8px;border-radius:3px;cursor:pointer;" onclick="clearFaseFilter()" title="Clique para limpar"></span>
         <button class="dist-export-btn" onclick="exportFluxoCsv()" style="margin-left:auto;">Exportar CSV</button>
       </div>
       <div class="card" style="padding:0;">
@@ -1217,6 +1220,7 @@
     let fluxoData = null; // { movements, posts }
     let fluxoLawsuitsParados = []; // todos os processos com lastMovDate
     let prodDetailData = null; // { mov: [], par: [] } do responsável aberto
+    let filtroFase = ''; // fase selecionada no gargalo
 
     function daysDiff(dateStr) {
       if (!dateStr) return 9999;
@@ -1396,14 +1400,16 @@
       const allRows = [...rows3, ...rows1];
       const maxCnt = Math.max(...allRows.map(r => r.cnt), 1);
 
-      const html = allRows.map(r => {
+      window._gargaloFases = allRows.map(r => r.etapa);
+
+      const html = allRows.map((r, idx) => {
         const pct = (r.cnt / maxCnt * 100).toFixed(1);
         const avgTxt = r.avg >= 9999 ? '—' : `média ${r.avg}d`;
         const barColor = r.cat === 3 ? '#c0392b' : '#f39c12';
         const tag = r.cat === 3
           ? `<span class="gargalo-tag acao">Ação do escritório</span>`
           : `<span class="gargalo-tag espera">Espera externa</span>`;
-        return `<div class="gargalo-row">
+        return `<div class="gargalo-row" onclick="filterByFase(${idx})">
           <div class="gargalo-etapa" title="${r.etapa}">${r.etapa}</div>
           ${tag}
           <div class="gargalo-bar-wrap"><div class="gargalo-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
@@ -1414,9 +1420,10 @@
       document.getElementById('gargaloList').innerHTML = html || '<div class="loading">Sem dados</div>';
     }
 
-    function renderParadosTable(lista, filtroResp) {
+    function renderParadosTable(lista, filtroResp, fase) {
       let sorted = [...lista].sort((a, b) => b.diasParado - a.diasParado);
       if (filtroResp) sorted = sorted.filter(l => l.responsible === filtroResp);
+      if (fase)       sorted = sorted.filter(l => (l.stage || '') === fase);
       const top = sorted.slice(0, 20);
       const rows = top.map(l => {
         const dias = l.diasParado === 9999 ? '?' : l.diasParado;
@@ -1442,7 +1449,40 @@
 
     function applyFlxFilter() {
       const v = document.getElementById('flxRespFiltro').value;
-      renderParadosTable(fluxoLawsuitsParados, v);
+      renderParadosTable(fluxoLawsuitsParados, v, filtroFase);
+    }
+
+    function filterByFase(idx) {
+      const etapa = (window._gargaloFases || [])[idx];
+      if (!etapa) return;
+      filtroFase = filtroFase === etapa ? '' : etapa;
+      // Atualiza estado visual dos gargalos
+      document.querySelectorAll('.gargalo-row').forEach((r, i) =>
+        r.classList.toggle('active', i === idx && filtroFase !== '')
+      );
+      // Atualiza label de fase ativa
+      const lbl = document.getElementById('flxFaseLabel');
+      if (filtroFase) {
+        lbl.textContent = filtroFase + '  ✕';
+        lbl.style.display = 'inline';
+      } else {
+        lbl.style.display = 'none';
+      }
+      // Aplica filtro na tabela e rola até ela
+      const resp = document.getElementById('flxRespFiltro').value;
+      renderParadosTable(fluxoLawsuitsParados, resp, filtroFase);
+      if (filtroFase) {
+        document.getElementById('flxParadosBody').closest('.card')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function clearFaseFilter() {
+      filtroFase = '';
+      document.querySelectorAll('.gargalo-row').forEach(r => r.classList.remove('active'));
+      document.getElementById('flxFaseLabel').style.display = 'none';
+      const resp = document.getElementById('flxRespFiltro').value;
+      renderParadosTable(fluxoLawsuitsParados, resp, '');
     }
 
     function exportFluxoCsv() {
