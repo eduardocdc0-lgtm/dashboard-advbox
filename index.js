@@ -138,6 +138,32 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
+// Cache para dados do Fluxo (movimentos + posts)
+let flowCache = null;
+let flowCacheAt = null;
+const FLOW_TTL_MS = 20 * 60 * 1000;
+
+app.get('/api/flow', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (flowCache && flowCacheAt && (now - flowCacheAt) < FLOW_TTL_MS) {
+      return res.json(flowCache);
+    }
+    const [movData, postsData] = await Promise.all([
+      callAdvBox('/last_movements?limit=500'),
+      callAdvBox('/posts?limit=500')
+    ]);
+    flowCache = {
+      movements: Array.isArray(movData) ? movData : (movData.data || []),
+      posts: Array.isArray(postsData) ? postsData : (postsData.data || [])
+    };
+    flowCacheAt = now;
+    res.json(flowCache);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Parseia string de data (YYYY-MM-DD ou DD/MM/YYYY)
 function parseDeadline(str) {
   if (!str) return null;

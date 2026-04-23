@@ -12,8 +12,8 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 - `ADVBOX_TOKEN` — token Bearer da API do AdvBox (configurado em Secrets)
 - `ADVBOX_BASE_URL` — `https://app.advbox.com.br/api/v1`
 
-## Abas do Dashboard (7 abas)
-1. **Visão Geral** — processos, tarefas, financeiro
+## Abas do Dashboard (9 abas)
+1. **Visão Geral** — processos, tarefas, financeiro + evolução mensal de honorários e faturamento
 2. **Processos** — lista de processos
 3. **Movimentações** — histórico de movimentações
 4. **Financeiro** — transações/vencimentos
@@ -21,6 +21,7 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 6. **Cadastros Pendentes** — processos com problemas (Sem fechado por, sem laudo, sem canal)
 7. **Canais** — Kanban por canal de origem (Parceiros, Orgânicos, Campanhas, Com Laudo, Sem Laudo)
 8. **Distribuição** — carga de trabalho por responsável, com lista detalhada filtrável e exportação CSV
+9. **Fluxo** — fluxo operacional (cards parados, gargalos por etapa, top 20 parados), produtividade por responsável, tarefas realizadas
 
 ## Aba Cadastros Pendentes
 - Valida anotações gerais dos processos

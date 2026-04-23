@@ -136,6 +136,47 @@
     .evo-pct-num { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1; }
     .evo-compare { font-size: 11px; color: #aaa; margin-top: 4px; }
     .evo-chart-wrap { height: 68px; }
+
+    /* ── FLUXO ── */
+    .fluxo-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-2); margin: 28px 0 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .fluxo-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 4px; }
+    @media (max-width: 800px) { .fluxo-cards { grid-template-columns: repeat(2,1fr); } }
+    .fluxo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .fluxo-card-label { font-size: 11px; color: var(--text-2); margin-bottom: 8px; }
+    .fluxo-card-value { font-family: 'DM Serif Display', serif; font-size: 32px; line-height: 1; }
+    .fluxo-card-value.danger { color: #c0392b; }
+    .fluxo-card-value.warning { color: #a86000; }
+    /* Gargalos */
+    .gargalo-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .gargalo-row:last-child { border-bottom: none; }
+    .gargalo-etapa { flex: 0 0 240px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gargalo-bar-wrap { flex: 1; background: #f0f0f0; border-radius: 3px; height: 8px; }
+    .gargalo-bar-fill { height: 8px; border-radius: 3px; background: #111; }
+    .gargalo-cnt { flex: 0 0 48px; text-align: right; font-size: 13px; font-weight: 600; }
+    .gargalo-days { flex: 0 0 100px; text-align: right; font-size: 11px; color: var(--text-2); }
+    /* Produtividade */
+    .prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 14px; }
+    .prod-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: border-color .15s; }
+    .prod-card:hover { border-color: #111; }
+    .prod-card-name { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+    .prod-card-stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .prod-stat { display: flex; justify-content: space-between; font-size: 12px; }
+    .prod-stat-label { color: var(--text-2); }
+    .prod-health { height: 4px; border-radius: 2px; }
+    .prod-health.green { background: #27ae60; }
+    .prod-health.yellow { background: #f39c12; }
+    .prod-health.red { background: #c0392b; }
+    /* Painel de detalhe de responsável */
+    .prod-detail { margin-top: 20px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: none; }
+    .prod-detail.open { display: block; }
+    .prod-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .prod-detail-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .prod-detail-tab { padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; background: transparent; }
+    .prod-detail-tab.active { background: #111; color: #fff; border-color: #111; }
+    /* Nota de limitação */
+    .fluxo-notice { font-size: 12px; color: var(--text-2); background: #f9f9f9; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-top: 14px; }
+    .fluxo-notice strong { color: var(--text); }
+
     .metric-label {
       font-size: 11px;
       font-weight: 500;
@@ -629,6 +670,7 @@
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
       <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
+      <button class="tab" onclick="showTab('fluxo', event)">Fluxo</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -872,6 +914,82 @@
       </div>
     </div>
 
+    <!-- ABA 10: FLUXO -->
+    <div id="fluxo" class="tab-content">
+
+      <!-- SEÇÃO 1: FLUXO OPERACIONAL -->
+      <div class="fluxo-section-title">Fluxo operacional</div>
+      <div class="fluxo-cards">
+        <div class="fluxo-card">
+          <div class="fluxo-card-label">Movimentados esta semana</div>
+          <div class="fluxo-card-value success" id="flxSemana">—</div>
+        </div>
+        <div class="fluxo-card">
+          <div class="fluxo-card-label">Movimentados este mês</div>
+          <div class="fluxo-card-value" id="flxMes">—</div>
+        </div>
+        <div class="fluxo-card">
+          <div class="fluxo-card-label">Parados +30 dias</div>
+          <div class="fluxo-card-value warning" id="flxP30">—</div>
+        </div>
+        <div class="fluxo-card">
+          <div class="fluxo-card-label">Parados +90 dias (críticos)</div>
+          <div class="fluxo-card-value danger" id="flxP90">—</div>
+        </div>
+      </div>
+
+      <div class="fluxo-notice">
+        <strong>Como é calculado:</strong> "Movimentação" = presença nos andamentos tribunais retornados pela API AdvBox. Processos sem registro de andamento nos últimos 500 captados são classificados como parados — pode haver andamentos internos não refletidos aqui.
+      </div>
+
+      <!-- Gargalos -->
+      <div class="fluxo-section-title">Gargalos por etapa</div>
+      <div class="card" style="padding:0 18px;">
+        <div id="gargaloList"><div class="loading">Carregando...</div></div>
+      </div>
+
+      <!-- Top 20 parados -->
+      <div class="fluxo-section-title">
+        Top 20 processos mais parados
+        <select class="reg-filter" id="flxRespFiltro" onchange="applyFlxFilter()" style="margin-left:16px;font-size:11px;">
+          <option value="">Todos os responsáveis</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;">
+        <table class="fin-table">
+          <thead><tr>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>Etapa</th>
+            <th>Dias parado</th>
+            <th>Responsável</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="flxParadosBody"></tbody>
+        </table>
+      </div>
+
+      <!-- SEÇÃO 2: PRODUTIVIDADE -->
+      <div class="fluxo-section-title">Produtividade por responsável</div>
+      <div class="prod-grid" id="prodGrid"><div class="loading">Carregando...</div></div>
+      <div class="prod-detail" id="prodDetail">
+        <div class="prod-detail-header">
+          <span style="font-weight:600;font-size:15px;" id="prodDetailName">—</span>
+          <button class="dist-panel-close" onclick="closeProdDetail()">×</button>
+        </div>
+        <div class="prod-detail-tabs">
+          <button class="prod-detail-tab active" onclick="switchProdTab('mov',this)">Em movimento (30d)</button>
+          <button class="prod-detail-tab" onclick="switchProdTab('par',this)">Parados (+60d)</button>
+        </div>
+        <div id="prodDetailContent"><div class="loading">—</div></div>
+      </div>
+
+      <!-- SEÇÃO 3: TAREFAS -->
+      <div class="fluxo-section-title">Tarefas realizadas</div>
+      <div id="tarefasSection"><div class="loading">Carregando...</div></div>
+
+    </div>
+
     <!-- ABA 7: CADASTROS PENDENTES -->
     <div id="registrations" class="tab-content">
       <div class="metrics">
@@ -1073,6 +1191,273 @@
       });
     }
 
+    // ── FLUXO ─────────────────────────────────────────────────────────────────
+    let fluxoData = null; // { movements, posts }
+    let fluxoLawsuitsParados = []; // todos os processos com lastMovDate
+    let prodDetailData = null; // { mov: [], par: [] } do responsável aberto
+
+    function daysDiff(dateStr) {
+      if (!dateStr) return 9999;
+      const d = new Date(dateStr.substring(0,10) + 'T00:00:00');
+      if (isNaN(d)) return 9999;
+      return Math.floor((Date.now() - d.getTime()) / 86400000);
+    }
+
+    function clientName(l) {
+      if (Array.isArray(l.customers) && l.customers.length) {
+        const p = l.customers.find(c => c.name && !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO/i.test(c.name));
+        return (p || l.customers[0]).name || '—';
+      }
+      return '—';
+    }
+
+    async function loadFluxo() {
+      try {
+        const data = await fetchJson('/api/flow');
+        fluxoData = data;
+        renderFluxo();
+      } catch(e) {
+        console.error('fluxo:', e);
+      }
+    }
+
+    function renderFluxo() {
+      if (!fluxoData || !allLawsuitsData.length) return;
+      const { movements, posts } = fluxoData;
+      const now = Date.now();
+
+      // Mapa lawsuit_id → data mais recente de andamento
+      const lastMov = {};
+      movements.forEach(m => {
+        const lid = m.lawsuit_id;
+        if (!lid) return;
+        if (!lastMov[lid] || m.date > lastMov[lid]) lastMov[lid] = m.date;
+      });
+
+      // Filtra apenas processos ativos (não encerrados)
+      const ativos = allLawsuitsData.filter(l => !l.exit_production && !l.exit_execution);
+
+      // Enriquece cada processo com diasParado
+      const paradosList = ativos.map(l => {
+        const d = daysDiff(lastMov[l.id]);
+        return { ...l, diasParado: d, lastMovDate: lastMov[l.id] || null };
+      });
+
+      fluxoLawsuitsParados = paradosList;
+
+      // Cards
+      const semana = paradosList.filter(l => l.diasParado <= 7).length;
+      const mes    = paradosList.filter(l => l.diasParado <= 30).length;
+      const p30    = paradosList.filter(l => l.diasParado > 30).length;
+      const p90    = paradosList.filter(l => l.diasParado > 90).length;
+      document.getElementById('flxSemana').textContent = semana;
+      document.getElementById('flxMes').textContent    = mes;
+      document.getElementById('flxP30').textContent    = p30;
+      document.getElementById('flxP90').textContent    = p90;
+
+      // Responsáveis para filtro
+      const resps = [...new Set(ativos.map(l => l.responsible).filter(Boolean))].sort();
+      const sel = document.getElementById('flxRespFiltro');
+      sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
+        resps.map(r => `<option>${r}</option>`).join('');
+
+      // Renderiza gargalos e tabela
+      renderGargalos(paradosList);
+      renderParadosTable(paradosList);
+      renderProdutividade(paradosList);
+      renderTarefas(posts);
+    }
+
+    function renderGargalos(paradosList) {
+      // Agrupa por etapa
+      const stepMap = {};
+      paradosList.forEach(l => {
+        const s = l.step || l.stage || '(sem etapa)';
+        if (!stepMap[s]) stepMap[s] = { cnt: 0, diasTotal: 0 };
+        stepMap[s].cnt++;
+        stepMap[s].diasTotal += l.diasParado === 9999 ? 180 : l.diasParado;
+      });
+      const rows = Object.entries(stepMap)
+        .map(([s, v]) => ({ etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal / v.cnt) }))
+        .sort((a, b) => b.cnt - a.cnt)
+        .slice(0, 15);
+      const maxCnt = rows[0]?.cnt || 1;
+      const html = rows.map(r => {
+        const pct = (r.cnt / maxCnt * 100).toFixed(1);
+        const avgTxt = r.avg >= 9999 ? '—' : `média ${r.avg}d`;
+        return `<div class="gargalo-row">
+          <div class="gargalo-etapa" title="${r.etapa}">${r.etapa}</div>
+          <div class="gargalo-bar-wrap"><div class="gargalo-bar-fill" style="width:${pct}%"></div></div>
+          <div class="gargalo-cnt">${r.cnt}</div>
+          <div class="gargalo-days">${avgTxt}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('gargaloList').innerHTML = html || '<div class="loading">Sem dados</div>';
+    }
+
+    function renderParadosTable(paradosList, filtroResp) {
+      let lista = [...paradosList].sort((a, b) => b.diasParado - a.diasParado);
+      if (filtroResp) lista = lista.filter(l => l.responsible === filtroResp);
+      lista = lista.slice(0, 20);
+      const rows = lista.map(l => {
+        const dias = l.diasParado === 9999 ? '?' : l.diasParado;
+        const cls  = l.diasParado > 90 ? 'danger' : l.diasParado > 30 ? 'warning' : '';
+        const link = `https://app.advbox.com.br/${l.id}`;
+        const nome = clientName(l);
+        return `<tr>
+          <td>${nome}</td>
+          <td>${l.type || '—'}</td>
+          <td>${l.step || l.stage || '—'}</td>
+          <td class="${cls}" style="font-weight:600">${dias}d</td>
+          <td>${l.responsible || '—'}</td>
+          <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
+        </tr>`;
+      }).join('');
+      document.getElementById('flxParadosBody').innerHTML = rows || '<tr><td colspan="6">Nenhum processo</td></tr>';
+    }
+
+    function applyFlxFilter() {
+      const v = document.getElementById('flxRespFiltro').value;
+      renderParadosTable(fluxoLawsuitsParados, v);
+    }
+
+    function renderProdutividade(paradosList) {
+      const byResp = {};
+      paradosList.forEach(l => {
+        const r = l.responsible || '(sem responsável)';
+        if (!byResp[r]) byResp[r] = { name: r, semana: 0, mes: 0, par60: 0, list: [] };
+        byResp[r].list.push(l);
+        if (l.diasParado <= 7)  byResp[r].semana++;
+        if (l.diasParado <= 30) byResp[r].mes++;
+        if (l.diasParado > 60)  byResp[r].par60++;
+      });
+      const cards = Object.values(byResp).sort((a,b) => b.list.length - a.list.length);
+      const html = cards.map((p, idx) => {
+        const ratio = p.par60 === 0 ? 99 : p.mes / p.par60;
+        const saude = ratio > 1 ? 'green' : ratio >= 0.5 ? 'yellow' : 'red';
+        return `<div class="prod-card" onclick="openProdDetail(${idx})">
+          <div class="prod-card-name">${p.name}</div>
+          <div class="prod-card-stats">
+            <div class="prod-stat"><span class="prod-stat-label">Moveu esta semana</span><strong>${p.semana}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Moveu este mês</span><strong>${p.mes}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Parados +60d</span><strong>${p.par60}</strong></div>
+            <div class="prod-stat"><span class="prod-stat-label">Total ativos</span><strong>${p.list.length}</strong></div>
+          </div>
+          <div class="prod-health ${saude}"></div>
+        </div>`;
+      });
+      document.getElementById('prodGrid').innerHTML = html.join('') || '<div class="loading">Sem dados</div>';
+      window._prodCards = cards;
+    }
+
+    function openProdDetail(idx) {
+      const p = window._prodCards[idx];
+      if (!p) return;
+      document.getElementById('prodDetailName').textContent = p.name;
+      prodDetailData = {
+        mov: p.list.filter(l => l.diasParado <= 30),
+        par: p.list.filter(l => l.diasParado > 60)
+      };
+      const detail = document.getElementById('prodDetail');
+      detail.classList.add('open');
+      detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // reset tabs
+      document.querySelectorAll('.prod-detail-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+      renderProdDetailContent('mov');
+    }
+
+    function closeProdDetail() {
+      document.getElementById('prodDetail').classList.remove('open');
+    }
+
+    function switchProdTab(type, btn) {
+      document.querySelectorAll('.prod-detail-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderProdDetailContent(type);
+    }
+
+    function renderProdDetailContent(type) {
+      if (!prodDetailData) return;
+      const list = prodDetailData[type];
+      const rows = list.map(l => {
+        const nome = clientName(l);
+        const link = `https://app.advbox.com.br/${l.id}`;
+        const dias = l.diasParado === 9999 ? '?' : l.diasParado;
+        return `<tr>
+          <td>${nome}</td>
+          <td>${l.type || '—'}</td>
+          <td>${l.step || l.stage || '—'}</td>
+          <td>${dias}d</td>
+          <td><a href="${link}" target="_blank" class="advbox-link">↗</a></td>
+        </tr>`;
+      }).join('');
+      document.getElementById('prodDetailContent').innerHTML = list.length
+        ? `<table class="fin-table"><thead><tr><th>Cliente</th><th>Tipo</th><th>Etapa</th><th>Dias</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<p style="color:var(--text-2);font-size:13px;">Nenhum processo nesta categoria.</p>';
+    }
+
+    function renderTarefas(posts) {
+      const completed = posts.flatMap(p =>
+        (p.users || [])
+          .filter(u => u.completed)
+          .map(u => ({
+            user: u.name,
+            completedAt: u.completed,
+            task: p.task,
+            lawsuit: p.lawsuit,
+            lawsuits_id: p.lawsuits_id
+          }))
+      );
+
+      if (completed.length === 0) {
+        document.getElementById('tarefasSection').innerHTML = `
+          <div class="fluxo-notice">
+            <strong>Tarefas não estão sendo registradas de forma confiável no AdvBox</strong> — apenas ${completed.length} conclusões encontradas em ${posts.length} tarefas. Considere adotar um padrão de marcação de conclusão para aproveitar essa visão.
+          </div>`;
+        return;
+      }
+
+      // Stats por pessoa (semana e mês)
+      const now30 = Date.now() - 30*86400000;
+      const now7  = Date.now() - 7*86400000;
+      const byUser = {};
+      completed.forEach(t => {
+        const u = t.user;
+        if (!byUser[u]) byUser[u] = { semana: 0, mes: 0 };
+        const dt = new Date(t.completedAt).getTime();
+        if (dt >= now7)  byUser[u].semana++;
+        if (dt >= now30) byUser[u].mes++;
+      });
+
+      const statsHtml = Object.entries(byUser).map(([u, v]) =>
+        `<div class="prod-stat" style="max-width:300px"><span class="prod-stat-label">${u}</span> <strong>${v.mes} no mês / ${v.semana} na semana</strong></div>`
+      ).join('');
+
+      // Tabela últimos 30 dias
+      const recentes = completed
+        .filter(t => new Date(t.completedAt).getTime() >= now30)
+        .sort((a,b) => b.completedAt.localeCompare(a.completedAt));
+
+      const rows = recentes.map(t => {
+        const link = t.lawsuits_id ? `<a href="https://app.advbox.com.br/${t.lawsuits_id}" target="_blank" class="advbox-link">↗</a>` : '—';
+        const cliente = t.lawsuit?.customers?.[0]?.name || '—';
+        const dt = t.completedAt ? t.completedAt.substring(0,10) : '—';
+        return `<tr><td>${t.user}</td><td>${dt}</td><td style="max-width:260px;white-space:normal">${t.task||'—'}</td><td>${cliente}</td><td>${link}</td></tr>`;
+      }).join('');
+
+      document.getElementById('tarefasSection').innerHTML = `
+        <div class="fluxo-notice" style="margin-bottom:14px;">
+          <strong>Cobertura:</strong> ${completed.length} conclusões registradas em ${posts.length} tarefas carregadas (API retorna as 500 mais recentes).
+        </div>
+        <div class="prod-card-stats" style="margin-bottom:18px;">${statsHtml}</div>
+        <div class="card" style="padding:0">
+          <table class="fin-table">
+            <thead><tr><th>Responsável</th><th>Concluída em</th><th>Tarefa</th><th>Cliente</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
     async function loadAll(force = false) {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
@@ -1091,9 +1476,10 @@
           loadRegistrations(force)
         ]);
         renderEvolucao();
-        // Distribuição usa o mesmo endpoint de lawsuits — executa após as outras para
-        // evitar rate limit simultâneo
+        // Distribuição e Fluxo usam o mesmo endpoint de lawsuits — executa após as outras
+        // para evitar rate limit simultâneo
         setTimeout(() => loadDistribuicao(), 2000);
+        setTimeout(() => loadFluxo(), 3500);
       } catch (err) {
         showError(err.message);
       } finally {

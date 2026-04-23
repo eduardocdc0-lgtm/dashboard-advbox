@@ -1,0 +1,93 @@
+Adicione uma nova aba chamada "Fluxo" no dashboard, dividida em 3 seções:
+
+═════════════════════════════════════════════════════
+SEÇÃO 1 — FLUXO OPERACIONAL (o mais importante)
+═════════════════════════════════════════════════════
+
+1.1) CARDS DE MOVIMENTAÇÃO (4 cards no topo):
+- "Processos movimentados esta semana" (mudaram de etapa nos últimos 7 dias)
+- "Processos movimentados este mês" (últimos 30 dias)
+- "Processos PARADOS +30 dias" (sem mudança de etapa há mais de 30 dias)
+- "Processos PARADOS +90 dias" (críticos)
+
+1.2) GARGALOS POR ETAPA (gráfico de barras horizontal):
+Lista das etapas com mais processos acumulados, mostrando:
+- Nome da etapa
+- Quantidade de processos nela
+- Tempo médio que os processos ficam nessa etapa (em dias)
+- Ordenado da pior pra melhor (mais acumulada primeiro)
+
+Ex:
+  PROTOCOLADO JUDICIAL | 72 processos | média 58 dias parados
+  PERICIAS MARCADAS    | 65 processos | média 41 dias parados
+  SAL. MATERNIDADE     | 41 processos | média 22 dias parados
+
+1.3) TOP 20 PROCESSOS MAIS PARADOS (tabela):
+- Cliente
+- Tipo de ação
+- Etapa atual
+- Dias desde última movimentação
+- Responsável
+- Link pro AdvBox
+
+Ordenado por dias sem movimento (mais parado primeiro). 
+Filtro por responsável no topo.
+
+═════════════════════════════════════════════════════
+SEÇÃO 2 — PRODUTIVIDADE POR PESSOA (honesta)
+═════════════════════════════════════════════════════
+
+2.1) CARDS POR RESPONSÁVEL:
+Cada pessoa com 3 métricas:
+- "Moveu esta semana": quantos processos dela mudaram de etapa nos últimos 7 dias
+- "Moveu este mês": últimos 30 dias
+- "Parados há +60 dias sob responsabilidade": quantos processos estão no nome dela sem movimento há mais de 60 dias
+
+Cor da barra de saúde:
+- Verde: muita movimentação, poucos parados
+- Amarelo: movimentação média
+- Vermelho: muitos processos parados (gargalo)
+
+Fórmula da cor: razão entre "moveu_mes" e "parados_60_dias"
+- > 1.0 → verde (move mais do que acumula)
+- 0.5 a 1.0 → amarelo
+- < 0.5 → vermelho (acumula mais do que move)
+
+2.2) DETALHAMENTO (clique num card):
+Abre lista dos processos dela, separados em 2 abas:
+- "Em movimento" — processos que ela moveu nos últimos 30 dias
+- "Parados" — processos dela sem movimento há mais de 60 dias
+
+═════════════════════════════════════════════════════
+SEÇÃO 3 — TAREFAS REALIZADAS (se a API AdvBox tiver)
+═════════════════════════════════════════════════════
+
+3.1) Consultar endpoint /posts ou /tasks (o que retornar tarefas):
+- Quantas tarefas cada responsável concluiu na semana
+- Quantas concluiu no mês
+- Quantas estão vencidas no nome dele
+
+3.2) Tabela com as tarefas CONCLUÍDAS no mês (últimos 30 dias):
+- Responsável
+- Data de conclusão
+- Descrição da tarefa
+- Processo relacionado
+
+Se o endpoint não retornar dados confiáveis, omita essa seção e coloque 
+uma mensagem: "Tarefas não estão sendo registradas de forma confiável 
+no AdvBox — considerar adoção de padrão para aproveitar essa visão."
+
+═════════════════════════════════════════════════════
+REGRAS GERAIS
+═════════════════════════════════════════════════════
+
+- "Movimentação" = mudança no campo de etapa do processo (você precisa 
+  comparar a etapa atual com o histórico, ou usar a data_ultimo_andamento 
+  se disponível na API)
+- Se não tiver histórico de etapas, use a "Data do último andamento" 
+  ou "updated_at" do processo
+- Mantém identidade visual preto/branco minimalista
+- Mantém TODAS as outras abas funcionando
+- Use cache de 20 min pra não sobrecarregar a API
+
+Me avisa quando terminar e qual seção ficou limitada por limitação da API.
