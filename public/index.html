@@ -704,10 +704,12 @@
         <div class="metric-card">
           <div class="metric-label">A receber</div>
           <div class="metric-value success" id="aReceber">-</div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px;">honorários dos processos ativos</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">A pagar</div>
           <div class="metric-value danger" id="aPagar">-</div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px;">despesas nos próximos 30 dias</div>
         </div>
       </div>
 
@@ -1797,7 +1799,7 @@
         const labels = Object.keys(porFase);
         const values = Object.values(porFase);
 
-        // A RECEBER = soma de fees_expec dos processos ativos (excluindo encerrados e etapas cat2)
+        // A RECEBER = soma de fees_money (honorários contratados) dos processos ativos
         const aReceberTotal = lawsuits
           .filter(l => {
             if (l.exit_production || l.exit_execution || l.status_closure) return false;
@@ -1805,7 +1807,7 @@
             if (FLUXO_CAT2_CONTAINS.some(k => etapa.includes(k))) return false;
             return true;
           })
-          .reduce((sum, l) => sum + Number(l.fees_expec || 0), 0);
+          .reduce((sum, l) => sum + Number(l.fees_money || 0), 0);
         document.getElementById('aReceber').textContent = formatMoney(aReceberTotal);
 
         if (chartFases) chartFases.destroy();
@@ -2004,13 +2006,17 @@
         finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
         renderFinanceiro();
 
-        // Atualiza card A PAGAR (a receber vem dos processos em loadLawsuits)
+        // A PAGAR = despesas com vencimento (date_due) nos próximos 30 dias, ainda não pagas
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        const em30 = new Date(hoje.getTime() + 30 * 86400000);
         let aPagar = 0;
         transData.forEach(t => {
-          if (!t.date_payment) {
-            const v = Number(t.amount || 0);
-            if (t.entry_type !== 'income') aPagar += v;
-          }
+          if (t.date_payment) return;
+          if (t.entry_type === 'income') return;
+          const venc = t.date_due || '';
+          if (!venc) return;
+          const d = new Date(venc.substring(0, 10) + 'T00:00:00');
+          if (d >= hoje && d <= em30) aPagar += Number(t.amount || 0);
         });
         document.getElementById('aPagar').textContent = formatMoney(aPagar);
 
