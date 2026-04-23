@@ -1246,12 +1246,36 @@
     ];
     const FLUXO_CAT2_CONTAINS = ['ARQUIV','ENCERR','FINALIZAD','CONCLU','BAIXADO','IMPLANTAD'];
 
+    // Etapas que contam como paradas para grupos específicos
+    const FLUXO_ADM_PARADAS = [
+      'EM ANALISE PERICIAS FEITAS',
+      'PARA DAR ENTRADA',
+      'PROCESSOS SEM LAUDOS'
+    ];
+    const FLUXO_MAT_PARADAS = ['PARA DAR ENTRADA'];
+
     function fluxoNorm(s) {
       return (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
     }
     function fluxoCat(l) {
       const etapa = fluxoNorm(l.step || l.stage || '');
+      const grupo = fluxoNorm(l.group || '');  // ex: PREVIDENCIARIO, ADMINISTRATIVO
+      const tipo  = fluxoNorm(l.type  || '');  // ex: SALARIO MATERNIDADE, ACAO ADMINISTRATIVA
+
+      // Cat 2: encerrado/arquivado pela etapa → excluir de tudo
       if (FLUXO_CAT2_CONTAINS.some(k => etapa.includes(k))) return 2;
+
+      // Salário Maternidade (identificado pelo type): só parado se "PARA DAR ENTRADA"
+      if (tipo.includes('MATERNIDADE')) {
+        return FLUXO_MAT_PARADAS.some(k => fluxoNorm(k) === etapa) ? 3 : 1;
+      }
+
+      // Administrativo (identificado pelo group): só parado nas 3 etapas específicas
+      if (grupo === 'ADMINISTRATIVO') {
+        return FLUXO_ADM_PARADAS.some(k => fluxoNorm(k) === etapa) ? 3 : 1;
+      }
+
+      // Demais grupos: espera externa por lista fixa
       if (FLUXO_CAT1_ETAPAS.some(k => fluxoNorm(k) === etapa)) return 1;
       return 3;
     }
@@ -1295,9 +1319,22 @@
         `Espera externa (cat1): ${cat1.length} | ` +
         `Ação do escritório (cat3): ${cat3.length}`
       );
-      // Mostra etapas que cayam no cat2 para auditoria
       const etapasCat2 = [...new Set(cat2.map(l => l.step || l.stage || '(sem etapa)'))].sort();
       console.log('[Fluxo] Etapas excluídas por cat2:', etapasCat2);
+      // Auditoria de grupos detectados em cat3 (parados)
+      const gruposCat3 = {};
+      cat3.forEach(l => {
+        const k = fluxoNorm(l.type || '') + ' [' + fluxoNorm(l.group || '') + ']';
+        gruposCat3[k] = (gruposCat3[k] || 0) + 1;
+      });
+      console.log('[Fluxo] Tipos/Grupos em cat3 (parados):', gruposCat3);
+      // Auditoria de grupos detectados em cat1 (espera)
+      const gruposCat1 = {};
+      cat1.forEach(l => {
+        const k = fluxoNorm(l.type || '') + ' [' + fluxoNorm(l.group || '') + ']';
+        gruposCat1[k] = (gruposCat1[k] || 0) + 1;
+      });
+      console.log('[Fluxo] Tipos/Grupos em cat1 (espera):', gruposCat1);
 
       fluxoLawsuitsParados = cat3; // usado pelo filtro e CSV
 
