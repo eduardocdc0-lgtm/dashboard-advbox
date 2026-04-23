@@ -450,6 +450,30 @@
     }
     .reg-link:hover { border-color: var(--text); color: var(--text); }
 
+    /* ── FINANCEIRO ── */
+    .fin-nav { display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px; }
+    .fin-nav-btn { background:none;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:15px;line-height:1; }
+    .fin-nav-btn:hover { background:#f5f5f5; }
+    .fin-mes-label { font-family:'DM Serif Display',serif;font-size:1.15rem;min-width:160px;text-align:center; }
+    .fin-cats { display:flex;flex-direction:column;gap:0; }
+    .fin-cat-row { display:grid;grid-template-columns:130px 1fr 180px 60px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0; }
+    .fin-cat-row:last-child { border-bottom:none; }
+    .fin-cat-label { font-size:13px;font-weight:500; }
+    .fin-bar-track { background:#f0f0f0;border-radius:4px;height:5px; }
+    .fin-bar-fill { background:#111;border-radius:4px;height:5px;transition:width .4s; }
+    .fin-cat-vals { font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+    .fin-pendente { color:#bbb;font-size:11px; }
+    .fin-cat-count { font-size:11px;color:#aaa;text-align:right; }
+    .fin-table { width:100%;border-collapse:collapse;font-size:13px; }
+    .fin-table th { text-align:left;padding:6px 8px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #eee;font-weight:500; }
+    .fin-table td { padding:8px 8px;border-bottom:1px solid #f5f5f5;vertical-align:middle; }
+    .fin-table tr:last-child td { border-bottom:none; }
+    .fin-badge { display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.04em; }
+    .fin-badge-R { background:#f0faf5;color:#2d6a4f; }
+    .fin-badge-D { background:#fff0f0;color:#c0392b; }
+    .fin-status-ok { color:#2d6a4f;font-size:11px; }
+    .fin-status-pend { color:#bbb;font-size:11px; }
+
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
       display: flex;
@@ -638,19 +662,36 @@
 
     <!-- ABA 4: FINANCEIRO -->
     <div id="financial" class="tab-content">
+      <!-- Navegação de mês -->
+      <div class="fin-nav">
+        <button class="fin-nav-btn" onclick="finNavMes(-1)">&#8592;</button>
+        <span class="fin-mes-label" id="finMesLabel">—</span>
+        <button class="fin-nav-btn" onclick="finNavMes(1)">&#8594;</button>
+      </div>
+      <!-- Resumo -->
       <div class="metrics">
         <div class="metric-card">
           <div class="metric-label">Recebido no mês</div>
           <div class="metric-value success" id="recebidoMes">-</div>
         </div>
         <div class="metric-card">
+          <div class="metric-label">Previsto (não pago)</div>
+          <div class="metric-value" id="finAReceber">-</div>
+        </div>
+        <div class="metric-card">
           <div class="metric-label">Pago no mês</div>
           <div class="metric-value danger" id="pagoMes">-</div>
         </div>
       </div>
+      <!-- Receitas por tipo -->
       <div class="card">
-        <div class="card-title">Próximos vencimentos</div>
-        <div id="listaVencimentos"><div class="loading">Carregando...</div></div>
+        <div class="card-title">Receitas por tipo</div>
+        <div class="fin-cats" id="finCategorias"><div class="loading">Carregando...</div></div>
+      </div>
+      <!-- Lista de lançamentos -->
+      <div class="card">
+        <div class="card-title">Lançamentos do mês</div>
+        <div id="finLancamentos"><div class="loading">Carregando...</div></div>
       </div>
     </div>
 
@@ -991,53 +1032,153 @@
       } catch (e) { console.error('movements:', e); }
     }
 
+    let transData = [];
+    let finMesAtual = null;
+
+    const FIN_TIPOS = ['RPV','Parcelamento','Mensalidade','H. Iniciais','H. Finais','Sucumbência','Honorário','Avulsa','Outros'];
+    const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function finClassify(t) {
+      const cat  = (t.category    || '').toUpperCase().trim();
+      const desc = (t.description || '').toUpperCase();
+      if (cat === 'RPVS' || (desc.includes('RPV') && !desc.includes('PARCELAMENTO'))) return 'RPV';
+      if (desc.includes('PARCELAMENTO')) return 'Parcelamento';
+      if (cat.includes('MENSALIDADE'))   return 'Mensalidade';
+      if (cat.includes('INICIAIS'))      return 'H. Iniciais';
+      if (cat.includes('FINAIS'))        return 'H. Finais';
+      if (cat.includes('SUCUMB'))        return 'Sucumbência';
+      if (cat === 'HONORÁRIO')           return 'Honorário';
+      if (cat === 'AVULSA')              return 'Avulsa';
+      return 'Outros';
+    }
+
+    function finNavMes(delta) {
+      const [mm, yyyy] = finMesAtual.split('/').map(Number);
+      const d = new Date(yyyy, mm - 1 + delta, 1);
+      finMesAtual = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      renderFinanceiro();
+    }
+
+    function renderFinanceiro() {
+      const [mm, yyyy] = finMesAtual.split('/').map(Number);
+      document.getElementById('finMesLabel').textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
+
+      const doMes  = transData.filter(t => t.competence === finMesAtual);
+      const income  = doMes.filter(t => t.entry_type === 'income');
+      const expense = doMes.filter(t => t.entry_type === 'expense');
+
+      const recebido = income.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const previsto = income.filter(t => !t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const pago     = expense.filter(t => t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+
+      document.getElementById('recebidoMes').textContent = formatMoney(recebido);
+      document.getElementById('finAReceber').textContent  = formatMoney(previsto);
+      document.getElementById('pagoMes').textContent     = formatMoney(pago);
+
+      // ─── Breakdown por tipo ───
+      const grupos = {};
+      FIN_TIPOS.forEach(k => grupos[k] = { recebido: 0, previsto: 0, count: 0 });
+
+      income.forEach(t => {
+        const tipo = finClassify(t);
+        if (!grupos[tipo]) grupos[tipo] = { recebido: 0, previsto: 0, count: 0 };
+        grupos[tipo].count++;
+        if (t.date_payment) grupos[tipo].recebido += Number(t.amount || 0);
+        else                grupos[tipo].previsto  += Number(t.amount || 0);
+      });
+
+      const totalRecebido = recebido || 1;
+      const rows = FIN_TIPOS.filter(k => grupos[k].recebido + grupos[k].previsto > 0).map(tipo => {
+        const g     = grupos[tipo];
+        const total = g.recebido + g.previsto;
+        const pct   = Math.round(g.recebido / totalRecebido * 100);
+        return `
+          <div class="fin-cat-row">
+            <div class="fin-cat-label">${tipo}</div>
+            <div class="fin-bar-track"><div class="fin-bar-fill" style="width:${pct}%"></div></div>
+            <div class="fin-cat-vals">
+              <span class="success" style="font-weight:600">${formatMoney(g.recebido)}</span>
+              ${g.previsto > 0 ? `<span class="fin-pendente">+ ${formatMoney(g.previsto)} previsto</span>` : ''}
+            </div>
+            <div class="fin-cat-count">${g.count} lanç.</div>
+          </div>`;
+      });
+
+      document.getElementById('finCategorias').innerHTML =
+        rows.length ? rows.join('') : '<div class="empty">Sem receitas neste mês</div>';
+
+      // ─── Lista de lançamentos ───
+      const sorted = [...doMes].sort((a, b) => {
+        const da = a.date_payment || a.date_due || '';
+        const db = b.date_payment || b.date_due || '';
+        return da > db ? -1 : 1;
+      });
+
+      const listEl = document.getElementById('finLancamentos');
+      if (!sorted.length) {
+        listEl.innerHTML = '<div class="empty">Sem lançamentos neste mês</div>';
+        return;
+      }
+
+      listEl.innerHTML = `
+        <table class="fin-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Cliente / Descrição</th>
+              <th>Fase</th>
+              <th style="text-align:right">Valor</th>
+              <th style="text-align:center">Status</th>
+              <th style="text-align:right">Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map(t => {
+              const badge = t.entry_type === 'income' ? 'R' : 'D';
+              const cls   = t.entry_type === 'income' ? 'fin-badge-R' : 'fin-badge-D';
+              const fase  = t.entry_type === 'income' ? finClassify(t) : 'Despesa';
+              const client = t.name || (t.description || '').split('\n')[0] || '—';
+              const valor  = Number(t.amount || 0);
+              const data   = formatDate(t.date_payment || t.date_due || '');
+              const link   = t.lawsuit_id
+                ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:2px 6px;margin-left:6px;">↗</a>` : '';
+              return `<tr>
+                <td><span class="fin-badge ${cls}">${badge}</span></td>
+                <td>${client}${link}</td>
+                <td style="color:#888;font-size:12px;">${fase}</td>
+                <td style="text-align:right;font-weight:600;" class="${t.entry_type === 'income' ? 'success' : 'danger'}">${formatMoney(valor)}</td>
+                <td style="text-align:center;">${t.date_payment
+                  ? '<span class="fin-status-ok">✓ Pago</span>'
+                  : '<span class="fin-status-pend">Pendente</span>'}</td>
+                <td style="text-align:right;color:#888;font-size:12px;">${data}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+
     async function loadTransactions() {
       try {
         const data = await fetchJson('/api/transactions');
-        const trans = data.data || [];
+        transData = data.data || [];
 
-        let aReceber = 0, aPagar = 0, recebidoMes = 0, pagoMes = 0;
-        const hoje = new Date();
-        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        const vencimentos = [];
+        // Inicializa no mês atual
+        const now = new Date();
+        finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+        renderFinanceiro();
 
-        trans.forEach(t => {
-          const valor = Number(t.amount || t.value || 0);
-          const tipo = (t.type || '').toLowerCase();
-          const pago = t.paid_at || t.paid;
-
-          if (!pago) {
-            if (tipo.includes('credit') || tipo === 'receita' || tipo === 'income') aReceber += valor;
-            else aPagar += valor;
-            if (t.due_date) vencimentos.push(t);
-          } else {
-            const dataPg = new Date(pago);
-            if (dataPg >= inicioMes) {
-              if (tipo.includes('credit') || tipo === 'receita' || tipo === 'income') recebidoMes += valor;
-              else pagoMes += valor;
-            }
+        // Atualiza cards Visão Geral (a receber / a pagar — total geral)
+        let aReceber = 0, aPagar = 0;
+        transData.forEach(t => {
+          if (!t.date_payment) {
+            const v = Number(t.amount || 0);
+            if (t.entry_type === 'income')   aReceber += v;
+            else                              aPagar   += v;
           }
         });
-
         document.getElementById('aReceber').textContent = formatMoney(aReceber);
-        document.getElementById('aPagar').textContent = formatMoney(aPagar);
-        document.getElementById('recebidoMes').textContent = formatMoney(recebidoMes);
-        document.getElementById('pagoMes').textContent = formatMoney(pagoMes);
+        document.getElementById('aPagar').textContent   = formatMoney(aPagar);
 
-        const lista = document.getElementById('listaVencimentos');
-        if (vencimentos.length === 0) {
-          lista.innerHTML = '<div class="empty">Sem vencimentos pendentes</div>';
-        } else {
-          lista.innerHTML = vencimentos.slice(0, 10).map(t => `
-            <div class="list-item">
-              <div class="list-item-main">
-                <div class="list-item-title">${t.description || 'Transação'}</div>
-                <div class="list-item-subtitle">${formatMoney(t.amount || t.value)}</div>
-              </div>
-              <div class="list-item-meta">${t.due_date || ''}</div>
-            </div>
-          `).join('');
-        }
       } catch (e) { console.error('transactions:', e); }
     }
 
