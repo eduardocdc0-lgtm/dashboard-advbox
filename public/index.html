@@ -976,7 +976,7 @@
           <thead><tr>
             <th>Cliente</th>
             <th>Tipo</th>
-            <th>Etapa</th>
+            <th>Fase</th>
             <th>Dias parado</th>
             <th>Responsável</th>
             <th></th>
@@ -1368,7 +1368,7 @@
       function buildMap(list, catNum) {
         const m = {};
         list.forEach(l => {
-          const s = l.step || l.stage || '(sem etapa)';
+          const s = l.stage || '(sem fase)';
           if (!m[s]) m[s] = { cnt: 0, diasTotal: 0, cat: catNum };
           m[s].cnt++;
           m[s].diasTotal += l.diasParado === 9999 ? 180 : l.diasParado;
@@ -1420,7 +1420,7 @@
         return `<tr>
           <td>${nome}</td>
           <td>${l.type || '—'}</td>
-          <td>${l.step || l.stage || '—'}</td>
+          <td>${l.stage || '—'}</td>
           <td class="${cls}" style="font-weight:600">${dias}d</td>
           <td>${l.responsible || '—'}</td>
           <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
@@ -1441,12 +1441,12 @@
 
     function exportFluxoCsv() {
       const lista = [...fluxoLawsuitsParados].sort((a, b) => b.diasParado - a.diasParado);
-      const rows = [['Cliente','Tipo','Etapa','Responsável','Dias parado','Link AdvBox']];
+      const rows = [['Cliente','Tipo','Fase','Responsável','Dias parado','Link AdvBox']];
       lista.forEach(l => {
         rows.push([
           clientName(l),
           l.type || '',
-          l.step || l.stage || '',
+          l.stage || '',
           l.responsible || '',
           l.diasParado === 9999 ? '' : l.diasParado,
           `https://app.advbox.com.br/${l.id}`
@@ -1536,13 +1536,13 @@
         return `<tr>
           <td>${nome}</td>
           <td>${l.type || '—'}</td>
-          <td>${l.step || l.stage || '—'}</td>
+          <td>${l.stage || '—'}</td>
           <td>${dias}d</td>
           <td><a href="${link}" target="_blank" class="advbox-link">↗</a></td>
         </tr>`;
       }).join('');
       document.getElementById('prodDetailContent').innerHTML = list.length
-        ? `<table class="fin-table"><thead><tr><th>Cliente</th><th>Tipo</th><th>Etapa</th><th>Dias</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        ? `<table class="fin-table"><thead><tr><th>Cliente</th><th>Tipo</th><th>Fase</th><th>Dias</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
         : '<p style="color:var(--text-2);font-size:13px;">Nenhum processo nesta categoria.</p>';
     }
 
