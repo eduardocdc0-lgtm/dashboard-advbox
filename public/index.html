@@ -692,29 +692,6 @@
           <input type="date" id="canalDateTo" class="reg-date-input" onchange="applyCanalFilter()">
         </div>
       </div>
-      <div class="metrics" style="margin-bottom:20px;">
-        <div class="metric-card">
-          <div class="metric-label">Parceiros · R$100/proc</div>
-          <div class="metric-value" id="kCustoTotalParceiros">—</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:4px;" id="kCustoSubParceiros"></div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Orgânicos · R$30/proc</div>
-          <div class="metric-value" id="kCustoTotalOrganicos">—</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:4px;" id="kCustoSubOrganicos"></div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Campanhas · R$200/proc</div>
-          <div class="metric-value" id="kCustoTotalCampanhas">—</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:4px;" id="kCustoSubCampanhas"></div>
-        </div>
-        <div class="metric-card" style="border:1.5px solid var(--text);">
-          <div class="metric-label">Total a repassar</div>
-          <div class="metric-value" id="kCustoTotal">—</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:4px;" id="kCustoTotalSub"></div>
-        </div>
-      </div>
-
       <div class="kanban-board">
         <div class="kanban-col">
           <div class="kanban-col-header">
@@ -1273,32 +1250,12 @@
       applyCanalFilter();
     }
 
-    const CUSTO_PARCEIRO  = 100;
-    const CUSTO_ORGANICO  = 30;
-    const CUSTO_CAMPANHA  = 200;
-
     function renderKanban() {
       const parceiros = canalByPeriod.filter(r => r.origem === 'PARCEIRO');
       const organicos = canalByPeriod.filter(r => r.origem === 'ORGANICO');
       const campanhas = canalByPeriod.filter(r => r.origem === 'CAMPANHA');
       const comLaudo  = canalByPeriod.filter(r => ['COM LAUDO','LAUDO OK'].includes(r.laudoStatus));
       const semLaudo  = canalByPeriod.filter(r => ['SEM LAUDO','FAZER LAUDO','AGUARDANDO LAUDO','PENDENTE'].includes(r.laudoStatus));
-
-      const custoParceiros = parceiros.length * CUSTO_PARCEIRO;
-      const custoOrganicos = organicos.length * CUSTO_ORGANICO;
-      const custoCampanhas = campanhas.length * CUSTO_CAMPANHA;
-      const custoTotal     = custoParceiros + custoOrganicos + custoCampanhas;
-
-      const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-
-      document.getElementById('kCustoTotalParceiros').textContent = fmt(custoParceiros);
-      document.getElementById('kCustoSubParceiros').textContent   = `${parceiros.length} processos × R$${CUSTO_PARCEIRO}`;
-      document.getElementById('kCustoTotalOrganicos').textContent = fmt(custoOrganicos);
-      document.getElementById('kCustoSubOrganicos').textContent   = `${organicos.length} processos × R$${CUSTO_ORGANICO}`;
-      document.getElementById('kCustoTotalCampanhas').textContent = fmt(custoCampanhas);
-      document.getElementById('kCustoSubCampanhas').textContent   = `${campanhas.length} processos × R$${CUSTO_CAMPANHA}`;
-      document.getElementById('kCustoTotal').textContent          = fmt(custoTotal);
-      document.getElementById('kCustoTotalSub').textContent       = `${parceiros.length + organicos.length + campanhas.length} processos no período`;
 
       renderKanbanCol('kColParceiros', 'kCntParceiros', parceiros, false);
       renderKanbanCol('kColOrganicos', 'kCntOrganicos', organicos, false);
