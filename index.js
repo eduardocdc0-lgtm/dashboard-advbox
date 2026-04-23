@@ -60,9 +60,33 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
+// ── Cache compartilhado de lawsuits (usado por /api/lawsuits e /api/distribution) ──
+let sharedLawsuitsCache = null;
+let sharedLawsuitsAt = null;
+let sharedLawsuitsPromise = null;
+const LAWSUITS_TTL_MS = 20 * 60 * 1000;
+
+async function fetchLawsuits(force = false) {
+  const now = Date.now();
+  const stale = !sharedLawsuitsAt || (now - sharedLawsuitsAt) > LAWSUITS_TTL_MS;
+  if (!force && !stale && sharedLawsuitsCache) return sharedLawsuitsCache;
+  if (sharedLawsuitsPromise) return sharedLawsuitsPromise;
+  sharedLawsuitsPromise = callAdvBox('/lawsuits?limit=1000').then(data => {
+    sharedLawsuitsCache = data;
+    sharedLawsuitsAt = Date.now();
+    sharedLawsuitsPromise = null;
+    return data;
+  }).catch(err => {
+    sharedLawsuitsPromise = null;
+    throw err;
+  });
+  return sharedLawsuitsPromise;
+}
+
 app.get('/api/lawsuits', async (req, res) => {
   try {
-    const data = await callAdvBox('/lawsuits?limit=1000');
+    const force = req.query.force === '1';
+    const data = await fetchLawsuits(force);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -166,7 +190,7 @@ async function buildRegistrationsCache() {
   registrationsFetching = true;
   console.log('[Cadastros] Buscando processos para validação...');
   try {
-    const data = await callAdvBox('/lawsuits?limit=1000');
+    const data = await fetchLawsuits();
     const all = data.data || [];
 
     const results = [];
@@ -383,7 +407,7 @@ app.get('/api/distribution', async (req, res) => {
   }
 
   try {
-    const data = await callAdvBox('/lawsuits?limit=1000');
+    const data = await fetchLawsuits(force);
     const all = data.data || [];
 
     // Processos ativos: sem status de encerramento
