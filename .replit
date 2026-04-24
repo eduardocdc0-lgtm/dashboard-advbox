@@ -38,6 +38,7 @@ externalPort = 80
 [userenv.shared]
 ADMIN_USER = "eduardorodrigues14"
 TEAM_USER = "colaboradores"
+META_AD_ACCOUNT = "act_654132083965752"
 
 [deployment]
 deploymentTarget = "autoscale"
