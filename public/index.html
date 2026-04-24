@@ -777,6 +777,16 @@
       color: var(--text); outline: none;
     }
     .ar-search input:focus { border-color: #999; }
+
+    /* ── Meta Ads ── */
+    .meta-badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+    .meta-badge.active  { background:#111; color:#fff; }
+    .meta-badge.paused  { background:#eee; color:#555; }
+    .meta-obj { font-size:11px; color:#777; }
+    #metaads .fin-table td, #metaads .fin-table th { white-space:nowrap; }
+    #metaads .fin-table td:first-child { white-space:normal; max-width:220px; min-width:140px; }
+    .meta-zero { color:#ccc; }
+    .meta-top   { background:#f7fff7; }
   </style>
 </head>
 <body>
@@ -822,6 +832,7 @@
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
       <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
       <button class="tab" onclick="showTab('fluxo', event)">Fluxo</button>
+      <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -1156,6 +1167,73 @@
 
     </div>
 
+    <!-- ABA META ADS -->
+    <div id="metaads" class="tab-content admin-tab">
+
+      <!-- Toolbar -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+        <div style="font-size:13px;color:#555;">Período:</div>
+        <select id="metaPeriod" class="reg-filter" onchange="loadMetaAds()" style="font-size:12px;">
+          <option value="last_7d">Últimos 7 dias</option>
+          <option value="last_14d">Últimos 14 dias</option>
+          <option value="last_30d" selected>Últimos 30 dias</option>
+          <option value="last_90d">Últimos 90 dias</option>
+        </select>
+        <div style="font-size:13px;color:#555;margin-left:8px;">Status:</div>
+        <select id="metaStatus" class="reg-filter" onchange="renderMetaAds()" style="font-size:12px;">
+          <option value="">Todos</option>
+          <option value="ACTIVE">Ativas</option>
+          <option value="PAUSED">Pausadas</option>
+        </select>
+        <div style="font-size:13px;color:#555;margin-left:8px;">Objetivo:</div>
+        <select id="metaObjective" class="reg-filter" onchange="renderMetaAds()" style="font-size:12px;">
+          <option value="">Todos</option>
+          <option value="OUTCOME_LEADS">Leads</option>
+          <option value="OUTCOME_ENGAGEMENT">Engajamento</option>
+        </select>
+        <button class="dist-export-btn" onclick="loadMetaAds(true)" style="margin-left:auto;">↺ Atualizar</button>
+      </div>
+
+      <!-- Cards de resumo -->
+      <div class="metrics" id="metaSummary">
+        <div class="metric-card"><div class="metric-label">Investido no período</div><div class="metric-value" id="metaTotalSpend">—</div></div>
+        <div class="metric-card"><div class="metric-label">Impressões</div><div class="metric-value" id="metaTotalImpr">—</div></div>
+        <div class="metric-card"><div class="metric-label">Alcance</div><div class="metric-value" id="metaTotalReach">—</div></div>
+        <div class="metric-card"><div class="metric-label">Conversas WhatsApp</div><div class="metric-value" id="metaTotalWA">—</div></div>
+        <div class="metric-card"><div class="metric-label">Cliques totais</div><div class="metric-value" id="metaTotalClicks">—</div></div>
+        <div class="metric-card"><div class="metric-label">CTR médio</div><div class="metric-value" id="metaAvgCTR">—</div></div>
+        <div class="metric-card"><div class="metric-label">CPM médio</div><div class="metric-value" id="metaAvgCPM">—</div></div>
+        <div class="metric-card"><div class="metric-label">Custo/WhatsApp</div><div class="metric-value" id="metaCostWA">—</div></div>
+      </div>
+
+      <!-- Tabela de campanhas -->
+      <div class="card" style="padding:0;margin-top:8px;">
+        <div id="metaTableWrap">
+          <table class="fin-table" id="metaTable">
+            <thead>
+              <tr>
+                <th>Campanha</th>
+                <th style="text-align:center;">Status</th>
+                <th style="text-align:center;">Objetivo</th>
+                <th style="text-align:right;">Orçamento/dia</th>
+                <th style="text-align:right;">Gasto</th>
+                <th style="text-align:right;">Impressões</th>
+                <th style="text-align:right;">Alcance</th>
+                <th style="text-align:right;">Cliques</th>
+                <th style="text-align:right;">CTR</th>
+                <th style="text-align:right;">CPM</th>
+                <th style="text-align:right;">WhatsApp</th>
+                <th style="text-align:right;">Custo/WA</th>
+              </tr>
+            </thead>
+            <tbody id="metaTbody"><tr><td colspan="12" style="text-align:center;padding:32px;">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="metaUpdatedAt" style="font-size:11px;color:#888;margin-top:10px;text-align:right;"></div>
+    </div>
+
     <!-- ABA 7: CADASTROS PENDENTES -->
     <div id="registrations" class="tab-content">
       <div class="metrics">
@@ -1222,6 +1300,7 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(name).classList.add('active');
       if (evt) evt.target.classList.add('active');
+      if (name === 'metaads' && !metaRawData) loadMetaAds();
     }
 
     function showError(msg) {
@@ -1388,6 +1467,90 @@
       } catch(e) {
         console.error('fluxo:', e);
       }
+    }
+
+    // ── META ADS ─────────────────────────────────────────────────────────────
+    let metaRawData = null;
+
+    async function loadMetaAds(force = false) {
+      const preset = document.getElementById('metaPeriod').value;
+      const url    = `/api/meta-ads?date_preset=${preset}${force ? '&force=1' : ''}`;
+      document.getElementById('metaTbody').innerHTML = '<tr><td colspan="12" style="text-align:center;padding:32px;">Carregando...</td></tr>';
+      try {
+        metaRawData = await fetchJson(url);
+        renderMetaAds();
+        const at = new Date(metaRawData.fetchedAt);
+        document.getElementById('metaUpdatedAt').textContent = 'Atualizado em ' + at.toLocaleString('pt-BR');
+      } catch(e) {
+        document.getElementById('metaTbody').innerHTML = `<tr><td colspan="12" style="text-align:center;padding:32px;color:#c00;">Erro ao carregar dados do Meta Ads: ${e.message}</td></tr>`;
+      }
+    }
+
+    function renderMetaAds() {
+      if (!metaRawData) return;
+      const statusFilter    = document.getElementById('metaStatus').value;
+      const objectiveFilter = document.getElementById('metaObjective').value;
+
+      let list = metaRawData.campaigns.filter(c => {
+        if (statusFilter    && c.status    !== statusFilter)    return false;
+        if (objectiveFilter && c.objective !== objectiveFilter) return false;
+        return true;
+      });
+
+      list.sort((a, b) => b.spend - a.spend);
+
+      const totalSpend  = list.reduce((s, c) => s + c.spend, 0);
+      const totalImpr   = list.reduce((s, c) => s + c.impressions, 0);
+      const totalReach  = list.reduce((s, c) => s + c.reach, 0);
+      const totalWA     = list.reduce((s, c) => s + c.whatsapp, 0);
+      const totalClicks = list.reduce((s, c) => s + c.clicks, 0);
+      const avgCTR      = totalImpr > 0 ? (totalClicks / totalImpr * 100) : 0;
+      const avgCPM      = totalImpr > 0 ? (totalSpend / totalImpr * 1000) : 0;
+      const costWA      = totalWA > 0   ? (totalSpend / totalWA) : 0;
+
+      const fmt  = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      const fmtN = v => v.toLocaleString('pt-BR');
+      const fmtP = v => v.toFixed(2).replace('.', ',') + '%';
+
+      document.getElementById('metaTotalSpend').textContent  = fmt(totalSpend);
+      document.getElementById('metaTotalImpr').textContent   = fmtN(totalImpr);
+      document.getElementById('metaTotalReach').textContent  = fmtN(totalReach);
+      document.getElementById('metaTotalWA').textContent     = fmtN(totalWA);
+      document.getElementById('metaTotalClicks').textContent = fmtN(totalClicks);
+      document.getElementById('metaAvgCTR').textContent      = fmtP(avgCTR);
+      document.getElementById('metaAvgCPM').textContent      = fmt(avgCPM);
+      document.getElementById('metaCostWA').textContent      = totalWA > 0 ? fmt(costWA) : '—';
+
+      const objLabel = { OUTCOME_LEADS: 'Leads', OUTCOME_ENGAGEMENT: 'Engajamento', OUTCOME_AWARENESS: 'Awareness', OUTCOME_TRAFFIC: 'Tráfego', OUTCOME_SALES: 'Vendas' };
+      const maxSpend = list[0] ? list[0].spend : 1;
+
+      const rows = list.map(c => {
+        const isTop = c.spend >= maxSpend * 0.8 && c.spend > 0;
+        const badge = c.status === 'ACTIVE'
+          ? '<span class="meta-badge active">Ativa</span>'
+          : '<span class="meta-badge paused">Pausada</span>';
+        const obj   = objLabel[c.objective] || c.objective || '—';
+        const bud   = c.daily_budget ? fmt(c.daily_budget) : '—';
+        const wa    = c.whatsapp > 0 ? fmtN(c.whatsapp) : '<span class="meta-zero">0</span>';
+        const cwa   = c.whatsapp > 0 && c.spend > 0 ? fmt(c.spend / c.whatsapp) : '—';
+        return `<tr class="${isTop ? 'meta-top' : ''}">
+          <td title="${c.name}">${c.name.length > 50 ? c.name.slice(0,48)+'…' : c.name}</td>
+          <td style="text-align:center;">${badge}</td>
+          <td style="text-align:center;" class="meta-obj">${obj}</td>
+          <td style="text-align:right;">${bud}</td>
+          <td style="text-align:right;">${c.spend > 0 ? fmt(c.spend) : '<span class="meta-zero">R$ 0,00</span>'}</td>
+          <td style="text-align:right;">${c.impressions > 0 ? fmtN(c.impressions) : '<span class="meta-zero">0</span>'}</td>
+          <td style="text-align:right;">${c.reach > 0 ? fmtN(c.reach) : '<span class="meta-zero">0</span>'}</td>
+          <td style="text-align:right;">${c.clicks > 0 ? fmtN(c.clicks) : '<span class="meta-zero">0</span>'}</td>
+          <td style="text-align:right;">${c.ctr > 0 ? fmtP(c.ctr) : '—'}</td>
+          <td style="text-align:right;">${c.cpm > 0 ? fmt(c.cpm) : '—'}</td>
+          <td style="text-align:right;">${wa}</td>
+          <td style="text-align:right;">${cwa}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('metaTbody').innerHTML = rows ||
+        '<tr><td colspan="12" style="text-align:center;padding:24px;color:#999;">Nenhuma campanha encontrada.</td></tr>';
     }
 
     // ── Categorização de etapas ──────────────────────────────────────────────

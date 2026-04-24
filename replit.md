@@ -9,10 +9,13 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 - **Porta**: 5000
 
 ## Configuração
-- `ADVBOX_TOKEN` — token Bearer da API do AdvBox (configurado em Secrets)
+- `ADVBOX_TOKEN` — token Bearer da API do AdvBox (Secrets)
 - `ADVBOX_BASE_URL` — `https://app.advbox.com.br/api/v1`
+- `META_TOKEN` — token de acesso da API do Meta Ads (Secrets)
+- `META_AD_ACCOUNT` — `act_654132083965752` (variável de ambiente)
+- `ADMIN_PASS`, `TEAM_PASS`, `SESSION_SECRET` — autenticação (Secrets)
 
-## Abas do Dashboard (9 abas)
+## Abas do Dashboard (10 abas)
 1. **Visão Geral** — processos, tarefas, financeiro + evolução mensal de honorários e faturamento
 2. **Processos** — lista de processos
 3. **Movimentações** — histórico de movimentações
@@ -22,6 +25,7 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 7. **Canais** — Kanban por canal de origem (Parceiros, Orgânicos, Campanhas, Com Laudo, Sem Laudo)
 8. **Distribuição** — carga de trabalho por responsável, com lista detalhada filtrável e exportação CSV
 9. **Fluxo** — fluxo operacional (cards parados, gargalos por etapa, top 20 parados), produtividade por responsável, tarefas realizadas
+10. **Meta Ads** *(admin only)* — campanhas Meta Ads em tempo real: investimento, impressões, alcance, WhatsApp, CTR, CPM, custo/conversa. Filtros por período, status e objetivo. Cache 15 min.
 
 ## Aba Cadastros Pendentes
 - Valida anotações gerais dos processos

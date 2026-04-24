@@ -573,6 +573,76 @@ app.get('/api/distribution', async (req, res) => {
   }
 });
 
+// ── Meta Ads ──────────────────────────────────────────────────────────────────
+const META_TOKEN      = process.env.META_TOKEN || '';
+const META_AD_ACCOUNT = process.env.META_AD_ACCOUNT || '';
+const META_BASE       = 'https://graph.facebook.com/v19.0';
+
+let metaCache    = {};
+const META_TTL   = 15 * 60 * 1000;
+
+app.get('/api/meta-ads', async (req, res) => {
+  const preset = req.query.date_preset || 'last_30d';
+  const force  = req.query.force === '1';
+  const now    = Date.now();
+
+  if (!force && metaCache[preset] && (now - metaCache[preset].at) < META_TTL) {
+    return res.json(metaCache[preset].data);
+  }
+  if (!META_TOKEN || !META_AD_ACCOUNT) {
+    return res.status(500).json({ error: 'META_TOKEN ou META_AD_ACCOUNT não configurados.' });
+  }
+
+  try {
+    const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time';
+    const campsUrl = `${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`;
+    const campsRes = await fetch(campsUrl);
+    const campsJson = await campsRes.json();
+    const campaigns = campsJson.data || [];
+
+    const insightFields = 'campaign_id,campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
+    const insUrl = `${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${insightFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`;
+    const insRes = await fetch(insUrl);
+    const insJson = await insRes.json();
+    const insights = insJson.data || [];
+
+    const insMap = {};
+    insights.forEach(i => { insMap[i.campaign_id] = i; });
+
+    const result = campaigns.map(c => {
+      const ins = insMap[c.id] || {};
+      const actions = ins.actions || [];
+      const whatsapp = actions.find(a => a.action_type === 'onsite_conversion.total_messaging_connection');
+      const leads    = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
+      return {
+        id:           c.id,
+        name:         c.name,
+        status:       c.status,
+        objective:    c.objective || '',
+        daily_budget: c.daily_budget ? (Number(c.daily_budget) / 100) : null,
+        start_time:   c.start_time || '',
+        stop_time:    c.stop_time  || '',
+        spend:        Number(ins.spend  || 0),
+        impressions:  Number(ins.impressions || 0),
+        clicks:       Number(ins.clicks || 0),
+        reach:        Number(ins.reach  || 0),
+        cpm:          Number(ins.cpm    || 0),
+        cpc:          Number(ins.cpc    || 0),
+        ctr:          Number(ins.ctr    || 0),
+        whatsapp:     Number(whatsapp ? whatsapp.value : 0),
+        leads:        Number(leads    ? leads.value    : 0),
+      };
+    });
+
+    const payload = { campaigns: result, period: preset, fetchedAt: new Date().toISOString() };
+    metaCache[preset] = { data: payload, at: now };
+    res.json(payload);
+  } catch (err) {
+    console.error('meta-ads:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {
