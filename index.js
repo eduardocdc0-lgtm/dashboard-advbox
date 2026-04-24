@@ -600,17 +600,17 @@ app.get('/api/meta-ads', async (req, res) => {
     const campsJson = await campsRes.json();
     const campaigns = campsJson.data || [];
 
-    const insightFields = 'campaign_id,campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
+    const insightFields = 'campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
     const insUrl = `${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${insightFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`;
     const insRes = await fetch(insUrl);
     const insJson = await insRes.json();
     const insights = insJson.data || [];
 
     const insMap = {};
-    insights.forEach(i => { insMap[i.campaign_id] = i; });
+    insights.forEach(i => { insMap[i.campaign_name] = i; });
 
     const result = campaigns.map(c => {
-      const ins = insMap[c.id] || {};
+      const ins = insMap[c.name] || {};
       const actions = ins.actions || [];
       const whatsapp = actions.find(a => a.action_type === 'onsite_conversion.total_messaging_connection');
       const leads    = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
