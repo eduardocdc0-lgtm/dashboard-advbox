@@ -598,19 +598,29 @@ app.get('/api/meta-ads', async (req, res) => {
     const campsUrl = `${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`;
     const campsRes = await fetch(campsUrl);
     const campsJson = await campsRes.json();
+    if (campsJson.error) throw new Error('Campaigns: ' + campsJson.error.message);
     const campaigns = campsJson.data || [];
+    console.log(`[Meta] Campanhas: ${campaigns.length} | preset: ${preset}`);
 
-    const insightFields = 'campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
+    const insightFields = 'campaign_id,campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
     const insUrl = `${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${insightFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`;
     const insRes = await fetch(insUrl);
     const insJson = await insRes.json();
+    if (insJson.error) throw new Error('Insights: ' + insJson.error.message);
     const insights = insJson.data || [];
+    console.log(`[Meta] Insights: ${insights.length} registros | Ex: ${insights[0] ? JSON.stringify(Object.keys(insights[0])) : 'nenhum'}`);
+    if (insights[0]) console.log(`[Meta] Amostra insight:`, JSON.stringify(insights[0]).slice(0, 200));
 
-    const insMap = {};
-    insights.forEach(i => { insMap[i.campaign_name] = i; });
+    // Mapeia por id e por nome para garantir o match
+    const insMapById   = {};
+    const insMapByName = {};
+    insights.forEach(i => {
+      if (i.campaign_id)   insMapById[i.campaign_id]     = i;
+      if (i.campaign_name) insMapByName[i.campaign_name] = i;
+    });
 
     const result = campaigns.map(c => {
-      const ins = insMap[c.name] || {};
+      const ins = insMapById[c.id] || insMapByName[c.name] || {};
       const actions = ins.actions || [];
       const whatsapp = actions.find(a => a.action_type === 'onsite_conversion.total_messaging_connection');
       const leads    = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
