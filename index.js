@@ -673,6 +673,69 @@ app.get('/api/meta-ads', async (req, res) => {
   }
 });
 
+// ── EVOLUÇÃO: Contratos e Faturamento por mês ───────────────────────────────
+let evolucaoCache = null;
+let evolucaoCacheAt = 0;
+const EVOLUCAO_TTL = 30 * 60 * 1000; // 30 min
+
+app.get('/api/evolucao', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (evolucaoCache && (now - evolucaoCacheAt) < EVOLUCAO_TTL) {
+      return res.json(evolucaoCache);
+    }
+
+    const byMonth    = {};
+    const faturMonth = {};
+    const expecMonth = {};
+    let page = 0;
+
+    while (page < 20) {
+      const data = await callAdvBox(`/lawsuits?limit=500&offset=${page * 500}`);
+      const arr  = Array.isArray(data) ? data : (data.data || []);
+      if (!arr.length) break;
+
+      arr.forEach(l => {
+        const dt = (l.created_at || l.process_date || '').slice(0, 7);
+        if (!dt || dt < '2025-01' || dt > '2030-12') return;
+        byMonth[dt]    = (byMonth[dt]    || 0) + 1;
+        if (l.fees_money)  faturMonth[dt] = (faturMonth[dt] || 0) + parseFloat(l.fees_money);
+        if (l.fees_expec)  expecMonth[dt] = (expecMonth[dt] || 0) + parseFloat(l.fees_expec);
+      });
+
+      page++;
+      if (arr.length < 500) break;
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Gera série completa desde 2025-01 até mês corrente
+    const curYM = new Date().toISOString().slice(0, 7);
+    const months = [];
+    let ym = '2025-01';
+    while (ym <= curYM) {
+      months.push(ym);
+      const [y, m] = ym.split('-').map(Number);
+      const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+      ym = next;
+    }
+
+    const payload = {
+      months,
+      contratos: months.map(m => byMonth[m] || 0),
+      faturamento: months.map(m => Math.round(faturMonth[m] || 0)),
+      expec:       months.map(m => Math.round(expecMonth[m] || 0)),
+      fetchedAt: new Date().toISOString()
+    };
+
+    evolucaoCache   = payload;
+    evolucaoCacheAt = now;
+    res.json(payload);
+  } catch (err) {
+    console.error('evolucao:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {
