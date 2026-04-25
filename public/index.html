@@ -778,6 +778,28 @@
     }
     .ar-search input:focus { border-color: #999; }
 
+    /* ── Hoje ── */
+    .hoje-section { margin-bottom: 32px; }
+    .hoje-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-2); margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; display:flex; align-items:center; }
+    .hoje-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    .hoje-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+    .hoje-card:hover { border-color: #111; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .hoje-card-name { font-size: 13px; font-weight: 600; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hoje-card-count { font-size: 32px; font-weight: 700; font-family: 'DM Serif Display', serif; line-height: 1; }
+    .hoje-card-count.zero { color: #ccc; }
+    .hoje-card-label { font-size: 11px; color: var(--text-2); margin-top: 4px; }
+    .hoje-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; display:flex; align-items:center; justify-content:center; }
+    .hoje-modal { background: #fff; border-radius: 10px; width: min(600px,94vw); max-height: 80vh; display:flex; flex-direction:column; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+    .hoje-modal-header { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+    .hoje-modal-title { font-size: 16px; font-weight: 700; }
+    .hoje-modal-body { padding: 14px 0; overflow-y: auto; flex: 1; }
+    .hoje-task-row { padding: 10px 22px; border-bottom: 1px solid #f3f3f3; display:grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+    .hoje-task-row:last-child { border-bottom: none; }
+    .hoje-task-desc { font-size: 13px; color: var(--text); font-weight: 500; }
+    .hoje-task-cliente { font-size: 11px; color: var(--text-2); margin-top: 3px; }
+    .hoje-task-hora { font-size: 11px; color: #aaa; white-space: nowrap; }
+    .hoje-empty { padding: 32px; text-align: center; color: #999; font-size: 13px; }
+
     /* ── Meta Ads ── */
     .meta-badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
     .meta-badge.active  { background:#111; color:#fff; }
@@ -856,6 +878,15 @@
           <div class="metric-value danger" id="aPagar">-</div>
           <div style="font-size:10px;color:#aaa;margin-top:2px;">despesas nos próximos 30 dias</div>
         </div>
+      </div>
+
+      <!-- Atividade de Hoje -->
+      <div class="hoje-section">
+        <div class="hoje-title">
+          Atividade de hoje
+          <span id="hojeData" style="font-weight:400;color:#aaa;font-size:11px;margin-left:8px;"></span>
+        </div>
+        <div id="hojeGrid" class="hoje-grid"><div class="loading">Aguardando dados...</div></div>
       </div>
 
       <!-- Evolução -->
@@ -1464,9 +1495,130 @@
         const data = await fetchJson('/api/flow');
         fluxoData = data;
         renderFluxo();
+        renderHoje(data.posts || []);
       } catch(e) {
         console.error('fluxo:', e);
+        document.getElementById('hojeGrid').innerHTML = '<div class="hoje-empty">Erro ao carregar atividade de hoje.</div>';
       }
+    }
+
+    // ── ATIVIDADE DE HOJE ──────────────────────────────────────────────────────
+    function renderHoje(posts) {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const grid = document.getElementById('hojeGrid');
+      const dataEl = document.getElementById('hojeData');
+      if (dataEl) {
+        const d = new Date();
+        dataEl.textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+      }
+
+      // Coleta todas as conclusões de hoje
+      const conclusoesHoje = [];
+      posts.forEach(p => {
+        (p.users || []).forEach(u => {
+          if (!u.completed) return;
+          const completedStr = typeof u.completed === 'string' ? u.completed : '';
+          // Suporta "YYYY-MM-DD" e "DD/MM/YYYY HH:mm"
+          let dateKey = '';
+          if (/^\d{4}-\d{2}-\d{2}/.test(completedStr)) {
+            dateKey = completedStr.slice(0, 10);
+          } else if (/^\d{2}\/\d{2}\/\d{4}/.test(completedStr)) {
+            const [day, mon, yr] = completedStr.split(/[\/\s]/);
+            dateKey = `${yr}-${mon}-${day}`;
+          }
+          if (dateKey !== hoje) return;
+          const clientName = p.lawsuit?.customers?.[0]?.name
+            || p.lawsuit?.name
+            || (typeof p.lawsuit === 'string' ? p.lawsuit : '')
+            || '';
+          conclusoesHoje.push({
+            user:   u.name || '—',
+            task:   p.task || '—',
+            client: clientName,
+            completed: completedStr,
+            lawsuits_id: p.lawsuits_id || ''
+          });
+        });
+      });
+
+      // Agrupa por usuário
+      const byUser = {};
+      conclusoesHoje.forEach(c => {
+        if (!byUser[c.user]) byUser[c.user] = [];
+        byUser[c.user].push(c);
+      });
+
+      // Ordem: responsáveis válidos primeiro, depois alfabética
+      const RESP_ORDER = ['ANA MARÍLIA','CLAUDIANA','MARIA ALICE','EDUARDO','LETICIA','THIAGO'];
+      const users = Object.keys(byUser).sort((a, b) => {
+        const ai = RESP_ORDER.findIndex(r => a.toUpperCase().includes(r));
+        const bi = RESP_ORDER.findIndex(r => b.toUpperCase().includes(r));
+        if (ai >= 0 && bi >= 0) return ai - bi;
+        if (ai >= 0) return -1;
+        if (bi >= 0) return 1;
+        return a.localeCompare(b);
+      });
+
+      if (users.length === 0) {
+        grid.innerHTML = '<div class="hoje-empty">Nenhuma tarefa concluída registrada hoje ainda. As tarefas aparecem conforme forem marcadas como concluídas no AdvBox.</div>';
+        return;
+      }
+
+      grid.innerHTML = users.map(u => {
+        const tasks = byUser[u];
+        const safeU = u.replace(/'/g, "\\'");
+        return `<div class="hoje-card" onclick="openHojeModal('${safeU}')">
+          <div class="hoje-card-name">${u}</div>
+          <div class="hoje-card-count${tasks.length === 0 ? ' zero' : ''}">${tasks.length}</div>
+          <div class="hoje-card-label">tarefa${tasks.length !== 1 ? 's' : ''} concluída${tasks.length !== 1 ? 's' : ''} hoje</div>
+        </div>`;
+      }).join('');
+
+      window._hojeByUser = byUser;
+    }
+
+    function openHojeModal(userName) {
+      const byUser = window._hojeByUser || {};
+      const tasks = byUser[userName] || [];
+      const existing = document.getElementById('hojeModalBg');
+      if (existing) existing.remove();
+
+      const parseHora = str => {
+        if (!str) return '';
+        const parts = str.split(' ');
+        return parts[1] ? parts[1].slice(0,5) : '';
+      };
+
+      const rows = tasks.length
+        ? tasks.map(t => {
+            const link = t.lawsuits_id ? `https://app.advbox.com.br/lawsuit/${t.lawsuits_id}` : '#';
+            const hora = parseHora(t.completed);
+            return `<div class="hoje-task-row">
+              <div>
+                <div class="hoje-task-desc">${t.task}</div>
+                ${t.client ? `<div class="hoje-task-cliente">${t.client}</div>` : ''}
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                ${hora ? `<span class="hoje-task-hora">${hora}</span>` : ''}
+                ${t.lawsuits_id ? `<a href="${link}" target="_blank" class="advbox-link" style="font-size:12px;">↗</a>` : ''}
+              </div>
+            </div>`;
+          }).join('')
+        : '<div class="hoje-empty">Sem tarefas concluídas hoje.</div>';
+
+      const modal = document.createElement('div');
+      modal.id = 'hojeModalBg';
+      modal.className = 'hoje-modal-bg';
+      modal.onclick = e => { if (e.target === modal) modal.remove(); };
+      modal.innerHTML = `
+        <div class="hoje-modal">
+          <div class="hoje-modal-header">
+            <div class="hoje-modal-title">${userName}</div>
+            <button class="dist-panel-close" onclick="document.getElementById('hojeModalBg').remove()">×</button>
+          </div>
+          <div class="hoje-modal-body">${rows}</div>
+        </div>`;
+      document.body.appendChild(modal);
     }
 
     // ── META ADS ─────────────────────────────────────────────────────────────
