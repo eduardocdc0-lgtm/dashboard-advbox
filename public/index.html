@@ -883,8 +883,9 @@
       <!-- Atividade de Hoje -->
       <div class="hoje-section">
         <div class="hoje-title">
-          Atividade de hoje
+          Atividade da equipe
           <span id="hojeData" style="font-weight:400;color:#aaa;font-size:11px;margin-left:8px;"></span>
+          <span style="font-weight:400;color:#bbb;font-size:10px;margin-left:6px;">· últimos 7 dias</span>
         </div>
         <div id="hojeGrid" class="hoje-grid"><div class="loading">Aguardando dados...</div></div>
       </div>
@@ -1504,73 +1505,71 @@
 
     // ── ATIVIDADE DE HOJE ──────────────────────────────────────────────────────
     function renderHoje(posts) {
-      const hoje = new Date().toISOString().slice(0, 10);
-      const grid = document.getElementById('hojeGrid');
-      const dataEl = document.getElementById('hojeData');
-      if (dataEl) {
-        const d = new Date();
-        dataEl.textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-      }
+      const now     = new Date();
+      const hoje    = now.toISOString().slice(0, 10);
+      const ontem   = new Date(now - 86400000).toISOString().slice(0, 10);
+      const semana  = new Date(now - 6 * 86400000).toISOString().slice(0, 10);
+      const grid    = document.getElementById('hojeGrid');
+      const dataEl  = document.getElementById('hojeData');
+      if (dataEl) dataEl.textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
-      // Coleta todas as conclusões de hoje
-      const conclusoesHoje = [];
+      // Coleta conclusões dos últimos 7 dias
+      const conclusoes = [];
       posts.forEach(p => {
         (p.users || []).forEach(u => {
           if (!u.completed) return;
-          const completedStr = typeof u.completed === 'string' ? u.completed : '';
-          // Suporta "YYYY-MM-DD" e "DD/MM/YYYY HH:mm"
+          const str = typeof u.completed === 'string' ? u.completed : '';
           let dateKey = '';
-          if (/^\d{4}-\d{2}-\d{2}/.test(completedStr)) {
-            dateKey = completedStr.slice(0, 10);
-          } else if (/^\d{2}\/\d{2}\/\d{4}/.test(completedStr)) {
-            const [day, mon, yr] = completedStr.split(/[\/\s]/);
-            dateKey = `${yr}-${mon}-${day}`;
+          if (/^\d{4}-\d{2}-\d{2}/.test(str))       dateKey = str.slice(0, 10);
+          else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+            const [d, m, y] = str.split(/[\/\s]/);
+            dateKey = `${y}-${m}-${d}`;
           }
-          if (dateKey !== hoje) return;
+          if (!dateKey || dateKey < semana) return;
           const clientName = p.lawsuit?.customers?.[0]?.name
             || p.lawsuit?.name
             || (typeof p.lawsuit === 'string' ? p.lawsuit : '')
             || '';
-          conclusoesHoje.push({
-            user:   u.name || '—',
-            task:   p.task || '—',
-            client: clientName,
-            completed: completedStr,
-            lawsuits_id: p.lawsuits_id || ''
-          });
+          conclusoes.push({ user: u.name || '—', task: p.task || '—', client: clientName, dateKey, completed: str, lawsuits_id: p.lawsuits_id || '' });
         });
       });
 
-      // Agrupa por usuário
+      // Agrupa por usuário, separando hoje / ontem / resto
       const byUser = {};
-      conclusoesHoje.forEach(c => {
-        if (!byUser[c.user]) byUser[c.user] = [];
-        byUser[c.user].push(c);
+      conclusoes.forEach(c => {
+        if (!byUser[c.user]) byUser[c.user] = { hoje: [], ontem: [], semana: [] };
+        if (c.dateKey === hoje)        byUser[c.user].hoje.push(c);
+        else if (c.dateKey === ontem)  byUser[c.user].ontem.push(c);
+        else                           byUser[c.user].semana.push(c);
       });
 
-      // Ordem: responsáveis válidos primeiro, depois alfabética
       const RESP_ORDER = ['ANA MARÍLIA','CLAUDIANA','MARIA ALICE','EDUARDO','LETICIA','THIAGO'];
       const users = Object.keys(byUser).sort((a, b) => {
         const ai = RESP_ORDER.findIndex(r => a.toUpperCase().includes(r));
         const bi = RESP_ORDER.findIndex(r => b.toUpperCase().includes(r));
         if (ai >= 0 && bi >= 0) return ai - bi;
-        if (ai >= 0) return -1;
-        if (bi >= 0) return 1;
+        if (ai >= 0) return -1; if (bi >= 0) return 1;
         return a.localeCompare(b);
       });
 
       if (users.length === 0) {
-        grid.innerHTML = '<div class="hoje-empty">Nenhuma tarefa concluída registrada hoje ainda. As tarefas aparecem conforme forem marcadas como concluídas no AdvBox.</div>';
+        grid.innerHTML = '<div class="hoje-empty">Nenhuma tarefa concluída nos últimos 7 dias.</div>';
         return;
       }
 
       grid.innerHTML = users.map(u => {
-        const tasks = byUser[u];
+        const g = byUser[u];
+        const total = g.hoje.length + g.ontem.length + g.semana.length;
         const safeU = u.replace(/'/g, "\\'");
+        const sub = g.hoje.length > 0
+          ? `<span style="color:#111;font-weight:700;">${g.hoje.length} hoje</span>${g.ontem.length > 0 ? ` · ${g.ontem.length} ontem` : ''}`
+          : g.ontem.length > 0
+            ? `<span style="color:#555;">${g.ontem.length} ontem</span>${g.semana.length > 0 ? ` · ${g.semana.length} outros` : ''}`
+            : `<span style="color:#aaa;">${g.semana.length} esta semana</span>`;
         return `<div class="hoje-card" onclick="openHojeModal('${safeU}')">
           <div class="hoje-card-name">${u}</div>
-          <div class="hoje-card-count${tasks.length === 0 ? ' zero' : ''}">${tasks.length}</div>
-          <div class="hoje-card-label">tarefa${tasks.length !== 1 ? 's' : ''} concluída${tasks.length !== 1 ? 's' : ''} hoje</div>
+          <div class="hoje-card-count${total === 0 ? ' zero' : ''}">${total}</div>
+          <div class="hoje-card-label">${sub}</div>
         </div>`;
       }).join('');
 
@@ -1579,32 +1578,44 @@
 
     function openHojeModal(userName) {
       const byUser = window._hojeByUser || {};
-      const tasks = byUser[userName] || [];
+      const g = byUser[userName] || { hoje: [], ontem: [], semana: [] };
       const existing = document.getElementById('hojeModalBg');
       if (existing) existing.remove();
 
-      const parseHora = str => {
-        if (!str) return '';
-        const parts = str.split(' ');
-        return parts[1] ? parts[1].slice(0,5) : '';
+      const parseHora = str => str ? (str.split(' ')[1] || '').slice(0,5) : '';
+      const dayLabel = dk => {
+        const now = new Date();
+        const hoje  = now.toISOString().slice(0,10);
+        const ontem = new Date(now - 86400000).toISOString().slice(0,10);
+        if (dk === hoje)  return 'Hoje';
+        if (dk === ontem) return 'Ontem';
+        const [y,m,d] = dk.split('-');
+        return `${d}/${m}`;
       };
 
-      const rows = tasks.length
-        ? tasks.map(t => {
-            const link = t.lawsuits_id ? `https://app.advbox.com.br/lawsuit/${t.lawsuits_id}` : '#';
-            const hora = parseHora(t.completed);
-            return `<div class="hoje-task-row">
-              <div>
-                <div class="hoje-task-desc">${t.task}</div>
-                ${t.client ? `<div class="hoje-task-cliente">${t.client}</div>` : ''}
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                ${hora ? `<span class="hoje-task-hora">${hora}</span>` : ''}
-                ${t.lawsuits_id ? `<a href="${link}" target="_blank" class="advbox-link" style="font-size:12px;">↗</a>` : ''}
-              </div>
-            </div>`;
-          }).join('')
-        : '<div class="hoje-empty">Sem tarefas concluídas hoje.</div>';
+      const taskRow = t => {
+        const link = t.lawsuits_id ? `https://app.advbox.com.br/lawsuit/${t.lawsuits_id}` : '';
+        const hora = parseHora(t.completed);
+        return `<div class="hoje-task-row">
+          <div>
+            <div class="hoje-task-desc">${t.task}</div>
+            ${t.client ? `<div class="hoje-task-cliente">${t.client}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            ${hora ? `<span class="hoje-task-hora">${hora}</span>` : ''}
+            ${link ? `<a href="${link}" target="_blank" class="advbox-link" style="font-size:12px;">↗</a>` : ''}
+          </div>
+        </div>`;
+      };
+
+      const section = (label, tasks) => tasks.length === 0 ? '' : `
+        <div style="padding:10px 22px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#aaa;">${label}</div>
+        ${tasks.map(taskRow).join('')}`;
+
+      const allTasks = [...g.hoje, ...g.ontem, ...g.semana];
+      const body = allTasks.length
+        ? section('Hoje', g.hoje) + section('Ontem', g.ontem) + section('Esta semana', g.semana)
+        : '<div class="hoje-empty">Sem tarefas concluídas nos últimos 7 dias.</div>';
 
       const modal = document.createElement('div');
       modal.id = 'hojeModalBg';
@@ -1616,7 +1627,7 @@
             <div class="hoje-modal-title">${userName}</div>
             <button class="dist-panel-close" onclick="document.getElementById('hojeModalBg').remove()">×</button>
           </div>
-          <div class="hoje-modal-body">${rows}</div>
+          <div class="hoje-modal-body">${body}</div>
         </div>`;
       document.body.appendChild(modal);
     }

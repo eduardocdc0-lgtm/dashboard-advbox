@@ -196,6 +196,26 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
+// Debug: inspeciona formato dos campos de posts
+app.get('/api/debug-posts', async (req, res) => {
+  try {
+    const data = await callAdvBox('/posts?limit=20');
+    const posts = Array.isArray(data) ? data : (data.data || []);
+    const sample = posts.slice(0, 5).map(p => ({
+      task: p.task,
+      lawsuits_id: p.lawsuits_id,
+      users: (p.users || []).slice(0, 3).map(u => ({
+        name: u.name,
+        completed: u.completed,
+        completed_type: typeof u.completed
+      }))
+    }));
+    res.json({ total: posts.length, today: new Date().toISOString(), sample });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Cache para dados do Fluxo (movimentos + posts)
 let flowCache = null;
 let flowCacheAt = null;
