@@ -603,6 +603,8 @@
     .fin-nav-btn { background:none;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:15px;line-height:1; }
     .fin-nav-btn:hover { background:#f5f5f5; }
     .fin-mes-label { font-family:'DM Serif Display',serif;font-size:1.15rem;min-width:160px;text-align:center; }
+    .fin-cols { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0; }
+    @media (max-width:800px) { .fin-cols { grid-template-columns:1fr; } }
     .fin-cats { display:flex;flex-direction:column;gap:0; }
     .fin-cat-row { display:grid;grid-template-columns:130px 1fr 180px 60px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0; }
     .fin-cat-row:last-child { border-bottom:none; }
@@ -627,6 +629,16 @@
     .fin-badge-D { background:#fff0f0;color:#c0392b; }
     .fin-status-ok { color:#2d6a4f;font-size:11px; }
     .fin-status-pend { color:#bbb;font-size:11px; }
+    /* Nova linha de categoria */
+    .fin-cat-row2 { display:grid;grid-template-columns:140px 1fr 110px 32px auto;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid #f5f5f5;cursor:pointer;border-radius:5px;transition:background .12s; }
+    .fin-cat-row2:last-child { border-bottom:none; }
+    .fin-cat-row2:hover { background:#f8f8f8; }
+    .fin-cat2-name { font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .fin-cat2-amt  { font-size:13px;font-weight:700;text-align:right;white-space:nowrap; }
+    .fin-cat2-cnt  { font-size:11px;color:#bbb;text-align:right; }
+    .fin-cat2-pend { font-size:10.5px;color:#bbb;white-space:nowrap; }
+    .fin-bar-green { background:#27ae60; }
+    .fin-bar-red   { background:#c0392b; }
 
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
@@ -975,18 +987,46 @@
           <div class="metric-value" id="finAReceber">-</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Pago no mês</div>
+          <div class="metric-label">Despesas pagas</div>
           <div class="metric-value danger" id="pagoMes">-</div>
         </div>
+        <div class="metric-card">
+          <div class="metric-label">Resultado líquido</div>
+          <div class="metric-value" id="finResultado">-</div>
+        </div>
       </div>
-      <!-- Receitas por tipo -->
-      <div class="card">
-        <div class="card-title">Receitas por tipo</div>
-        <div class="fin-cats" id="finCategorias"><div class="loading">Carregando...</div></div>
+      <!-- Categorias: Receitas e Despesas lado a lado -->
+      <div class="fin-cols">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:baseline;">
+            Receitas por categoria
+            <span id="finReceitasTotalLabel" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#2d7a2d;"></span>
+          </div>
+          <div id="finReceitas"><div class="loading" style="padding:20px 0;">Carregando...</div></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:baseline;">
+            Despesas por categoria
+            <span id="finDespesasTotalLabel" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#c0392b;"></span>
+          </div>
+          <div id="finDespesas"><div class="loading" style="padding:20px 0;">Carregando...</div></div>
+        </div>
       </div>
       <!-- Lista de lançamentos -->
-      <div class="card">
-        <div class="card-title">Lançamentos do mês</div>
+      <div class="card" style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin-bottom:0;">Lançamentos do mês</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="finCatFilter" class="reg-filter" onchange="renderFinanceiro()" style="font-size:12px;">
+              <option value="">Todas categorias</option>
+            </select>
+            <select id="finTipoFilter" class="reg-filter" onchange="renderFinanceiro()" style="font-size:12px;">
+              <option value="">Receitas e despesas</option>
+              <option value="income">Só receitas</option>
+              <option value="expense">Só despesas</option>
+            </select>
+          </div>
+        </div>
         <div id="finLancamentos"><div class="loading">Carregando...</div></div>
       </div>
     </div>
@@ -2550,22 +2590,7 @@
     let transData = [];
     let finMesAtual = null;
 
-    const FIN_TIPOS = ['RPV','Parcelamento','Mensalidade','H. Iniciais','H. Finais','Sucumbência','Honorário','Avulsa','Outros'];
     const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-    function finClassify(t) {
-      const cat  = (t.category    || '').toUpperCase().trim();
-      const desc = (t.description || '').toUpperCase();
-      if (cat === 'RPVS' || (desc.includes('RPV') && !desc.includes('PARCELAMENTO'))) return 'RPV';
-      if (desc.includes('PARCELAMENTO')) return 'Parcelamento';
-      if (cat.includes('MENSALIDADE'))   return 'Mensalidade';
-      if (cat.includes('INICIAIS'))      return 'H. Iniciais';
-      if (cat.includes('FINAIS'))        return 'H. Finais';
-      if (cat.includes('SUCUMB'))        return 'Sucumbência';
-      if (cat === 'HONORÁRIO')           return 'Honorário';
-      if (cat === 'AVULSA')              return 'Avulsa';
-      return 'Outros';
-    }
 
     function finNavMes(delta) {
       const [mm, yyyy] = finMesAtual.split('/').map(Number);
@@ -2574,64 +2599,147 @@
       renderFinanceiro();
     }
 
+    function finCatLabel(cat) {
+      const map = {
+        'HONORÁRIO': 'Honorário',
+        'HONORARIOS': 'Honorário',
+        'HONORÁRIOS POR MENSALIDADE': 'Mensalidade',
+        'HONORÁRIOS INICIAIS': 'H. Iniciais',
+        'HONORÁRIOS FINAIS': 'H. Finais',
+        'HONORÁRIOS DE SUCUMBÊNCIA': 'Sucumbência',
+        'HONORÁRIOS CONSULTORIAS': 'H. Consultorias',
+        'HONORÁRIOS DE ADVOGADOS ASSOCIADOS': 'H. Associados',
+        'HONORÁRIOS DE PARCEIROS': 'H. Parceiros',
+        'RPVS': 'RPVs',
+        'AVULSA': 'Avulsa',
+        'SALÁRIOS': 'Salários',
+        'PRÓ-LABORE': 'Pró-labore',
+        'REMUNERAÇÃO DE FUNCIONÁRIOS': 'Remuneração Func.',
+        'ABONO PRODUTIVIDADE': 'Abono Produtividade',
+        'MARKETING JURÍDICO E PUBLICIDADE': 'Marketing',
+        'ALUGUEL': 'Aluguel',
+        'CONTADOR': 'Contador',
+        'DESPESAS AVULSAS': 'Despesas Avulsas',
+        'GUIA DE CUSTAS PAGAS PARA O CLIENTE': 'Custas p/ Cliente',
+        'MATERIAIS DE LIMPEZA E ALIMENTAÇÃO': 'Limpeza / Alimentação',
+        'MATERIAIS DO ESCRITÓRIO': 'Materiais',
+        'INTERNET': 'Internet',
+        'TELEFONIA': 'Telefonia',
+        'ÁGUA': 'Água',
+        'SIMPLES NACIONAL': 'Simples Nacional',
+        'TROCO': 'Troco',
+        'REPASSE PARCEIRO': 'Repasse Parceiro',
+        'VALE TRANSPORTE': 'Vale Transporte',
+        'VALOR INICIAL': 'Valor Inicial',
+        'APORTE DE SÓCIO': 'Aporte de Sócio',
+      };
+      return map[cat] || (cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : 'Outros');
+    }
+
     function renderFinanceiro() {
       const [mm, yyyy] = finMesAtual.split('/').map(Number);
       document.getElementById('finMesLabel').textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
 
-      const doMes  = transData.filter(t => t.competence === finMesAtual);
+      const doMes   = transData.filter(t => t.competence === finMesAtual);
       const income  = doMes.filter(t => t.entry_type === 'income');
       const expense = doMes.filter(t => t.entry_type === 'expense');
 
       const recebido = income.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
       const previsto = income.filter(t => !t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
-      const pago     = expense.filter(t => t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const pago     = expense.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const resultado = recebido - pago;
 
-      document.getElementById('recebidoMes').textContent = formatMoney(recebido);
+      document.getElementById('recebidoMes').textContent  = formatMoney(recebido);
       document.getElementById('finAReceber').textContent  = formatMoney(previsto);
-      document.getElementById('pagoMes').textContent     = formatMoney(pago);
+      document.getElementById('pagoMes').textContent      = formatMoney(pago);
+      const resEl = document.getElementById('finResultado');
+      resEl.textContent = formatMoney(resultado);
+      resEl.className   = 'metric-value ' + (resultado >= 0 ? 'success' : 'danger');
 
-      // ─── Breakdown por tipo ───
-      const grupos = {};
-      FIN_TIPOS.forEach(k => grupos[k] = { recebido: 0, previsto: 0, count: 0 });
+      // ─── Helper: agrupa por categoria ───────────────────────────────────────
+      function buildCatGroups(list) {
+        const g = {};
+        list.forEach(t => {
+          const cat = (t.category || 'SEM CATEGORIA').trim();
+          if (!g[cat]) g[cat] = { total: 0, pago: 0, pendente: 0, count: 0 };
+          const amt = Number(t.amount || 0);
+          g[cat].total += amt;
+          g[cat].count++;
+          if (t.date_payment) g[cat].pago     += amt;
+          else                g[cat].pendente  += amt;
+        });
+        return g;
+      }
 
-      income.forEach(t => {
-        const tipo = finClassify(t);
-        if (!grupos[tipo]) grupos[tipo] = { recebido: 0, previsto: 0, count: 0 };
-        grupos[tipo].count++;
-        if (t.date_payment) grupos[tipo].recebido += Number(t.amount || 0);
-        else                grupos[tipo].previsto  += Number(t.amount || 0);
-      });
+      // ─── Painel de receitas ──────────────────────────────────────────────────
+      const rGrp = buildCatGroups(income);
+      const rTotal = Object.values(rGrp).reduce((s, g) => s + g.total, 0);
+      document.getElementById('finReceitasTotalLabel').textContent = formatMoney(rTotal);
+      const rMax = Math.max(...Object.values(rGrp).map(g => g.total), 1);
 
-      const totalRecebido = recebido || 1;
-      const rows = FIN_TIPOS.filter(k => grupos[k].recebido + grupos[k].previsto > 0).map(tipo => {
-        const g     = grupos[tipo];
-        const total = g.recebido + g.previsto;
-        const pct   = Math.round(g.recebido / totalRecebido * 100);
-        return `
-          <div class="fin-cat-row">
-            <div class="fin-cat-label">${tipo}</div>
-            <div class="fin-bar-track"><div class="fin-bar-fill" style="width:${pct}%"></div></div>
-            <div class="fin-cat-vals">
-              <span class="success" style="font-weight:600">${formatMoney(g.recebido)}</span>
-              ${g.previsto > 0 ? `<span class="fin-pendente">+ ${formatMoney(g.previsto)} previsto</span>` : ''}
-            </div>
-            <div class="fin-cat-count">${g.count} lanç.</div>
+      const rRows = Object.entries(rGrp)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([cat, g]) => {
+          const pct  = Math.round(g.total / rMax * 100);
+          const lbl  = finCatLabel(cat);
+          return `<div class="fin-cat-row2" onclick="finFilterCat('${cat.replace(/'/g,"\\'")}')">
+            <div class="fin-cat2-name" title="${cat}">${lbl}</div>
+            <div class="fin-bar-track" style="flex:1;margin:0 10px;"><div class="fin-bar-fill fin-bar-green" style="width:${pct}%"></div></div>
+            <div class="fin-cat2-amt success">${formatMoney(g.total)}</div>
+            <div class="fin-cat2-cnt">${g.count}</div>
+            ${g.pendente > 0 ? `<div class="fin-cat2-pend">+ ${formatMoney(g.pendente)} prev.</div>` : '<div></div>'}
           </div>`;
-      });
+        }).join('');
+      document.getElementById('finReceitas').innerHTML =
+        rRows || '<div class="empty" style="padding:20px 0">Sem receitas neste mês</div>';
 
-      document.getElementById('finCategorias').innerHTML =
-        rows.length ? rows.join('') : '<div class="empty">Sem receitas neste mês</div>';
+      // ─── Painel de despesas ──────────────────────────────────────────────────
+      const dGrp = buildCatGroups(expense);
+      const dTotal = Object.values(dGrp).reduce((s, g) => s + g.total, 0);
+      document.getElementById('finDespesasTotalLabel').textContent = formatMoney(dTotal);
+      const dMax = Math.max(...Object.values(dGrp).map(g => g.total), 1);
 
-      // ─── Lista de lançamentos ───
-      const sorted = [...doMes].sort((a, b) => {
+      const dRows = Object.entries(dGrp)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([cat, g]) => {
+          const pct = Math.round(g.total / dMax * 100);
+          const lbl = finCatLabel(cat);
+          return `<div class="fin-cat-row2" onclick="finFilterCat('${cat.replace(/'/g,"\\'")}')">
+            <div class="fin-cat2-name" title="${cat}">${lbl}</div>
+            <div class="fin-bar-track" style="flex:1;margin:0 10px;"><div class="fin-bar-fill fin-bar-red" style="width:${pct}%"></div></div>
+            <div class="fin-cat2-amt danger">${formatMoney(g.total)}</div>
+            <div class="fin-cat2-cnt">${g.count}</div>
+            <div></div>
+          </div>`;
+        }).join('');
+      document.getElementById('finDespesas').innerHTML =
+        dRows || '<div class="empty" style="padding:20px 0">Sem despesas neste mês</div>';
+
+      // ─── Popula filtro de categoria ─────────────────────────────────────────
+      const allCats = [...new Set(doMes.map(t => (t.category || 'SEM CATEGORIA').trim()))].sort();
+      const catSel = document.getElementById('finCatFilter');
+      const catVal = catSel.value;
+      catSel.innerHTML = '<option value="">Todas categorias</option>' +
+        allCats.map(c => `<option value="${c}"${c === catVal ? ' selected' : ''}>${finCatLabel(c)}</option>`).join('');
+
+      // ─── Lista de lançamentos ────────────────────────────────────────────────
+      const catFilter  = document.getElementById('finCatFilter').value;
+      const tipoFilter = document.getElementById('finTipoFilter').value;
+
+      let filtered = doMes.filter(t => {
+        const cat = (t.category || 'SEM CATEGORIA').trim();
+        if (catFilter  && cat !== catFilter) return false;
+        if (tipoFilter && t.entry_type !== tipoFilter) return false;
+        return true;
+      }).sort((a, b) => {
         const da = a.date_payment || a.date_due || '';
         const db = b.date_payment || b.date_due || '';
         return da > db ? -1 : 1;
       });
 
       const listEl = document.getElementById('finLancamentos');
-      if (!sorted.length) {
-        listEl.innerHTML = '<div class="empty">Sem lançamentos neste mês</div>';
+      if (!filtered.length) {
+        listEl.innerHTML = '<div class="empty">Sem lançamentos para os filtros selecionados</div>';
         return;
       }
 
@@ -2639,29 +2747,30 @@
         <table class="fin-table">
           <thead>
             <tr>
-              <th>Tipo</th>
+              <th></th>
+              <th>Categoria</th>
               <th>Cliente / Descrição</th>
-              <th>Fase</th>
               <th style="text-align:right">Valor</th>
               <th style="text-align:center">Status</th>
               <th style="text-align:right">Data</th>
             </tr>
           </thead>
           <tbody>
-            ${sorted.map(t => {
-              const badge = t.entry_type === 'income' ? 'R' : 'D';
-              const cls   = t.entry_type === 'income' ? 'fin-badge-R' : 'fin-badge-D';
-              const fase  = t.entry_type === 'income' ? finClassify(t) : 'Despesa';
+            ${filtered.map(t => {
+              const isInc  = t.entry_type === 'income';
+              const cls    = isInc ? 'fin-badge-R' : 'fin-badge-D';
+              const badge  = isInc ? 'R' : 'D';
+              const cat    = finCatLabel((t.category || '').trim());
               const client = t.name || (t.description || '').split('\n')[0] || '—';
               const valor  = Number(t.amount || 0);
               const data   = formatDate(t.date_payment || t.date_due || '');
               const link   = t.lawsuit_id
-                ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:2px 6px;margin-left:6px;">↗</a>` : '';
+                ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 5px;">↗</a>` : '';
               return `<tr>
                 <td><span class="fin-badge ${cls}">${badge}</span></td>
+                <td style="font-size:12px;color:#666;">${cat}</td>
                 <td>${client}${link}</td>
-                <td style="color:#888;font-size:12px;">${fase}</td>
-                <td style="text-align:right;font-weight:600;" class="${t.entry_type === 'income' ? 'success' : 'danger'}">${formatMoney(valor)}</td>
+                <td style="text-align:right;font-weight:600;" class="${isInc ? 'success' : 'danger'}">${formatMoney(valor)}</td>
                 <td style="text-align:center;">${t.date_payment
                   ? '<span class="fin-status-ok">✓ Pago</span>'
                   : '<span class="fin-status-pend">Pendente</span>'}</td>
@@ -2670,6 +2779,16 @@
             }).join('')}
           </tbody>
         </table>`;
+    }
+
+    function finFilterCat(cat) {
+      const sel = document.getElementById('finCatFilter');
+      if (sel.value === cat) {
+        sel.value = '';
+      } else {
+        sel.value = cat;
+      }
+      renderFinanceiro();
     }
 
     async function loadTransactions() {
