@@ -639,6 +639,8 @@
     .fin-cat2-pend { font-size:10.5px;color:#bbb;white-space:nowrap; }
     .fin-bar-green { background:#27ae60; }
     .fin-bar-red   { background:#c0392b; }
+    .fin-split-row { background:#fdfbfb; }
+    .fin-split-row .fin-cat2-name::before { content:'↳ ';color:#ddd;font-size:11px; }
 
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
@@ -2656,19 +2658,33 @@
       resEl.textContent = formatMoney(resultado);
       resEl.className   = 'metric-value ' + (resultado >= 0 ? 'success' : 'danger');
 
-      // ─── Helper: agrupa por categoria ───────────────────────────────────────
+      // Categorias que serão separadas por pessoa (campo name)
+      const SPLIT_BY_NAME = ['PRÓ-LABORE', 'PRO-LABORE', 'PROLABORE'];
+
+      // ─── Helper: agrupa por categoria (com split opcional por nome) ──────────
       function buildCatGroups(list) {
         const g = {};
         list.forEach(t => {
-          const cat = (t.category || 'SEM CATEGORIA').trim();
-          if (!g[cat]) g[cat] = { total: 0, pago: 0, pendente: 0, count: 0 };
+          const rawCat = (t.category || 'SEM CATEGORIA').trim();
+          const upper  = rawCat.toUpperCase().replace(/\s+/g,'').replace(/-/g,'');
+          const splitThisCat = SPLIT_BY_NAME.some(s => upper.includes(s.replace(/-/g,'')));
+          const key = splitThisCat
+            ? rawCat + '||' + (t.name || t.description || 'Outros').split('\n')[0].trim()
+            : rawCat;
+          if (!g[key]) g[key] = { cat: rawCat, label: null, total: 0, pago: 0, pendente: 0, count: 0, split: splitThisCat };
           const amt = Number(t.amount || 0);
-          g[cat].total += amt;
-          g[cat].count++;
-          if (t.date_payment) g[cat].pago     += amt;
-          else                g[cat].pendente  += amt;
+          g[key].total += amt;
+          g[key].count++;
+          if (t.date_payment) g[key].pago     += amt;
+          else                g[key].pendente  += amt;
         });
         return g;
+      }
+
+      function groupLabel(key, grp) {
+        if (!grp.split) return finCatLabel(grp.cat);
+        const [, pessoa] = key.split('||');
+        return finCatLabel(grp.cat) + ' — ' + (pessoa || 'Outros');
       }
 
       // ─── Painel de receitas ──────────────────────────────────────────────────
@@ -2679,11 +2695,12 @@
 
       const rRows = Object.entries(rGrp)
         .sort((a, b) => b[1].total - a[1].total)
-        .map(([cat, g]) => {
+        .map(([key, g]) => {
           const pct  = Math.round(g.total / rMax * 100);
-          const lbl  = finCatLabel(cat);
-          return `<div class="fin-cat-row2" onclick="finFilterCat('${cat.replace(/'/g,"\\'")}')">
-            <div class="fin-cat2-name" title="${cat}">${lbl}</div>
+          const lbl  = groupLabel(key, g);
+          const filterCat = g.cat.replace(/'/g,"\\'");
+          return `<div class="fin-cat-row2" onclick="finFilterCat('${filterCat}')">
+            <div class="fin-cat2-name" title="${lbl}">${lbl}</div>
             <div class="fin-bar-track" style="flex:1;margin:0 10px;"><div class="fin-bar-fill fin-bar-green" style="width:${pct}%"></div></div>
             <div class="fin-cat2-amt success">${formatMoney(g.total)}</div>
             <div class="fin-cat2-cnt">${g.count}</div>
@@ -2701,11 +2718,12 @@
 
       const dRows = Object.entries(dGrp)
         .sort((a, b) => b[1].total - a[1].total)
-        .map(([cat, g]) => {
+        .map(([key, g]) => {
           const pct = Math.round(g.total / dMax * 100);
-          const lbl = finCatLabel(cat);
-          return `<div class="fin-cat-row2" onclick="finFilterCat('${cat.replace(/'/g,"\\'")}')">
-            <div class="fin-cat2-name" title="${cat}">${lbl}</div>
+          const lbl = groupLabel(key, g);
+          const filterCat = g.cat.replace(/'/g,"\\'");
+          return `<div class="fin-cat-row2${g.split ? ' fin-split-row' : ''}" onclick="finFilterCat('${filterCat}')">
+            <div class="fin-cat2-name" title="${lbl}">${lbl}</div>
             <div class="fin-bar-track" style="flex:1;margin:0 10px;"><div class="fin-bar-fill fin-bar-red" style="width:${pct}%"></div></div>
             <div class="fin-cat2-amt danger">${formatMoney(g.total)}</div>
             <div class="fin-cat2-cnt">${g.count}</div>
