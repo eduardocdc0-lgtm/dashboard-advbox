@@ -641,6 +641,24 @@
     .fin-bar-red   { background:#c0392b; }
     .fin-split-row { background:#fdfbfb; }
     .fin-split-row .fin-cat2-name::before { content:'↳ ';color:#ddd;font-size:11px; }
+    /* ── Kanban de lançamentos ── */
+    .kb-board { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start; }
+    @media (max-width:800px) { .kb-board { grid-template-columns:1fr; } }
+    .kb-col { background:#f9f9f9;border-radius:8px;overflow:hidden; }
+    .kb-col-hdr { display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase; }
+    .kb-hdr-pago { background:#eaf7ee;color:#1a6634; }
+    .kb-hdr-pend { background:#f5f5f5;color:#666; }
+    .kb-hdr-inad { background:#fdecea;color:#b02020; }
+    .kb-col-total { font-size:11px;font-weight:500;opacity:.8; }
+    .kb-cards { display:flex;flex-direction:column;gap:6px;padding:8px;max-height:520px;overflow-y:auto; }
+    .kb-card { background:#fff;border-radius:6px;padding:9px 10px;border:1px solid #ebebeb;font-size:12.5px; }
+    .kb-card-top { display:flex;align-items:center;gap:6px;margin-bottom:5px; }
+    .kb-cat { font-size:11px;color:#999;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .kb-client { font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .kb-card-bot { display:flex;justify-content:space-between;align-items:center; }
+    .kb-valor { font-weight:700;font-size:13px; }
+    .kb-date { font-size:11px;color:#aaa; }
+    .kb-empty { text-align:center;color:#ccc;padding:20px 0;font-size:12px; }
 
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
@@ -1017,7 +1035,7 @@
       <!-- Lista de lançamentos -->
       <div class="card" style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-          <div class="card-title" style="margin-bottom:0;">Lançamentos do mês</div>
+          <div class="card-title" style="margin-bottom:0;">Lançamentos do mês <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;">Kanban por status</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <select id="finCatFilter" class="reg-filter" onchange="renderFinanceiro()" style="font-size:12px;">
               <option value="">Todas categorias</option>
@@ -2660,16 +2678,35 @@
 
       // Categorias que serão separadas por pessoa (campo name)
       const SPLIT_BY_NAME = ['PRÓ-LABORE', 'PRO-LABORE', 'PROLABORE'];
+      // Nomes do titular — lançamentos de despesa com esses nomes são pró-labore
+      const OWNER_NAMES = ['Eduardo Rodrigues', 'Eduardo', 'EDUARDO RODRIGUES', 'EDUARDO'];
+
+      // Status de um lançamento: pago / inadimplente / pendente
+      function finTxStatus(t) {
+        if (t.date_payment) return 'pago';
+        if (t.date_due) {
+          const due = new Date(t.date_due.includes('/') ? t.date_due.split('/').reverse().join('-') : t.date_due);
+          if (!isNaN(due) && due < new Date()) return 'inadimplente';
+        }
+        return 'pendente';
+      }
 
       // ─── Helper: agrupa por categoria (com split opcional por nome) ──────────
       function buildCatGroups(list) {
         const g = {};
         list.forEach(t => {
-          const rawCat = (t.category || 'SEM CATEGORIA').trim();
+          let rawCat = (t.category || 'SEM CATEGORIA').trim();
+          const txName = (t.name || '').trim();
+
+          // Despesas no nome do titular → reclassificar como pró-labore
+          if (t.entry_type === 'expense' && OWNER_NAMES.some(n => txName.toLowerCase().startsWith(n.toLowerCase()))) {
+            rawCat = 'PRÓ-LABORE';
+          }
+
           const upper  = rawCat.toUpperCase().replace(/\s+/g,'').replace(/-/g,'');
           const splitThisCat = SPLIT_BY_NAME.some(s => upper.includes(s.replace(/-/g,'')));
           const key = splitThisCat
-            ? rawCat + '||' + (t.name || t.description || 'Outros').split('\n')[0].trim()
+            ? rawCat + '||' + (txName || (t.description || '').split('\n')[0].trim() || 'Outros')
             : rawCat;
           if (!g[key]) g[key] = { cat: rawCat, label: null, total: 0, pago: 0, pendente: 0, count: 0, split: splitThisCat };
           const amt = Number(t.amount || 0);
@@ -2740,7 +2777,7 @@
       catSel.innerHTML = '<option value="">Todas categorias</option>' +
         allCats.map(c => `<option value="${c}"${c === catVal ? ' selected' : ''}>${finCatLabel(c)}</option>`).join('');
 
-      // ─── Lista de lançamentos ────────────────────────────────────────────────
+      // ─── Kanban de lançamentos ───────────────────────────────────────────────
       const catFilter  = document.getElementById('finCatFilter').value;
       const tipoFilter = document.getElementById('finTipoFilter').value;
 
@@ -2761,42 +2798,64 @@
         return;
       }
 
+      function txCard(t) {
+        const isInc  = t.entry_type === 'income';
+        const badge  = isInc ? 'R' : 'D';
+        const cls    = isInc ? 'fin-badge-R' : 'fin-badge-D';
+        const cat    = finCatLabel((t.category || '').trim());
+        const client = t.name || (t.description || '').split('\n')[0] || '—';
+        const valor  = Number(t.amount || 0);
+        const st     = finTxStatus(t);
+        const dateLabel = st === 'pago'
+          ? formatDate(t.date_payment)
+          : (t.date_due ? 'Venc. ' + formatDate(t.date_due) : '—');
+        const link = t.lawsuit_id
+          ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 4px;">↗</a>` : '';
+        return `<div class="kb-card">
+          <div class="kb-card-top">
+            <span class="fin-badge ${cls}">${badge}</span>
+            <span class="kb-cat">${cat}</span>
+          </div>
+          <div class="kb-client">${client}${link}</div>
+          <div class="kb-card-bot">
+            <span class="kb-valor ${isInc ? 'success' : 'danger'}">${formatMoney(valor)}</span>
+            <span class="kb-date">${dateLabel}</span>
+          </div>
+        </div>`;
+      }
+
+      function colTotal(list) {
+        return list.reduce((s, t) => s + Number(t.amount || 0), 0);
+      }
+
+      const pagos        = filtered.filter(t => finTxStatus(t) === 'pago');
+      const pendentes    = filtered.filter(t => finTxStatus(t) === 'pendente');
+      const inadimplentes = filtered.filter(t => finTxStatus(t) === 'inadimplente');
+
       listEl.innerHTML = `
-        <table class="fin-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Categoria</th>
-              <th>Cliente / Descrição</th>
-              <th style="text-align:right">Valor</th>
-              <th style="text-align:center">Status</th>
-              <th style="text-align:right">Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map(t => {
-              const isInc  = t.entry_type === 'income';
-              const cls    = isInc ? 'fin-badge-R' : 'fin-badge-D';
-              const badge  = isInc ? 'R' : 'D';
-              const cat    = finCatLabel((t.category || '').trim());
-              const client = t.name || (t.description || '').split('\n')[0] || '—';
-              const valor  = Number(t.amount || 0);
-              const data   = formatDate(t.date_payment || t.date_due || '');
-              const link   = t.lawsuit_id
-                ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 5px;">↗</a>` : '';
-              return `<tr>
-                <td><span class="fin-badge ${cls}">${badge}</span></td>
-                <td style="font-size:12px;color:#666;">${cat}</td>
-                <td>${client}${link}</td>
-                <td style="text-align:right;font-weight:600;" class="${isInc ? 'success' : 'danger'}">${formatMoney(valor)}</td>
-                <td style="text-align:center;">${t.date_payment
-                  ? '<span class="fin-status-ok">✓ Pago</span>'
-                  : '<span class="fin-status-pend">Pendente</span>'}</td>
-                <td style="text-align:right;color:#888;font-size:12px;">${data}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
+        <div class="kb-board">
+          <div class="kb-col">
+            <div class="kb-col-hdr kb-hdr-pago">
+              <span>✓ Pago</span>
+              <span class="kb-col-total">${formatMoney(colTotal(pagos))} · ${pagos.length}</span>
+            </div>
+            <div class="kb-cards">${pagos.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
+          </div>
+          <div class="kb-col">
+            <div class="kb-col-hdr kb-hdr-pend">
+              <span>Pendente</span>
+              <span class="kb-col-total">${formatMoney(colTotal(pendentes))} · ${pendentes.length}</span>
+            </div>
+            <div class="kb-cards">${pendentes.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
+          </div>
+          <div class="kb-col">
+            <div class="kb-col-hdr kb-hdr-inad">
+              <span>Inadimplente</span>
+              <span class="kb-col-total">${formatMoney(colTotal(inadimplentes))} · ${inadimplentes.length}</span>
+            </div>
+            <div class="kb-cards">${inadimplentes.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
+          </div>
+        </div>`;
     }
 
     function finFilterCat(cat) {
