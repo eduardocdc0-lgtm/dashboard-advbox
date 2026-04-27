@@ -1,0 +1,76 @@
+OBSERVAÇÕES IMPORTANTES SOBRE O MATCHING:
+1. Os nomes das fases acima são aproximações — no AdvBox eles podem aparecer 
+   truncados ou com pequenas variações. Use comparação tolerante: 
+   normalize (lowercase, sem acento, sem pontuação) e compare por "começa com" 
+   ou "contém" os primeiros termos significativos.
+2. Os nomes dos responsáveis no AdvBox são: MARILIA (Ana Marília), LETICIA, ALICE 
+   (Maria Alice), CAU, EDUARDO, THIAGO, TAMMYRES, CLAUDIANA. 
+   Use comparação tolerante também (a busca por "marilia" deve casar com 
+   "Ana Marília", etc).
+3. Para a ZONA LETICIA_OU_ALICE, qualquer um dos dois é considerado correto. 
+   NÃO sinalizar erro se for Letícia OU Alice.
+4. Se a fase do processo NÃO estiver mapeada em nenhuma das 3 zonas acima, 
+   classificar como "FASE NÃO MAPEADA" e mostrar separadamente (não como erro).
+5. Considerar APENAS processos ATIVOS (status_closure = null). Processos 
+   arquivados/encerrados que estão nas fases de "Arquivado" entram normalmente 
+   na zona da Cau.
+
+O QUE A AUDITORIA DEVE MOSTRAR:
+
+1. CARDS NO TOPO:
+   - Total de processos auditados
+   - Total CORRETOS (verde)
+   - Total ERRADOS (vermelho)
+   - Total em FASES NÃO MAPEADAS (cinza)
+   - Taxa de acerto (%)
+
+2. RESUMO POR PESSOA:
+   - "Eduardo está com X processos que deveriam ser da Marília"
+   - "Thiago está com Y processos que deveriam ser da Cau"
+   - etc.
+
+3. RESUMO POR FASE:
+   - Para cada fase com erros, mostrar: quantos errados, quem é o responsável 
+     atual mais comum, quem deveria ser.
+
+4. TABELA DETALHADA com filtros:
+   Colunas:
+   - Cliente
+   - Número do Processo
+   - Tipo (BPC, Aux Doença, etc)
+   - Fase Atual
+   - Responsável Atual
+   - Zona Esperada (MARILIA / LETICIA_OU_ALICE / CAU)
+   - Responsável Esperado
+   - Status (✅ CORRETO / ❌ ERRADO / ⚪ NÃO MAPEADO)
+   - Link direto pro AdvBox: https://app.advbox.com.br/lawsuit/{lawsuits_id}
+
+   Filtros:
+   - Status (Errado / Correto / Não Mapeado / Todos)
+   - Zona Esperada
+   - Responsável Atual
+   - Tipo de processo
+   - Busca por nome do cliente
+
+5. EXPORTAR CSV (respeitando filtros aplicados)
+
+REQUISITOS TÉCNICOS:
+- Usar o cache existente de /api/lawsuits (não fazer chamada nova à API)
+- Cache de 20 min como as outras abas
+- Layout consistente com o resto do dashboard (preto/branco, DM Serif/DM Sans)
+- Responsivo (precisa funcionar no celular)
+- Apenas perfil ADMIN tem acesso a essa aba
+
+ORDEM DE EXECUÇÃO:
+1. Criar o mapa Fase → Zona no backend (objeto/constante)
+2. Criar endpoint /api/audit-responsible que retorna a auditoria pronta
+3. Adicionar a aba no frontend
+4. Implementar tabela com filtros + export CSV
+5. Testar com os dados reais
+
+Quando terminar, me mostra:
+- Quantos processos erro encontrou no total
+- Os 5 piores casos (pessoa com mais processos errados)
+- A taxa de acerto atual
+
+Pode executar.
