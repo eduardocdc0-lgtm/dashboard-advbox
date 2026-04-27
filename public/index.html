@@ -687,10 +687,12 @@
     .ar-err-row { background:#fff9f9; }
     .ar-err-row td:first-child { border-left:3px solid #c0392b; }
     .ar-badge { display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em; }
-    .ar-badge-marilia { background:#dcfce7;color:#166534; }
-    .ar-badge-leticia { background:#dbeafe;color:#1d4ed8; }
-    .ar-badge-cau     { background:#fef3c7;color:#92400e; }
-    .ar-badge-unknown { background:#f5f5f5;color:#666; }
+    .ar-badge-marilia  { background:#dcfce7;color:#166534; }
+    .ar-badge-leticia  { background:#dbeafe;color:#1d4ed8; }
+    .ar-badge-cau      { background:#fef3c7;color:#92400e; }
+    .ar-badge-tammyres { background:#f3e8ff;color:#7c3aed; }
+    .ar-badge-eduardo  { background:#1a1a1a;color:#fff; }
+    .ar-badge-unknown  { background:#f5f5f5;color:#666; }
 
     /* ── GARGALOS ── */
     .garg-cards-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px; }
@@ -1423,6 +1425,8 @@
           <option value="MARILIA">🟢 Zona Marília</option>
           <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
           <option value="CAU">🟡 Zona Cau</option>
+          <option value="TAMMYRES">🟣 Zona Tammyres</option>
+          <option value="EDUARDO">⚫ Zona Eduardo</option>
         </select>
         <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;"><option value="">Todos os responsáveis</option></select>
         <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
@@ -2823,10 +2827,13 @@
     const AUDR_ZONE_LABEL_FE = {
       MARILIA:          '🟢 Ana Marília',
       LETICIA_OU_ALICE: '🔵 Letícia ou Alice',
-      CAU:              '🟡 Claudiana (Cau)'
+      CAU:              '🟡 Claudiana (Cau)',
+      TAMMYRES:         '🟣 Tammyres',
+      EDUARDO:          '⚫ Eduardo'
     };
     const AUDR_BADGE_CLS = {
-      MARILIA: 'ar-badge-marilia', LETICIA_OU_ALICE: 'ar-badge-leticia', CAU: 'ar-badge-cau'
+      MARILIA: 'ar-badge-marilia', LETICIA_OU_ALICE: 'ar-badge-leticia',
+      CAU: 'ar-badge-cau', TAMMYRES: 'ar-badge-tammyres', EDUARDO: 'ar-badge-eduardo'
     };
 
     async function loadAuditResp(force) {
@@ -3051,9 +3058,11 @@
 
     function audrZoneForStageDebug(stage) {
       const AUDR_ZONES_FE = {
-        MARILIA: ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','PROTOCOLADO','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS','SALARIO MATERNIDADE GUIA PAGA'],
+        MARILIA: ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','PROTOCOLADO','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS','SALARIO MATERNIDADE GUIA PAGA','SALARIO MATERNIDADE 5 7 MESES','SALARIO MATERNIDADE 3 5 MESES','SALARIO MATERNIDADE 1 A 3 MESES','SALARIO MATERNIDADE'],
         LETICIA_OU_ALICE: ['ELABORAR PETICAO INICIAL','PERICIA MEDICA MARCADA','SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA','COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL','AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA','PROCEDENTE EM PARTE FAZER RECURSO','IMPROCEDENTE CABE RECURSO','DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO INICIADO','APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO','RECURSO JULGADO ENTRE EM CONTATO','TRANSITO EM JULGADO NAO CABE RECURSO'],
-        CAU: ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER','ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO','ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE','ARQUIVADO POR DETERMINACAO JUDICIAL','IGNORAR ESSA ETAPA','CANCELADO REQUERIMENTO','BENEFICIO CONCEDIDO AGUARDAR']
+        CAU: ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER','ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO','ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE','ARQUIVADO POR DETERMINACAO JUDICIAL','IGNORAR ESSA ETAPA','CANCELADO REQUERIMENTO','BENEFICIO CONCEDIDO AGUARDAR','ARQUIVADO ENCERRADO'],
+        TAMMYRES: ['FALTA LAUDO FAZER PREVDOC','FALTA LAUDO','PREVDOC'],
+        EDUARDO: ['TRABALHISTA']
       };
       function norm(s) {
         return (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
