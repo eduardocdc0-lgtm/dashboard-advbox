@@ -1074,6 +1074,29 @@ app.get('/api/audit-responsible', async (req, res) => {
   }
 });
 
+// ── Debug: fases distintas nos processos ativos ──────────────────────────────
+app.get('/api/audit-debug-stages', async (req, res) => {
+  if (!req.session?.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso restrito.' });
+  }
+  try {
+    const rawData = await fetchLawsuits();
+    const lawsuits = Array.isArray(rawData) ? rawData : (rawData.data || []);
+    const counts = {};
+    for (const l of lawsuits) {
+      if (l.status_closure) continue;
+      const stage = (l.stage || l.step || '').trim();
+      counts[stage] = (counts[stage] || 0) + 1;
+    }
+    const result = Object.entries(counts)
+      .map(([stage, count]) => ({ stage, count }))
+      .sort((a, b) => b.count - a.count);
+    res.json({ total: lawsuits.filter(l => !l.status_closure).length, stages: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {

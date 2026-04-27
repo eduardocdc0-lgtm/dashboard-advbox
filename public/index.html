@@ -1392,6 +1392,7 @@
         <div style="display:flex;gap:8px;">
           <button class="dist-export-btn" onclick="exportAuditResp()">📊 Exportar CSV</button>
           <button class="dist-export-btn" onclick="loadAuditResp(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
+          <button class="dist-export-btn" onclick="openStagesModal()" style="background:#1a1a2e;color:#fff;">🔬 Ver fases do AdvBox</button>
         </div>
       </div>
       <div id="audrLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando auditoria…</div>
@@ -2985,6 +2986,100 @@
       a.click();
     }
 
+    // ── MODAL DE FASES (diagnóstico) ─────────────────────────────────────────
+    let _stagesData = null;
+
+    async function openStagesModal() {
+      document.getElementById('stagesOverlay').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      if (_stagesData) { renderStages(_stagesData, ''); return; }
+      document.getElementById('stagesModalBody').innerHTML =
+        '<div style="text-align:center;padding:32px;color:#aaa;">Buscando fases no AdvBox…</div>';
+      try {
+        const data = await fetchJson('/api/audit-debug-stages');
+        _stagesData = data;
+        document.getElementById('stagesModalSub').textContent =
+          `${data.total} processos ativos · ${data.stages.length} fases distintas`;
+        document.getElementById('stagesSearch').value = '';
+        renderStages(data, '');
+      } catch (e) {
+        document.getElementById('stagesModalBody').innerHTML =
+          `<div style="color:#b02020;padding:20px;">Erro: ${e.message}</div>`;
+      }
+    }
+
+    function closeStagesModal() {
+      document.getElementById('stagesOverlay').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function filterStages(q) {
+      if (!_stagesData) return;
+      renderStages(_stagesData, q);
+    }
+
+    function renderStages(data, q) {
+      const term = (q || '').toLowerCase();
+      const list = data.stages.filter(s => !term || s.stage.toLowerCase().includes(term));
+      if (!list.length) {
+        document.getElementById('stagesModalBody').innerHTML =
+          '<div style="padding:20px;color:#aaa;text-align:center;">Nenhuma fase encontrada.</div>';
+        return;
+      }
+      const rows = list.map(s => {
+        const z = audrZoneForStageDebug(s.stage);
+        const badge = z
+          ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:${z==='MARILIA'?'#dcfce7':z==='LETICIA_OU_ALICE'?'#dbeafe':'#fef3c7'};color:${z==='MARILIA'?'#166534':z==='LETICIA_OU_ALICE'?'#1d4ed8':'#92400e'};">${z==='MARILIA'?'Marília':z==='LETICIA_OU_ALICE'?'Letícia/Alice':'Cau'}</span>`
+          : '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#f5f5f5;color:#999;font-weight:700;">não mapeada</span>';
+        return `<tr>
+          <td style="padding:7px 8px;font-size:13px;font-weight:500;word-break:break-word;">${s.stage || '(vazio)'}</td>
+          <td style="padding:7px 8px;text-align:center;font-weight:700;font-size:13px;">${s.count}</td>
+          <td style="padding:7px 8px;">${badge}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('stagesModalBody').innerHTML =
+        `<table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:2px solid #f0f0f0;">
+            <th style="text-align:left;padding:6px 8px;font-size:11px;color:#888;font-weight:600;">FASE NO ADVBOX</th>
+            <th style="text-align:center;padding:6px 8px;font-size:11px;color:#888;font-weight:600;">PROCESSOS</th>
+            <th style="padding:6px 8px;font-size:11px;color:#888;font-weight:600;">ZONA MAPEADA</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="font-size:11px;color:#bbb;margin-top:10px;">${list.length} fase${list.length!==1?'s':''} ${term?'filtradas':'no total'}</div>`;
+    }
+
+    function audrZoneForStageDebug(stage) {
+      const AUDR_ZONES_FE = {
+        MARILIA: ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS'],
+        LETICIA_OU_ALICE: ['ELABORAR PETICAO INICIAL','PERICIA MEDICA MARCADA','SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA','COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL','AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA','PROCEDENTE EM PARTE FAZER RECURSO','IMPROCEDENTE CABE RECURSO','DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO INICIADO','APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO','RECURSO JULGADO ENTRE EM CONTATO','TRANSITO EM JULGADO NAO CABE RECURSO'],
+        CAU: ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER','ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO','ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE','ARQUIVADO POR DETERMINACAO JUDICIAL','IGNORAR ESSA ETAPA','CANCELADO REQUERIMENTO','BENEFICIO CONCEDIDO AGUARDAR']
+      };
+      function norm(s) {
+        return (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+      }
+      const n = norm(stage);
+      for (const [zone, stages] of Object.entries(AUDR_ZONES_FE)) {
+        for (const mapped of stages) {
+          const m = norm(mapped);
+          if (n === m) return zone;
+          const nW = n.split(' ').slice(0,4).join(' ');
+          const mW = m.split(' ').slice(0,4).join(' ');
+          if (nW === mW && nW.length > 5) return zone;
+          if (n.startsWith(m) || m.startsWith(n)) return zone;
+        }
+      }
+      return null;
+    }
+
+    function exportStagesCSV() {
+      if (!_stagesData) return;
+      const rows = [['Fase','Processos','Zona Mapeada'],..._stagesData.stages.map(s => [s.stage, s.count, audrZoneForStageDebug(s.stage)||'não mapeada'])];
+      const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+      a.download='fases-advbox.csv'; a.click();
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // AUDITORIA CRM × FINANCEIRO
     // ══════════════════════════════════════════════════════════════════════════
@@ -4523,6 +4618,29 @@
       <div class="ar-modal-footer">
         <span id="arFooterCount"></span>
         <strong id="arFooterTotal"></strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Fases do AdvBox (diagnóstico) -->
+  <div id="stagesOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;overflow-y:auto;padding:40px 16px;" onclick="if(event.target===this)closeStagesModal()">
+    <div style="background:#fff;border-radius:14px;max-width:680px;margin:0 auto;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #f0f0f0;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:18px;">🔬 Fases reais no AdvBox</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;" id="stagesModalSub">Somente processos ativos</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="dist-export-btn" onclick="exportStagesCSV()" style="font-size:11px;">📋 Copiar CSV</button>
+          <button onclick="closeStagesModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1;">×</button>
+        </div>
+      </div>
+      <div style="padding:14px 22px 6px;">
+        <input id="stagesSearch" type="text" placeholder="Filtrar fase..." oninput="filterStages(this.value)"
+          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #e5e5e5;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div id="stagesModalBody" style="padding:8px 22px 22px;max-height:60vh;overflow-y:auto;">
+        <div style="text-align:center;padding:32px;color:#aaa;">Carregando…</div>
       </div>
     </div>
   </div>
