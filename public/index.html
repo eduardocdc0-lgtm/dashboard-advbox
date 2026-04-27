@@ -660,6 +660,43 @@
     .kb-date { font-size:11px;color:#aaa; }
     .kb-empty { text-align:center;color:#ccc;padding:20px 0;font-size:12px; }
 
+    /* ── AUDITORIA CRM × FINANCEIRO ── */
+    @keyframes pulseBadge { 0%,100%{opacity:1} 50%{opacity:.65} }
+    .audit-cards-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px; }
+    @media(max-width:700px){.audit-cards-row{grid-template-columns:1fr;}}
+    .audit-sum-card { border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:4px;border:1px solid #eee;transition:box-shadow .15s; }
+    .audit-sum-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+    .audit-sum-crit { background:#fff5f5;border-color:#fcd5d5; }
+    .audit-sum-mon  { background:#fffbea;border-color:#fde68a; }
+    .audit-sum-ok   { background:#f0faf5;border-color:#bbf0d0; }
+    .audit-sum-icon { font-size:20px; }
+    .audit-sum-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888; }
+    .audit-sum-count { font-family:'DM Serif Display',serif;font-size:2rem;line-height:1; }
+    .audit-sum-val   { font-size:12px;color:#888; }
+    .audit-sum-crit .audit-sum-count { color:#b02020; }
+    .audit-sum-mon  .audit-sum-count { color:#856404; }
+    .audit-sum-ok   .audit-sum-count { color:#166534; }
+    /* Alert item card */
+    .audit-alert-item { border:1px solid #fcd5d5;border-radius:8px;padding:14px 16px;margin-bottom:10px;background:#fff; }
+    .audit-alert-top { display:flex;justify-content:space-between;align-items:center;margin-bottom:4px; }
+    .audit-alert-nome { font-weight:700;font-size:13.5px; }
+    .audit-alert-fase { font-size:12px;color:#999;margin-bottom:8px; }
+    .audit-alert-details { display:flex;flex-direction:column;gap:3px;font-size:12px;color:#555;margin-bottom:10px; }
+    .audit-alert-actions { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+    .audit-btn-cobrar { background:#111;color:#fff;border:none;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600; }
+    .audit-btn-cobrar:hover { background:#333; }
+    .audit-btn-advbox { font-size:11px;color:#555;text-decoration:none;border:1px solid #ddd;padding:4px 10px;border-radius:5px; }
+    .audit-btn-advbox:hover { background:#f5f5f5; }
+    /* Monitor row */
+    .audit-monitor-row { display:flex;justify-content:space-between;align-items:center;padding:9px 6px;border-bottom:1px solid #f5f5f5;flex-wrap:wrap;gap:6px; }
+    .audit-monitor-row:last-child{border-bottom:none;}
+    .audit-mon-left { display:flex;flex-direction:column;gap:2px; }
+    .audit-mon-nome { font-size:13px;font-weight:500; }
+    .audit-mon-fase { font-size:11px;color:#999; }
+    .audit-mon-right { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+    .audit-mon-fees  { font-size:12px;font-weight:600;color:#555; }
+    .audit-mon-resp  { font-size:11px;color:#999; }
+
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
       display: flex;
@@ -878,6 +915,7 @@
         <div class="logo-sub">Advocacia</div>
       </div>
       <div class="header-right">
+        <span id="auditBadge" style="display:none;background:#c0392b;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer;animation:pulseBadge 1.8s infinite;" onclick="showTab('auditoria',event)"></span>
         <span class="user-chip" id="userChip"></span>
         <button class="refresh-btn" id="refreshBtn" onclick="loadAll(true)">Atualizar dados</button>
         <button class="logout-btn" onclick="doLogout()">Sair</button>
@@ -891,6 +929,7 @@
       <button class="tab admin-tab" onclick="showTab('processes', event)">Processos</button>
       <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
       <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
+      <button class="tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
@@ -1049,6 +1088,87 @@
         </div>
         <div id="finLancamentos"><div class="loading">Carregando...</div></div>
       </div>
+    </div>
+
+    <!-- ABA AUDITORIA: CRM × FINANCEIRO -->
+    <div id="auditoria" class="tab-content">
+      <!-- Navegação de mês + filtros -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="fin-nav-btn" onclick="auditNavMes(-1)">&#8592;</button>
+          <span class="fin-mes-label" id="auditMesLabel">—</span>
+          <button class="fin-nav-btn" onclick="auditNavMes(1)">&#8594;</button>
+          <button class="fin-nav-btn" style="font-size:12px;padding:4px 10px;" onclick="auditNavMes(0)">Mês atual</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="auditRespFilter" class="reg-filter" onchange="renderAudit()" style="font-size:12px;">
+            <option value="">Todos responsáveis</option>
+            <option>Eduardo Rodrigues</option>
+            <option>Maria Alice</option>
+            <option>Letícia Stephany</option>
+            <option>Ana Marília</option>
+            <option>Claudiana Maria</option>
+            <option>Thiago Tavares</option>
+          </select>
+          <button id="auditExportBtn" class="reg-filter admin-only" onclick="auditExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:5px 12px;border-radius:6px;">📊 Exportar CSV</button>
+          <button class="reg-filter" onclick="loadAudit(true)" style="font-size:12px;">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <!-- 3 cards de resumo -->
+      <div class="audit-cards-row" id="auditSummaryRow">
+        <div class="audit-sum-card audit-sum-crit" id="auditCardCrit" onclick="auditSetFilter('criticos')" style="cursor:pointer;">
+          <div class="audit-sum-icon">🔴</div>
+          <div class="audit-sum-label">Críticos</div>
+          <div class="audit-sum-count" id="auditCritCount">—</div>
+          <div class="audit-sum-val" id="auditCritVal"></div>
+        </div>
+        <div class="audit-sum-card audit-sum-mon" id="auditCardMon" onclick="auditSetFilter('monitoramento')" style="cursor:pointer;">
+          <div class="audit-sum-icon">🟡</div>
+          <div class="audit-sum-label">Monitorar</div>
+          <div class="audit-sum-count" id="auditMonCount">—</div>
+          <div class="audit-sum-val" id="auditMonVal"></div>
+        </div>
+        <div class="audit-sum-card audit-sum-ok" id="auditCardOk" onclick="auditSetFilter('ok')" style="cursor:pointer;">
+          <div class="audit-sum-icon">✅</div>
+          <div class="audit-sum-label">OK</div>
+          <div class="audit-sum-count" id="auditOkCount">—</div>
+          <div class="audit-sum-val">em dia</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#bbb;text-align:center;margin-bottom:22px;" id="auditCachedAt"></div>
+
+      <!-- Alertas Críticos -->
+      <div class="card" id="auditSecCriticos">
+        <div class="card-title" style="color:#b02020;">🔴 Alertas Críticos
+          <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
+        </div>
+        <div id="auditCritList"><div class="loading">Carregando...</div></div>
+      </div>
+
+      <!-- Em Monitoramento -->
+      <div class="card" id="auditSecMonitoramento" style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin-bottom:0;color:#856404;">🟡 Em Monitoramento</div>
+          <select id="auditMonFilter" class="reg-filter" onchange="renderAudit()" style="font-size:12px;">
+            <option value="">Todas as fases</option>
+            <option value="Rpv">RPV do Próximo Mês</option>
+            <option value="Judicial Implantado">Judicial Implantado</option>
+            <option value="Adm Implantado">Adm Implantado</option>
+            <option value="Maternidade Concedido">SM Concedido</option>
+          </select>
+        </div>
+        <div id="auditMonList"></div>
+      </div>
+
+      <!-- Saúde Geral (recolhível) -->
+      <details class="card" id="auditSecOk" style="margin-top:14px;">
+        <summary style="cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          <span>📊 Saúde Geral — <span id="auditOkCountDetail">0</span> processos em dia</span>
+          <span style="font-size:11px;color:#bbb;">clique para expandir</span>
+        </summary>
+        <div id="auditOkList" style="margin-top:14px;"></div>
+      </details>
     </div>
 
     <!-- ABA 5: CLIENTES -->
@@ -1457,8 +1577,9 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(name).classList.add('active');
       if (evt) evt.target.classList.add('active');
-      if (name === 'metaads' && !metaRawData) loadMetaAds();
-      if (name === 'evolucao' && !window._evoData) loadEvolucao();
+      if (name === 'metaads'   && !metaRawData)  loadMetaAds();
+      if (name === 'evolucao'  && !window._evoData) loadEvolucao();
+      if (name === 'auditoria' && !auditData)   loadAudit();
     }
 
     function showError(msg) {
@@ -2481,6 +2602,250 @@
         <div style="font-size:11px;color:#aaa;padding:8px 4px;">${lista.length} tarefa${lista.length === 1 ? '' : 's'} encontrada${lista.length === 1 ? '' : 's'}</div>`;
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // AUDITORIA CRM × FINANCEIRO
+    // ══════════════════════════════════════════════════════════════════════════
+    let auditData     = null;
+    let auditMesAtual = null;
+    let _auditFilter  = 'all'; // 'all' | 'criticos' | 'monitoramento' | 'ok'
+
+    function auditNavMes(delta) {
+      if (delta === 0) {
+        const now = new Date();
+        auditMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+      } else {
+        const [mm, yyyy] = auditMesAtual.split('/').map(Number);
+        const d = new Date(yyyy, mm - 1 + delta, 1);
+        auditMesAtual = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      }
+      auditData = null;
+      loadAudit();
+    }
+
+    async function loadAudit(force = false) {
+      const now = new Date();
+      if (!auditMesAtual) {
+        auditMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+      }
+      const [mm, yyyy] = auditMesAtual.split('/').map(Number);
+      document.getElementById('auditMesLabel').textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
+      document.getElementById('auditCritList').innerHTML = '<div class="loading">Cruzando CRM × Financeiro...</div>';
+      document.getElementById('auditMonList').innerHTML  = '';
+      document.getElementById('auditOkList').innerHTML   = '';
+
+      try {
+        const url = '/api/audit/kanban-financeiro?mes=' + encodeURIComponent(auditMesAtual) + (force ? '&force=1' : '');
+        auditData = await fetchJson(url);
+        renderAudit();
+      } catch (e) {
+        document.getElementById('auditCritList').innerHTML =
+          '<div class="empty" style="color:#c0392b;">Erro ao carregar auditoria: ' + e.message + '</div>';
+      }
+    }
+
+    function auditSetFilter(f) {
+      _auditFilter = _auditFilter === f ? 'all' : f;
+      // Highlight active card
+      ['auditCardCrit','auditCardMon','auditCardOk'].forEach(id => {
+        document.getElementById(id).style.outline = '';
+      });
+      const map = { criticos: 'auditCardCrit', monitoramento: 'auditCardMon', ok: 'auditCardOk' };
+      if (_auditFilter !== 'all') document.getElementById(map[_auditFilter]).style.outline = '2px solid #111';
+      renderAudit();
+    }
+
+    function normAudit(s) {
+      return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    }
+
+    function renderAudit() {
+      if (!auditData) return;
+      const { criticos, monitoramento, ok, resumo, cachedAt } = auditData;
+
+      const respFilter     = (document.getElementById('auditRespFilter')?.value || '').toLowerCase();
+      const monFaseFilter  = normAudit(document.getElementById('auditMonFilter')?.value || '');
+
+      function filterResp(c) {
+        return !respFilter || (c.responsavel || '').toLowerCase().includes(respFilter);
+      }
+
+      const filtCrit = criticos.filter(filterResp);
+      const filtMon  = monitoramento.filter(c => {
+        if (!filterResp(c)) return false;
+        if (monFaseFilter && !normAudit(c.fase).includes(monFaseFilter)) return false;
+        return true;
+      });
+      const filtOk = ok.filter(filterResp);
+
+      // Resumo
+      document.getElementById('auditCritCount').textContent = filtCrit.length;
+      document.getElementById('auditCritVal').textContent   = filtCrit.length ? formatMoney(filtCrit.reduce((s,c)=>s+(c.ultimoValor||0),0)) : '';
+      document.getElementById('auditMonCount').textContent  = filtMon.length;
+      document.getElementById('auditMonVal').textContent    = filtMon.length ? formatMoney(filtMon.reduce((s,c)=>s+(c.valorFees||0),0)) : '';
+      document.getElementById('auditOkCount').textContent   = filtOk.length;
+      document.getElementById('auditOkCountDetail').textContent = filtOk.length;
+
+      if (cachedAt) {
+        const mins = Math.round((Date.now() - new Date(cachedAt).getTime()) / 60000);
+        document.getElementById('auditCachedAt').textContent =
+          `Última atualização: há ${mins <= 0 ? 'menos de 1 min' : mins + ' min'} · ${filtCrit.length + filtMon.length + filtOk.length} processos auditados`;
+      }
+
+      // Badge no header
+      const badge = document.getElementById('auditBadge');
+      if (filtCrit.length > 0) {
+        badge.textContent = `🚨 ${filtCrit.length} alerta${filtCrit.length > 1 ? 's' : ''} crítico${filtCrit.length > 1 ? 's' : ''}`;
+        badge.style.display = 'inline-block';
+        const tabBtn = document.getElementById('auditTab');
+        if (tabBtn) tabBtn.innerHTML =
+          `🚨 Auditoria <span style="background:#c0392b;color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;">${filtCrit.length}</span>`;
+      } else {
+        badge.style.display = 'none';
+        const tabBtn = document.getElementById('auditTab');
+        if (tabBtn) tabBtn.textContent = '🚨 Auditoria';
+      }
+
+      // Visibilidade das seções por filtro
+      const showCrit = _auditFilter === 'all' || _auditFilter === 'criticos';
+      const showMon  = _auditFilter === 'all' || _auditFilter === 'monitoramento';
+      const showOk   = _auditFilter === 'all' || _auditFilter === 'ok';
+      document.getElementById('auditSecCriticos').style.display     = showCrit ? '' : 'none';
+      document.getElementById('auditSecMonitoramento').style.display = showMon  ? '' : 'none';
+      document.getElementById('auditSecOk').style.display           = showOk   ? '' : 'none';
+
+      // ── Críticos ────────────────────────────────────────────────────────────
+      const critEl = document.getElementById('auditCritList');
+      if (!showCrit) { critEl.innerHTML = ''; }
+      else if (filtCrit.length === 0) {
+        critEl.innerHTML = '<div class="empty" style="color:#166534;padding:20px 0;">✅ Nenhum alerta crítico neste mês!</div>';
+      } else {
+        critEl.innerHTML = filtCrit.map(c => {
+          const diasCls = c.diasNaFase == null ? ''
+            : c.diasNaFase > 30 ? 'dist-dias-badge velho'
+            : c.diasNaFase > 15 ? 'dist-dias-badge mid'
+            : 'dist-dias-badge ok';
+          const msgRaw = `Oi Cau,\n${c.cliente} tá em "${c.fase}" mas não tem lançamento em ${auditMesAtual}. Último lançamento foi ${c.ultimoLancamento ? formatDate(c.ultimoLancamento) : 'desconhecido'}${c.ultimoValor ? ' ('+formatMoney(c.ultimoValor)+')' : ''}.\nPode verificar com a cliente?`;
+          const msgEnc = encodeURIComponent(msgRaw);
+          return `<div class="audit-alert-item">
+            <div class="audit-alert-top">
+              <span class="audit-alert-nome">🔴 ${c.cliente}</span>
+              ${c.diasNaFase != null ? `<span class="${diasCls}">${c.diasNaFase}d na fase</span>` : ''}
+            </div>
+            <div class="audit-alert-fase">${c.fase}${c.responsavel ? ' · ' + c.responsavel : ''}</div>
+            <div class="audit-alert-details">
+              <span>Esperado: lançamento de receita em <strong>${auditMesAtual}</strong></span>
+              <span style="color:#b02020;font-weight:600;">Encontrado: NENHUM</span>
+              ${c.ultimoLancamento
+                ? `<span>Último lançamento: ${formatDate(c.ultimoLancamento)}${c.ultimoValor ? ' — ' + formatMoney(c.ultimoValor) : ''}</span>`
+                : '<span style="color:#bbb;">Sem lançamentos anteriores vinculados a este processo</span>'}
+              ${c.valorFees ? `<span>Honorários da causa: ${formatMoney(c.valorFees)}</span>` : ''}
+            </div>
+            <div class="audit-alert-actions">
+              <button class="audit-btn-cobrar" onclick="auditCopiarMsg(this,decodeURIComponent('${msgEnc}'))">📋 Cobrar Cau</button>
+              <a href="${c.linkAdvBox}" target="_blank" class="audit-btn-advbox">↗ Abrir no AdvBox</a>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // ── Monitoramento ────────────────────────────────────────────────────────
+      const monEl = document.getElementById('auditMonList');
+      if (!showMon) { monEl.innerHTML = ''; }
+      else if (filtMon.length === 0) {
+        monEl.innerHTML = '<div class="empty">Nenhum processo em monitoramento</div>';
+      } else {
+        monEl.innerHTML = filtMon.map(c => {
+          const diasCls = c.diasNaFase == null ? ''
+            : c.diasNaFase > 30 ? 'dist-dias-badge velho'
+            : c.diasNaFase > 15 ? 'dist-dias-badge mid'
+            : 'dist-dias-badge ok';
+          return `<div class="audit-monitor-row">
+            <div class="audit-mon-left">
+              <span class="audit-mon-nome">🟡 ${c.cliente}</span>
+              <span class="audit-mon-fase">${c.fase}</span>
+            </div>
+            <div class="audit-mon-right">
+              ${c.diasNaFase != null ? `<span class="${diasCls}">${c.diasNaFase}d</span>` : ''}
+              ${c.valorFees ? `<span class="audit-mon-fees">${formatMoney(c.valorFees)}</span>` : ''}
+              ${c.responsavel ? `<span class="audit-mon-resp">${c.responsavel}</span>` : ''}
+              <a href="${c.linkAdvBox}" target="_blank" class="reg-link" style="font-size:10px;">↗</a>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // ── OK ───────────────────────────────────────────────────────────────────
+      const okEl = document.getElementById('auditOkList');
+      if (!showOk || filtOk.length === 0) {
+        okEl.innerHTML = filtOk.length === 0 ? '<div class="empty">Sem processos OK</div>' : '';
+      } else {
+        okEl.innerHTML = `<table class="fin-table">
+          <thead><tr>
+            <th>Cliente</th><th>Fase</th><th>Responsável</th>
+            <th style="text-align:center">Lanç.</th><th style="text-align:right">Total mês</th><th></th>
+          </tr></thead>
+          <tbody>${filtOk.map(c => `<tr>
+            <td>${c.cliente}</td>
+            <td style="font-size:12px;color:#666;">${c.fase}</td>
+            <td style="font-size:12px;color:#888;">${c.responsavel || '—'}</td>
+            <td style="text-align:center;font-size:12px;">${c.lancamentosDoMes || '—'}</td>
+            <td style="text-align:right;font-weight:600;" class="success">${c.totalDoMes ? formatMoney(c.totalDoMes) : '—'}</td>
+            <td><a href="${c.linkAdvBox}" target="_blank" class="reg-link" style="font-size:10px;">↗</a></td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+      }
+    }
+
+    function auditCopiarMsg(btn, msg) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(msg).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = '✓ Copiado!';
+          btn.style.background = '#166534';
+          setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+        }).catch(() => auditCopiarFallback(msg));
+      } else {
+        auditCopiarFallback(msg);
+      }
+    }
+
+    function auditCopiarFallback(msg) {
+      const ta = document.createElement('textarea');
+      ta.value = msg;
+      Object.assign(ta.style, {
+        position: 'fixed', top: '40%', left: '50%', transform: 'translate(-50%,-50%)',
+        width: '420px', height: '140px', zIndex: '9999', padding: '12px',
+        fontFamily: 'DM Sans, sans-serif', fontSize: '13px', borderRadius: '8px', border: '1px solid #ddd'
+      });
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      setTimeout(() => document.body.removeChild(ta), 4000);
+    }
+
+    function auditExportCSV() {
+      if (!auditData) return;
+      const rows = [['Status','Cliente','Processo','Fase','Dias na Fase','Responsável','Último Lançamento','Honorários']];
+      auditData.criticos.forEach(c => rows.push([
+        'CRÍTICO', c.cliente, c.processo, c.fase,
+        c.diasNaFase ?? '', c.responsavel, c.ultimoLancamento || '', c.valorFees || ''
+      ]));
+      auditData.monitoramento.forEach(c => rows.push([
+        'MONITORAMENTO', c.cliente, c.processo, c.fase,
+        c.diasNaFase ?? '', c.responsavel, '', c.valorFees || ''
+      ]));
+      auditData.ok.forEach(c => rows.push([
+        'OK', c.cliente, c.processo, c.fase,
+        c.diasNaFase ?? '', c.responsavel, '', c.totalDoMes || ''
+      ]));
+      const csv = rows.map(r => r.map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `auditoria-${auditMesAtual.replace('/', '-')}.csv`;
+      a.click();
+    }
+
     async function loadAll(force = false) {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
@@ -2503,6 +2868,8 @@
         // para evitar rate limit simultâneo
         setTimeout(() => loadDistribuicao(), 2000);
         setTimeout(() => loadFluxo(), 3500);
+        // Auditoria: carrega em background e atualiza badge mesmo sem abrir a aba
+        setTimeout(() => loadAudit(), 5000);
       } catch (err) {
         showError(err.message);
       } finally {

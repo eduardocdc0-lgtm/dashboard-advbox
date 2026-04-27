@@ -1,0 +1,323 @@
+# 🚨 PROMPT PRO REPLIT AGENT — Auditoria Kanban Financeiro × Lançamentos
+
+> Cole esse prompt INTEIRO no Replit Agent.
+> Estimativa: 4-6h de execução.
+> Substitui o prompt anterior de normalização do Financeiro (vamos fazer essa frente DEPOIS).
+
+---
+
+## CONTEXTO E PROBLEMA
+
+O escritório (Eduardo Rodrigues Advocacia, previdenciário, Carpina-PE) tem dois mundos no AdvBox que vivem **separados**:
+
+1. **Kanban (CRM)** — fases dos processos, agrupados por estágio
+2. **Financeiro** — lançamentos de receita/despesa
+
+Hoje **NINGUÉM cruza** essas duas fontes. Resultado: o escritório perde dinheiro em silêncio. Cliente para de pagar mensalidade do Salário Maternidade parcelado, ninguém percebe, e só descobre 3-4 meses depois.
+
+Esse projeto é construir uma **camada de auditoria automática** que cruza os dois mundos e gera alertas.
+
+---
+
+## A REGRA DE NEGÓCIO
+
+A aba "Financeiro" do Kanban tem 8 fases. Cada uma tem um significado financeiro:
+
+### 🔴 Fases que DEVEM TER lançamento no mês corrente
+
+Se o processo tá numa dessas fases, **PRECISA** existir lançamento financeiro do mês:
+
+| Fase no Kanban | Lançamento esperado | Periodicidade |
+|---|---|---|
+| **Salário Maternidade Parcelado** | 1 lançamento por mês | Mensal |
+| **Judicial Parcelado** | 1 lançamento por mês | Mensal |
+| **Adm Parcelado** | 1 lançamento por mês | Mensal |
+| **Rpv do Mês** | 1 lançamento (no mês) | Único |
+
+Se o processo tá nessas fases mas **NÃO TEM** lançamento do mês → 🔴 **ALERTA CRÍTICO**.
+
+### 🟡 Fases que NÃO precisam de lançamento, mas precisam de MONITORAMENTO
+
+Se o processo tá numa dessas, ainda não saiu pagamento — só precisa estar visível pra Cau acompanhar:
+
+| Fase no Kanban | O que fazer |
+|---|---|
+| **Rpv do Próximo Mês** | Esperar virar "Rpv do Mês" |
+| **Judicial Implantado a Receber** | Monitorar alvará |
+| **Adm Implantado a Receber** | Monitorar pagamento |
+| **Salário Maternidade Concedido** | Monitorar pagamento |
+
+---
+
+## OBJETIVO DESSE SPRINT
+
+Construir uma **aba nova** no dashboard chamada **"🚨 Auditoria"** com 3 seções:
+
+1. **Alertas Críticos** — processos em fase de "Parcelado" ou "Rpv do Mês" sem lançamento
+2. **Em Monitoramento** — processos em fase de "Implantado a Receber" / "Concedido"
+3. **Saúde Geral** — quantos processos têm correspondência correta
+
+---
+
+## TAREFAS
+
+### 1️⃣ MAPEAR AS FASES DO KANBAN
+
+No AdvBox, a aba Financeiro do Kanban tem essas 8 colunas exatas (preservar grafia):
+
+```typescript
+export const FASES_FINANCEIRO_KANBAN = {
+  // Fases que EXIGEM lançamento mensal
+  COBRANCA_ATIVA: [
+    "Salario Maternidade Parcelado",
+    "Judicial Parcelado",
+    "Adm Parcelado",
+    "Rpv do Mês",
+  ],
+  // Fases que ficam só em monitoramento
+  MONITORAMENTO: [
+    "Rpv do Proximo Mês",
+    "Judicial Implantado a Receber",
+    "Adm Implantado a Receber",
+    "Salario Maternidade Concedido",
+  ],
+};
+```
+
+> **IMPORTANTE:** o nome real das fases pode ter pequenas variações (acentos, maiúsculas). Buscar via API do AdvBox listando fases reais e confirmar match. Se nome real for diferente, ajustar a lista.
+
+---
+
+### 2️⃣ CRIAR ENDPOINT `/api/audit/kanban-financeiro`
+
+Criar handler em `index.js` que:
+
+1. **Busca todos os processos** (lawsuits) do AdvBox
+2. **Filtra** os que estão nas fases listadas (COBRANCA_ATIVA + MONITORAMENTO)
+3. **Pra cada processo em COBRANCA_ATIVA**, busca lançamentos financeiros do mês corrente vinculados a esse processo (`lawsuits_id`)
+4. **Calcula:**
+   - Tem pelo menos 1 lançamento de receita no mês? → ✅ ok
+   - Não tem nenhum → 🔴 alerta crítico
+5. **Retorna** estrutura agregada
+
+**Estrutura de resposta:**
+
+```json
+{
+  "mes": "2026-05",
+  "criticos": [
+    {
+      "lawsuitId": 12345,
+      "cliente": "Mayra Evhellen Guedes Silva de Freitas",
+      "processo": "0010776-38.2025.4.05.8300",
+      "fase": "Salario Maternidade Parcelado",
+      "diasNaFase": 29,
+      "valorEsperado": 432.90,
+      "valorFees": 8072,
+      "responsavel": "Maria Alice",
+      "linkAdvBox": "https://app.advbox.com.br/lawsuit/12345",
+      "ultimoLancamento": "2026-04-05",
+      "motivo": "Em fase parcelada, sem lançamento em maio/26"
+    }
+  ],
+  "monitoramento": [
+    {
+      "lawsuitId": 67890,
+      "cliente": "Francisco de Assis Azevedo",
+      "processo": "...",
+      "fase": "Adm Implantado a Receber",
+      "diasNaFase": 32,
+      "valorFees": 8072,
+      "responsavel": "Maria Alice",
+      "linkAdvBox": "..."
+    }
+  ],
+  "resumo": {
+    "totalProcessosAuditados": 54,
+    "criticosCount": 8,
+    "monitoramentoCount": 10,
+    "okCount": 36,
+    "valorTotalCriticos": 12453.20,
+    "valorTotalMonitoramento": 89230.00
+  }
+}
+```
+
+**Cache:** 30 minutos (não precisa rodar toda hora).
+
+---
+
+### 3️⃣ ADICIONAR ABA "🚨 AUDITORIA" NO FRONTEND
+
+No `public/index.html`, adicionar nova aba no menu (depois de Financeiro, antes de Clientes).
+
+#### 3.1 — Header da aba
+
+```
+🚨 Auditoria CRM ↔ Financeiro
+
+📅 Mês corrente: Maio/2026
+[← Mês anterior] [Mês atual] [Próximo mês →]
+
+Última atualização: há X minutos | [🔄 Atualizar]
+```
+
+#### 3.2 — 3 cards no topo (resumo)
+
+```
+┌───────────────┬───────────────┬───────────────┐
+│ 🔴 CRÍTICOS   │ 🟡 MONITORAR  │ ✅ OK          │
+│      8        │      10       │      36       │
+│ R$ 12.453,20  │ R$ 89.230,00  │      —        │
+└───────────────┴───────────────┴───────────────┘
+```
+
+Cada card é clicável e filtra a lista abaixo.
+
+#### 3.3 — Seção "🔴 Alertas Críticos"
+
+Lista os processos críticos. Cada item:
+
+```
+┌────────────────────────────────────────────────┐
+│ 🔴 Mayra Evhellen Guedes Silva de Freitas      │
+│ Salario Maternidade Parcelado · 29 dias na fase│
+│                                                │
+│ Esperado: lançamento de mensalidade em mai/26  │
+│ Encontrado: NENHUM                             │
+│ Último lançamento: 05/04/2026 (R$ 432,90)     │
+│ Valor total da causa: R$ 8.072,00             │
+│ Responsável: Maria Alice                       │
+│                                                │
+│ [📋 Cobrar Cau] [↗ Abrir no AdvBox]           │
+└────────────────────────────────────────────────┘
+```
+
+Botão "Cobrar Cau" abre um modal com mensagem pronta pra colar no Discord/WhatsApp:
+
+```
+Oi Cau, 
+[Mayra Evhellen] tá em "Salario Maternidade Parcelado" 
+mas não tem lançamento em maio. Último foi 05/04.
+Pode verificar com a cliente?
+```
+
+#### 3.4 — Seção "🟡 Em Monitoramento"
+
+Lista os processos esperando pagamento. Mais sucinto:
+
+```
+🟡 Francisco de Assis Azevedo · Adm Implantado a Receber · 32 dias
+   R$ 8.072 · Maria Alice · [↗ AdvBox]
+```
+
+Filtros disponíveis:
+- Todos / Implantados / Concedidos / RPV do Próximo Mês
+- Por responsável
+
+#### 3.5 — Seção "📊 Saúde Geral" (recolhível)
+
+Lista os 36 processos OK por fase, agrupados, só pra confirmar que tá tudo certo. Tabela compacta.
+
+#### 3.6 — Botão "📊 Exportar Relatório"
+
+Gera CSV com todas as 3 listas (críticos + monitoramento + ok).
+
+---
+
+### 4️⃣ FILTRO POR RESPONSÁVEL
+
+Adicionar dropdown no topo da aba:
+
+```
+Responsável: [Todos ▼]
+- Todos
+- Eduardo Rodrigues
+- Maria Alice
+- Letícia Stephany
+- Ana Marília
+- Claudiana Maria
+- Thiago Tavares
+```
+
+Ao mudar, refiltra todas as 3 seções.
+
+---
+
+### 5️⃣ ALERTA NO HEADER GERAL DO DASHBOARD
+
+No header geral (visível em qualquer aba), se houver críticos > 0:
+
+```
+🚨 8 alertas críticos no Financeiro [Ver]
+```
+
+Vermelho piscante. Clique vai pra aba Auditoria.
+
+---
+
+### 6️⃣ EXIBIR DIAS PARADOS NA FASE
+
+Como o resumo do dashboard já tem essa lógica em `/api/flow`, reutilizar pra mostrar quantos dias o processo tá na fase atual.
+
+Cores:
+- 0-15 dias: cinza (normal)
+- 16-30 dias: amarelo
+- 30+ dias: vermelho
+
+---
+
+## REGRAS IMPORTANTES
+
+1. ❌ **NÃO modificar dados via API do AdvBox.** Apenas LEITURA.
+2. ❌ **NÃO quebrar abas existentes.** Especialmente Visão Geral, Processos, Financeiro, Distribuição, Fluxo.
+3. ✅ **Reutilizar caches existentes** quando possível (lawsuits já tem cache de 20 min).
+4. ✅ **Layout responsivo** — funcionar bem em iPhone (Eduardo acessa muito do celular).
+5. ✅ **Permissões:** Admin (eduardorodrigues14) vê tudo. Team (colaboradores) vê só as listas, sem botão "Exportar".
+
+---
+
+## DETALHES TÉCNICOS DO ADVBOX
+
+### Endpoint de Lawsuits (já implementado)
+- Retorna campo `stage` (fase atual) e `step` (etapa atual)
+- Campo `responsible` com nome do responsável
+- Campo `customers[].name` com nome do cliente
+
+### Endpoint Financial (já implementado)
+- Retorna lançamentos com `lawsuits_id`, `valor`, `data`, `tipo` (R/D)
+- Cache de 20 min
+
+### Match entre os dois
+- A junção é por `lawsuits_id`
+- Um processo pode ter múltiplos lançamentos vinculados
+- Para auditoria, considerar só lançamentos do tipo R (Receita) e do mês corrente
+
+---
+
+## TESTE FINAL
+
+Quando terminar, validar:
+
+1. Abrir aba 🚨 Auditoria → ver 3 cards com números
+2. Card "Críticos" mostra processos em SM Parcelado, Judicial Parcelado, Adm Parcelado, Rpv do Mês sem lançamento de maio
+3. Filtrar por responsável (Maria Alice) → ver só os dela
+4. Clicar "Cobrar Cau" em algum crítico → abre modal com mensagem
+5. Clicar "Abrir no AdvBox" → abre o processo no AdvBox em nova aba
+6. Mudar mês → recalcula tudo
+7. Header geral do dashboard mostra "🚨 8 alertas" se tiver críticos
+8. Conferir que outras abas não quebraram
+9. Mobile: testar no iPhone, todas as listas devem rolar
+
+**Quando terminar, me avise pra eu testar.**
+
+---
+
+## DEPOIS DESSA ENTREGA
+
+Próximas frentes (NÃO fazer agora):
+- Bot que avisa cliente automaticamente quando processo cai em "Implantado a Receber" via ChatGuru
+- Normalização do plano de contas no Financeiro (já tem prompt pronto, mas vai ser depois)
+- Faxina retroativa do AdvBox (Cau)
+
+**Pode executar!** 🚀

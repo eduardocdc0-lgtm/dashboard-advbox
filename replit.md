@@ -15,7 +15,7 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 - `META_AD_ACCOUNT` — `act_654132083965752` (variável de ambiente)
 - `ADMIN_PASS`, `TEAM_PASS`, `SESSION_SECRET` — autenticação (Secrets)
 
-## Abas do Dashboard (11 abas)
+## Abas do Dashboard (12 abas)
 1. **Visão Geral** — processos, tarefas, financeiro + evolução mensal de honorários e faturamento + atividade da equipe (últimos 7 dias)
 2. **Processos** — lista de processos
 3. **Movimentações** — histórico de movimentações
@@ -27,6 +27,7 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 9. **Fluxo** — fluxo operacional (cards parados, gargalos por etapa, top 20 parados), produtividade por responsável, tarefas realizadas
 10. **Meta Ads** *(admin only)* — campanhas Meta Ads em tempo real: investimento, impressões, alcance, WhatsApp, CTR, CPM, custo/conversa. Filtros por período, status e objetivo. Cache 15 min.
 11. **Evolução** *(admin only)* — evolução mensal jan/2025 → hoje. Sub-abas: Contratos (novos processos/mês) e Faturamento (fees_money/mês). Cards de resumo + gráfico de barras + tabela com var% e acumulado. Cache 30 min.
+12. **🚨 Auditoria** — cruza fases de cobrança (COBRANCA_ATIVA / MONITORAMENTO) com transações do mês. Classifica em Críticos (fase parcelada sem lançamento), Monitoramento (outras fases ativas), OK. Badge pulsante no header quando há alertas. Filtros por responsável, navegação de mês, exportação CSV (admin). Cache 30 min. Endpoint: `/api/audit/kanban-financeiro`.
 
 ## Aba Cadastros Pendentes
 - Valida anotações gerais dos processos

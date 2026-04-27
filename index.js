@@ -736,6 +736,172 @@ app.get('/api/evolucao', async (req, res) => {
   }
 });
 
+// ── Cache compartilhado de transações ────────────────────────────────────────
+let transCache = null;
+let transCacheAt = null;
+const TRANS_TTL_MS = 30 * 60 * 1000;
+
+async function fetchTransactions() {
+  const now = Date.now();
+  if (transCache && transCacheAt && (now - transCacheAt) < TRANS_TTL_MS) return transCache;
+  const data = await callAdvBox('/transactions?limit=1000');
+  transCache = data;
+  transCacheAt = now;
+  return data;
+}
+
+// ── Fases do Kanban Financeiro (Auditoria) ────────────────────────────────────
+const FASES_COBRANCA_ATIVA = [
+  'Salario Maternidade Parcelado',
+  'Judicial Parcelado',
+  'Adm Parcelado',
+  'Rpv do Mês'
+];
+const FASES_MONITORAMENTO_AUDIT = [
+  'Rpv do Proximo Mês',
+  'Judicial Implantado a Receber',
+  'Adm Implantado a Receber',
+  'Salario Maternidade Concedido'
+];
+
+function normFase(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+function matchFaseList(stage, faseList) {
+  const st = normFase(stage);
+  return faseList.some(f => {
+    const fn = normFase(f);
+    return st === fn || st.includes(fn) || fn.includes(st);
+  });
+}
+
+let auditCache = {};
+const AUDIT_TTL = 30 * 60 * 1000;
+
+app.get('/api/audit/kanban-financeiro', async (req, res) => {
+  const now = Date.now();
+  const today = new Date();
+  const defaultMes = String(today.getMonth() + 1).padStart(2, '0') + '/' + today.getFullYear();
+  const mes = req.query.mes || defaultMes;
+
+  if (auditCache[mes] && (now - auditCache[mes].at) < AUDIT_TTL) {
+    return res.json(auditCache[mes].data);
+  }
+
+  try {
+    const [lawData, txData] = await Promise.all([fetchLawsuits(), fetchTransactions()]);
+    const lawsuits     = Array.isArray(lawData) ? lawData : (lawData.data || []);
+    const transactions = Array.isArray(txData)  ? txData  : (txData.data  || []);
+
+    // Transações de receita do mês auditado
+    const txDoMes = transactions.filter(t => t.entry_type === 'income' && t.competence === mes);
+
+    // Índice: lawsuitId (string) → transações do mês
+    const txByLawsuit = {};
+    txDoMes.forEach(t => {
+      const lid = String(t.lawsuits_id || t.lawsuit_id || '');
+      if (!lid) return;
+      if (!txByLawsuit[lid]) txByLawsuit[lid] = [];
+      txByLawsuit[lid].push(t);
+    });
+
+    // Último lançamento de receita por processo (qualquer mês)
+    const lastTxByLawsuit = {};
+    transactions.filter(t => t.entry_type === 'income').forEach(t => {
+      const lid = String(t.lawsuits_id || t.lawsuit_id || '');
+      if (!lid) return;
+      const existing = lastTxByLawsuit[lid];
+      const tDate = t.date_payment || t.date_due || '';
+      if (!existing || tDate > (existing.date_payment || existing.date_due || '')) {
+        lastTxByLawsuit[lid] = t;
+      }
+    });
+
+    const criticos = [], monitoramento = [], ok = [];
+
+    for (const l of lawsuits) {
+      const stage = l.stage || l.step || '';
+      const isCobranca = matchFaseList(stage, FASES_COBRANCA_ATIVA);
+      const isMonitor  = matchFaseList(stage, FASES_MONITORAMENTO_AUDIT);
+      if (!isCobranca && !isMonitor) continue;
+
+      const clientsArr = Array.isArray(l.customers) ? l.customers : [];
+      const personal = clientsArr.find(c =>
+        c.name && !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i.test((c.name || '').toUpperCase())
+      );
+      const cliente = (personal || clientsArr[0] || {}).name || l.customer_name || `#${l.id}`;
+
+      const stageAt = l.stage_date || l.stage_at || l.updated_at || l.created_at || '';
+      const diasNaFase = stageAt
+        ? Math.max(0, Math.floor((now - new Date(stageAt).getTime()) / 86400000))
+        : null;
+
+      const feesValue = parseFloat(String(l.fees_money || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+      const lawId     = String(l.id || l.lawsuits_id || '');
+      const processNum = l.process_number || l.protocol_number || `#${lawId}`;
+
+      const entry = {
+        lawsuitId:  lawId,
+        cliente,
+        processo:   processNum,
+        fase:       stage,
+        diasNaFase,
+        valorFees:  feesValue,
+        responsavel: l.responsible || '',
+        linkAdvBox: `https://app.advbox.com.br/lawsuits/${lawId}`
+      };
+
+      if (isCobranca) {
+        const txMes  = txByLawsuit[lawId] || [];
+        const lastTx = lastTxByLawsuit[lawId];
+        if (txMes.length === 0) {
+          criticos.push({
+            ...entry,
+            ultimoLancamento: lastTx ? (lastTx.date_payment || lastTx.date_due || null) : null,
+            ultimoValor: lastTx ? Number(lastTx.amount || 0) : null,
+            motivo: `Em fase parcelada, sem lançamento em ${mes}`
+          });
+        } else {
+          ok.push({
+            ...entry,
+            lancamentosDoMes: txMes.length,
+            totalDoMes: txMes.reduce((s, t) => s + Number(t.amount || 0), 0)
+          });
+        }
+      } else {
+        monitoramento.push(entry);
+      }
+    }
+
+    criticos.sort((a, b) => (b.diasNaFase || 0) - (a.diasNaFase || 0));
+    monitoramento.sort((a, b) => (b.diasNaFase || 0) - (a.diasNaFase || 0));
+
+    const result = {
+      mes,
+      criticos,
+      monitoramento,
+      ok,
+      resumo: {
+        totalProcessosAuditados: criticos.length + monitoramento.length + ok.length,
+        criticosCount:           criticos.length,
+        monitoramentoCount:      monitoramento.length,
+        okCount:                 ok.length,
+        valorTotalCriticos:      criticos.reduce((s, c) => s + (c.ultimoValor || 0), 0),
+        valorTotalMonitoramento: monitoramento.reduce((s, c) => s + (c.valorFees || 0), 0)
+      },
+      cachedAt: new Date().toISOString()
+    };
+
+    auditCache[mes] = { data: result, at: now };
+    console.log(`[Auditoria] ${mes}: ${criticos.length} críticos | ${monitoramento.length} monitoramento | ${ok.length} ok`);
+    res.json(result);
+  } catch (err) {
+    console.error('[Auditoria] Erro:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {
