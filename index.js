@@ -124,12 +124,27 @@ let sharedLawsuitsAt = null;
 let sharedLawsuitsPromise = null;
 const LAWSUITS_TTL_MS = 20 * 60 * 1000;
 
+async function fetchAllLawsuitPages() {
+  const all = [];
+  let page = 0;
+  while (page < 30) {
+    const data = await callAdvBox(`/lawsuits?limit=500&offset=${page * 500}`);
+    const arr = Array.isArray(data) ? data : (data.data || []);
+    if (!arr.length) break;
+    all.push(...arr);
+    page++;
+    if (arr.length < 500) break;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return all;
+}
+
 async function fetchLawsuits(force = false) {
   const now = Date.now();
   const stale = !sharedLawsuitsAt || (now - sharedLawsuitsAt) > LAWSUITS_TTL_MS;
   if (!force && !stale && sharedLawsuitsCache) return sharedLawsuitsCache;
   if (sharedLawsuitsPromise) return sharedLawsuitsPromise;
-  sharedLawsuitsPromise = callAdvBox('/lawsuits?limit=1000').then(data => {
+  sharedLawsuitsPromise = fetchAllLawsuitPages().then(data => {
     sharedLawsuitsCache = data;
     sharedLawsuitsAt = Date.now();
     sharedLawsuitsPromise = null;
@@ -1005,7 +1020,6 @@ app.get('/api/audit-responsible', async (req, res) => {
     let totalAuditados = 0, totalCorretos = 0, totalErrados = 0, totalNaoMapeados = 0;
 
     for (const l of lawsuits) {
-      if (l.status_closure) continue;
       const stage = l.stage || l.step || '';
       const responsible = l.responsible || '';
       const expectedZone = audrZoneForStage(stage);
