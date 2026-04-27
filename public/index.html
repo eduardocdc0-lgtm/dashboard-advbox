@@ -1010,6 +1010,7 @@
       <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
+      <button class="tab admin-tab" onclick="showTab('auditresp', event)">🔍 Auditoria Resp.</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -1378,112 +1379,64 @@
         </div>
       </div>
 
-      <!-- AUDITORIA DE RESPONSÁVEL — admin only -->
-      <details id="audrBlock" class="admin-only" style="margin-top:22px;" ontoggle="if(this.open && !_audrData)loadAuditResp()">
-        <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#f9f9f9;border:1px solid #eee;border-radius:10px;font-weight:600;font-size:14px;">
-          <span>🔍 Auditoria de Responsável — fases × quem deveria ser responsável</span>
-          <span id="audrSummaryBadge" style="font-size:11px;color:#bbb;font-weight:400;">clique para carregar</span>
-        </summary>
 
-        <div style="margin-top:18px;">
-
-          <!-- 5 cards -->
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;" id="audrCardsRow">
-            <div class="ar-card ar-card-total">
-              <div class="ar-card-label">Auditados</div>
-              <div class="ar-card-count" id="audrTotalN">—</div>
-              <div class="ar-card-sub">fases mapeadas</div>
-            </div>
-            <div class="ar-card ar-card-ok">
-              <div class="ar-card-label">Corretos</div>
-              <div class="ar-card-count" id="audrCorretoN">—</div>
-              <div class="ar-card-sub">responsável certo</div>
-            </div>
-            <div class="ar-card ar-card-error">
-              <div class="ar-card-label">Errados</div>
-              <div class="ar-card-count" id="audrErradoN">—</div>
-              <div class="ar-card-sub">precisam corrigir</div>
-            </div>
-            <div class="ar-card" style="background:#f8f8f8;border-color:#e5e5e5;">
-              <div class="ar-card-label">Não mapeados</div>
-              <div class="ar-card-count" id="audrNaoMapN" style="color:#999;">—</div>
-              <div class="ar-card-sub">fase desconhecida</div>
-            </div>
-            <div class="ar-card" style="background:#fffbea;border-color:#fde68a;">
-              <div class="ar-card-label">Taxa de acerto</div>
-              <div class="ar-card-count" id="audrTaxaN" style="color:#92400e;">—</div>
-              <div class="ar-card-sub">conformidade</div>
-            </div>
-          </div>
-
-          <!-- Filtros -->
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
-            <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-              <option value="ERRADO">❌ Somente errados</option>
-              <option value="">Todos (correto + errado)</option>
-              <option value="CORRETO">✅ Somente corretos</option>
-              <option value="NAO_MAPEADO">⚪ Não mapeados</option>
-            </select>
-            <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-              <option value="">Todas as zonas</option>
-              <option value="MARILIA">🟢 Zona Marília</option>
-              <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
-              <option value="CAU">🟡 Zona Cau</option>
-            </select>
-            <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-              <option value="">Todos os responsáveis</option>
-            </select>
-            <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
-            <button class="dist-export-btn" onclick="exportAuditResp()" style="margin-left:auto;">📊 Exportar CSV</button>
-            <button class="dist-export-btn" onclick="loadAuditResp(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
-          </div>
-
-          <!-- Loading state -->
-          <div id="audrLoading" style="display:none;text-align:center;padding:28px;color:#aaa;font-size:13px;">Carregando auditoria…</div>
-
-          <!-- Resumo por Pessoa -->
-          <details style="margin-bottom:10px;" open>
-            <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#fff5f5;border-radius:7px;border:1px solid #fcd5d5;list-style:none;">
-              ⚠ Resumo por Pessoa <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span>
-            </summary>
-            <div id="audrByPerson" style="margin-top:8px;"></div>
-          </details>
-
-          <!-- Resumo por Fase -->
-          <details style="margin-bottom:10px;">
-            <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">
-              📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span>
-            </summary>
-            <div id="audrByStage" style="margin-top:8px;overflow-x:auto;"></div>
-          </details>
-
-          <!-- Tabela detalhada -->
-          <div style="overflow-x:auto;margin-top:4px;">
-            <table class="fin-table" style="width:100%;">
-              <thead><tr>
-                <th>Cliente</th>
-                <th>Tipo</th>
-                <th>Fase Atual</th>
-                <th>Responsável Atual</th>
-                <th>Zona Esperada</th>
-                <th>Responsável Esperado</th>
-                <th style="text-align:center;">Status</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="audrTableBody">
-                <tr><td colspan="8" style="text-align:center;padding:24px;color:#aaa;">Clique em "Auditoria de Responsável" acima para carregar.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div style="text-align:center;margin-top:8px;" id="audrLoadMore"></div>
-          <div style="font-size:11px;color:#bbb;margin-top:12px;padding:8px 4px;border-top:1px solid #f0f0f0;">
-            ⓘ Somente processos ativos (sem status_closure). 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo
-          </div>
-        </div>
-      </details>
     </div>
 
-    <!-- ABA 10: FLUXO -->
+    <!-- ABA: AUDITORIA DE RESPONSÁVEL -->
+    <div id="auditresp" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🔍 Auditoria de Responsável</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="audrSummaryBadge">Fases × quem deveria ser responsável — clique ↺ Atualizar para carregar</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="dist-export-btn" onclick="exportAuditResp()">📊 Exportar CSV</button>
+          <button class="dist-export-btn" onclick="loadAuditResp(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
+        </div>
+      </div>
+      <div id="audrLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando auditoria…</div>
+      <div id="audrCardsRow" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">
+        <div class="ar-card ar-card-total"><div class="ar-card-label">Auditados</div><div class="ar-card-count" id="audrTotalN">—</div><div class="ar-card-sub">fases mapeadas</div></div>
+        <div class="ar-card ar-card-ok"><div class="ar-card-label">Corretos</div><div class="ar-card-count" id="audrCorretoN">—</div><div class="ar-card-sub">responsável certo</div></div>
+        <div class="ar-card ar-card-error"><div class="ar-card-label">Errados</div><div class="ar-card-count" id="audrErradoN">—</div><div class="ar-card-sub">precisam corrigir</div></div>
+        <div class="ar-card" style="background:#f8f8f8;border-color:#e5e5e5;"><div class="ar-card-label">Não mapeados</div><div class="ar-card-count" id="audrNaoMapN" style="color:#999;">—</div><div class="ar-card-sub">fase desconhecida</div></div>
+        <div class="ar-card" style="background:#fffbea;border-color:#fde68a;"><div class="ar-card-label">Taxa de acerto</div><div class="ar-card-count" id="audrTaxaN" style="color:#92400e;">—</div><div class="ar-card-sub">conformidade</div></div>
+      </div>
+      <details style="margin-bottom:10px;" open>
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#fff5f5;border-radius:7px;border:1px solid #fcd5d5;list-style:none;">⚠ Resumo por Pessoa <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
+        <div id="audrByPerson" style="margin-top:8px;"></div>
+      </details>
+      <details style="margin-bottom:10px;">
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
+        <div id="audrByStage" style="margin-top:8px;overflow-x:auto;"></div>
+      </details>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
+        <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+          <option value="ERRADO">❌ Somente errados</option>
+          <option value="">Todos</option>
+          <option value="CORRETO">✅ Somente corretos</option>
+          <option value="NAO_MAPEADO">⚪ Não mapeados</option>
+        </select>
+        <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+          <option value="">Todas as zonas</option>
+          <option value="MARILIA">🟢 Zona Marília</option>
+          <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
+          <option value="CAU">🟡 Zona Cau</option>
+        </select>
+        <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;"><option value="">Todos os responsáveis</option></select>
+        <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="fin-table" style="width:100%;">
+          <thead><tr><th>Cliente</th><th>Tipo</th><th>Fase Atual</th><th>Responsável Atual</th><th>Zona Esperada</th><th>Responsável Esperado</th><th style="text-align:center;">Status</th><th></th></tr></thead>
+          <tbody id="audrTableBody"><tr><td colspan="8" style="text-align:center;padding:32px;color:#aaa;">Clique em ↺ Atualizar para carregar a auditoria.</td></tr></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:8px;" id="audrLoadMore"></div>
+      <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">ⓘ Somente processos ativos. 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo. Cache 20 min.</div>
+    </div>
+
+        <!-- ABA 10: FLUXO -->
     <div id="fluxo" class="tab-content">
 
       <!-- Header -->
@@ -1754,6 +1707,7 @@
       if (name === 'metaads'   && !metaRawData)  loadMetaAds();
       if (name === 'evolucao'  && !window._evoData) loadEvolucao();
       if (name === 'auditoria' && !auditData)   loadAudit();
+      if (name === 'auditresp' && !_audrData)   loadAuditResp();
     }
 
     function showError(msg) {
