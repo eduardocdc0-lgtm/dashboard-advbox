@@ -24,7 +24,7 @@ Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 6. **Cadastros Pendentes** — processos com problemas (Sem fechado por, sem laudo, sem canal)
 7. **Canais** — Kanban por canal de origem (Parceiros, Orgânicos, Campanhas, Com Laudo, Sem Laudo)
 8. **Distribuição** — carga de trabalho por responsável, com lista detalhada filtrável e exportação CSV
-9. **Fluxo** — fluxo operacional (cards parados, gargalos por etapa, top 20 parados), produtividade por responsável, tarefas realizadas
+9. **🚧 Gargalos** (ex-Fluxo) — 3 cards (Crítico +90d / Atenção 30-90d / Espera Externa), tabela principal ordenável por dias/cliente/responsável com cores de severidade, "Carregar mais" (50/página), filtro por responsável, chips de severidade, seção "Gargalos por Etapa" recolhível com barra proporcional e média de dias calculada de verdade. Exportar CSV (admin). Bug de "?d" corrigido: String keys + fallback updated_at.
 10. **Meta Ads** *(admin only)* — campanhas Meta Ads em tempo real: investimento, impressões, alcance, WhatsApp, CTR, CPM, custo/conversa. Filtros por período, status e objetivo. Cache 15 min.
 11. **Evolução** *(admin only)* — evolução mensal jan/2025 → hoje. Sub-abas: Contratos (novos processos/mês) e Faturamento (fees_money/mês). Cards de resumo + gráfico de barras + tabela com var% e acumulado. Cache 30 min.
 12. **🚨 Auditoria** — cruza fases de cobrança (COBRANCA_ATIVA / MONITORAMENTO) com transações do mês. Classifica em Críticos (fase parcelada sem lançamento), Monitoramento (outras fases ativas), OK. Badge pulsante no header quando há alertas. Filtros por responsável, navegação de mês, exportação CSV (admin). Cache 30 min. Endpoint: `/api/audit/kanban-financeiro`.

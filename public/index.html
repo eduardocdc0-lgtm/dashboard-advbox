@@ -660,6 +660,47 @@
     .kb-date { font-size:11px;color:#aaa; }
     .kb-empty { text-align:center;color:#ccc;padding:20px 0;font-size:12px; }
 
+    /* ── GARGALOS ── */
+    .garg-cards-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px; }
+    @media(max-width:700px){.garg-cards-row{grid-template-columns:1fr;}}
+    .garg-card { border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:4px;border:1px solid #eee;cursor:pointer;transition:box-shadow .15s,outline .1s; }
+    .garg-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+    .garg-card-crit { background:#fff5f5;border-color:#fcd5d5; }
+    .garg-card-warn { background:#fffbea;border-color:#fde68a; }
+    .garg-card-ext  { background:#f0faf5;border-color:#bbf0d0; }
+    .garg-card-icon  { font-size:20px; }
+    .garg-card-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888; }
+    .garg-card-count { font-family:'DM Serif Display',serif;font-size:2rem;line-height:1; }
+    .garg-card-sub   { font-size:12px;color:#888; }
+    .garg-card-crit .garg-card-count { color:#b02020; }
+    .garg-card-warn .garg-card-count { color:#856404; }
+    .garg-card-ext  .garg-card-count { color:#166534; }
+    /* Chips */
+    .garg-chip { font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .12s,border-color .12s; }
+    .garg-chip:hover { background:#f5f5f5; }
+    .garg-chip.active { background:#111;color:#fff;border-color:#111; }
+    .garg-chip-fase { background:#333;color:#fff;border-color:#333;display:inline-flex;align-items:center;gap:4px; }
+    /* Sort indicators */
+    .garg-sortable { cursor:pointer; }
+    .garg-sortable:hover { background:#f9f9f9; }
+    .garg-sort-ind { font-size:10px;color:#bbb; }
+    /* Row severity colors */
+    .garg-row-crit { background:#fff9f9; }
+    .garg-row-warn { background:#fffdf0; }
+    .garg-row-crit td:first-child { border-left:3px solid #c0392b; }
+    .garg-row-warn td:first-child { border-left:3px solid #f39c12; }
+    /* Etapa rows */
+    .garg-etapa-row { display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid #f5f5f5;cursor:pointer;border-radius:4px; }
+    .garg-etapa-row:last-child { border-bottom:none; }
+    .garg-etapa-row:hover { background:#f7f7f7; }
+    .garg-etapa-row.active { background:#f0f0f0;box-shadow:inset 3px 0 0 #111; }
+    .garg-etapa-nome { font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:10px; }
+    .garg-etapa-bar-wrap { flex:0 0 120px;background:#f0f0f0;border-radius:3px;height:7px;margin-right:10px; }
+    .garg-etapa-bar-fill { height:7px;border-radius:3px;background:#111; }
+    .garg-etapa-cnt { font-size:13px;font-weight:600;min-width:28px;text-align:right; }
+    .garg-etapa-avg { font-size:11px;color:#aaa;min-width:52px;text-align:right; }
+    @media(max-width:600px){.garg-etapa-bar-wrap{display:none;}}
+
     /* ── AUDITORIA CRM × FINANCEIRO ── */
     @keyframes pulseBadge { 0%,100%{opacity:1} 50%{opacity:.65} }
     .audit-cards-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px; }
@@ -934,7 +975,7 @@
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
       <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
-      <button class="tab" onclick="showTab('fluxo', event)">Fluxo</button>
+      <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
     </div>
@@ -1309,84 +1350,81 @@
     <!-- ABA 10: FLUXO -->
     <div id="fluxo" class="tab-content">
 
-      <!-- SEÇÃO 1: FLUXO OPERACIONAL -->
-      <div class="fluxo-section-title">Fluxo operacional</div>
-      <div class="fluxo-cards">
-        <div class="fluxo-card">
-          <div class="fluxo-card-label">Movimentados esta semana</div>
-          <div class="fluxo-card-value success" id="flxSemana">—</div>
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🚧 Gargalos — Processos com Ação Pendente</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="gargalosUpdatedAt"></div>
         </div>
-        <div class="fluxo-card">
-          <div class="fluxo-card-label">Movimentados este mês</div>
-          <div class="fluxo-card-value" id="flxMes">—</div>
-        </div>
-        <div class="fluxo-card">
-          <div class="fluxo-card-label">Parados +30 dias</div>
-          <div class="fluxo-card-value warning" id="flxP30">—</div>
-        </div>
-        <div class="fluxo-card">
-          <div class="fluxo-card-label">Parados +90 dias (críticos)</div>
-          <div class="fluxo-card-value danger" id="flxP90">—</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="gargRespFiltro" class="reg-filter" onchange="applyGargFilter()" style="font-size:12px;">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <button class="dist-export-btn admin-only" onclick="exportGargCsv()">📊 Exportar CSV</button>
+          <button class="reg-filter" onclick="loadFluxo()" style="font-size:12px;">🔄</button>
         </div>
       </div>
 
-      <!-- Info row -->
-      <div class="fluxo-info-row" id="flxInfoRow" style="display:none">
-        <span class="fluxo-info-tag cat1" id="flxInfoCat1">—</span>
-        <span class="fluxo-info-tag cat2" id="flxInfoCat2">—</span>
+      <!-- 3 cards de resumo -->
+      <div class="garg-cards-row">
+        <div class="garg-card garg-card-crit" id="gcCrit" onclick="gargSetFilter('crit')">
+          <div class="garg-card-icon">🔴</div>
+          <div class="garg-card-label">Crítico</div>
+          <div class="garg-card-count" id="gcCritN">—</div>
+          <div class="garg-card-sub">+90 dias parado</div>
+        </div>
+        <div class="garg-card garg-card-warn" id="gcWarn" onclick="gargSetFilter('warn')">
+          <div class="garg-card-icon">🟡</div>
+          <div class="garg-card-label">Atenção</div>
+          <div class="garg-card-count" id="gcWarnN">—</div>
+          <div class="garg-card-sub">30–90 dias parado</div>
+        </div>
+        <div class="garg-card garg-card-ext" id="gcExt" onclick="gargSetFilter('ext')">
+          <div class="garg-card-icon">🟢</div>
+          <div class="garg-card-label">Espera Externa</div>
+          <div class="garg-card-count" id="gcExtN">—</div>
+          <div class="garg-card-sub">aguarda INSS / Juiz</div>
+        </div>
       </div>
 
-      <div class="fluxo-notice">
-        <strong>Como é calculado:</strong> "Movimentação" = presença nos andamentos tribunais. "Parado de verdade" = etapa com responsabilidade ativa do escritório, excluindo esperas externas e encerrados.
+      <!-- Chips de severidade + fase ativa -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <button class="garg-chip active" id="gcChipAll"  onclick="gargSetFilter('all')">Todos</button>
+        <button class="garg-chip"        id="gcChipCrit" onclick="gargSetFilter('crit')">🔴 Críticos</button>
+        <button class="garg-chip"        id="gcChipWarn" onclick="gargSetFilter('warn')">🟡 Atenção</button>
+        <button class="garg-chip"        id="gcChipExt"  onclick="gargSetFilter('ext')">🟢 Espera Externa</button>
+        <span id="gargFaseChip" style="display:none;" class="garg-chip garg-chip-fase" onclick="gargClearFase()"></span>
       </div>
 
-      <!-- Gargalos -->
-      <div class="fluxo-section-title">Gargalos por etapa (ação do escritório + espera externa)</div>
-      <div class="card" style="padding:0 18px;">
-        <div id="gargaloList"><div class="loading">Carregando...</div></div>
-      </div>
-
-      <!-- Top 20 parados -->
-      <div class="fluxo-section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span>Processos parados (ação do escritório)</span>
-        <select class="reg-filter" id="flxRespFiltro" onchange="applyFlxFilter()" style="font-size:11px;">
-          <option value="">Todos os responsáveis</option>
-        </select>
-        <span id="flxFaseLabel" style="display:none;font-size:11px;background:#111;color:#fff;padding:2px 8px;border-radius:3px;cursor:pointer;" onclick="clearFaseFilter()" title="Clique para limpar"></span>
-        <button class="dist-export-btn" onclick="exportFluxoCsv()" style="margin-left:auto;">Exportar CSV</button>
-      </div>
-      <div class="card" style="padding:0;">
-        <table class="fin-table">
-          <thead><tr>
-            <th>Cliente</th>
-            <th>Tipo</th>
-            <th>Fase</th>
-            <th>Dias parado</th>
-            <th>Responsável</th>
-            <th></th>
-          </tr></thead>
-          <tbody id="flxParadosBody"></tbody>
+      <!-- Tabela principal -->
+      <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="fin-table" id="gargTable">
+          <thead>
+            <tr>
+              <th class="garg-sortable" onclick="gargSort('cliente')">Cliente <span id="gSortCliente" class="garg-sort-ind"></span></th>
+              <th>Tipo</th>
+              <th>Etapa</th>
+              <th class="garg-sortable" onclick="gargSort('dias')" style="text-align:center;">Dias Parado <span id="gSortDias" class="garg-sort-ind">▼</span></th>
+              <th class="garg-sortable" onclick="gargSort('resp')">Responsável <span id="gSortResp" class="garg-sort-ind"></span></th>
+              <th style="text-align:center;">Sev.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="gargTableBody">
+            <tr><td colspan="7"><div class="loading">Carregando...</div></td></tr>
+          </tbody>
         </table>
       </div>
+      <div style="text-align:center;margin-top:10px;" id="gargLoadMoreRow"></div>
 
-      <!-- SEÇÃO 2: PRODUTIVIDADE -->
-      <div class="fluxo-section-title">Produtividade por responsável</div>
-      <div class="prod-grid" id="prodGrid"><div class="loading">Carregando...</div></div>
-      <div class="prod-detail" id="prodDetail">
-        <div class="prod-detail-header">
-          <span style="font-weight:600;font-size:15px;" id="prodDetailName">—</span>
-          <button class="dist-panel-close" onclick="closeProdDetail()">×</button>
-        </div>
-        <div class="prod-detail-tabs">
-          <button class="prod-detail-tab active" onclick="switchProdTab('mov',this)">Em movimento (30d)</button>
-          <button class="prod-detail-tab" onclick="switchProdTab('par',this)">Parados (+60d)</button>
-        </div>
-        <div id="prodDetailContent"><div class="loading">—</div></div>
-      </div>
-
-      <!-- SEÇÃO 3: TAREFAS -->
-      <div class="fluxo-section-title">Tarefas realizadas</div>
-      <div id="tarefasSection"><div class="loading">Carregando...</div></div>
+      <!-- Gargalos por etapa (recolhível) -->
+      <details class="card" style="margin-top:18px;">
+        <summary style="cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+          <span>📍 Gargalos por etapa <span style="font-size:11px;font-weight:400;color:#999;">(ação do escritório)</span></span>
+          <span style="font-size:11px;color:#bbb;">clique para expandir</span>
+        </summary>
+        <div id="gargEtapaList" style="margin-top:14px;"></div>
+      </details>
 
     </div>
 
@@ -2152,220 +2190,301 @@
       return 3;
     }
 
+    // ── GARGALOS — estado ────────────────────────────────────────────────────
+    let _gargFilter     = 'all';   // 'all' | 'crit' | 'warn' | 'ext'
+    let _gargFaseFilter = '';      // etapa selecionada
+    let _gargSort       = { col: 'dias', asc: false };
+    let _gargPage       = 1;
+    const GARG_PER_PAGE = 50;
+    let _gargAll        = [];      // lista enriquecida (cat3 + cat1) após render
+
     function renderFluxo() {
       if (!fluxoData || !allLawsuitsData.length) return;
       const { movements, posts } = fluxoData;
 
-      // Mapa lawsuit_id → data mais recente de andamento
+      // ── Fix bug: String keys para evitar mismatch number/string ──────────
       const lastMov = {};
-      movements.forEach(m => {
-        const lid = m.lawsuit_id;
+      (movements || []).forEach(m => {
+        // AdvBox usa lawsuit_id ou lawsuits_id dependendo da versão
+        const lid = m.lawsuit_id != null ? String(m.lawsuit_id)
+                  : m.lawsuits_id != null ? String(m.lawsuits_id)
+                  : null;
         if (!lid) return;
-        if (!lastMov[lid] || m.date > lastMov[lid]) lastMov[lid] = m.date;
+        const dateStr = m.date || m.movement_date || m.created_at || '';
+        if (!lastMov[lid] || dateStr > lastMov[lid]) lastMov[lid] = dateStr;
       });
 
-      // Filtra processos que o AdvBox já marcou como encerrados (exit_* ou status_closure)
-      const total = allLawsuitsData.length;
-      const base = allLawsuitsData.filter(l =>
+      // Exclui processos marcados como encerrados pelo AdvBox
+      const total      = allLawsuitsData.length;
+      const base       = allLawsuitsData.filter(l =>
         !l.exit_production && !l.exit_execution && !l.status_closure
       );
       const exclAdvbox = total - base.length;
 
-      // Enriquece com diasParado + categoria
-      const enriched = base.map(l => ({
-        ...l,
-        diasParado: daysDiff(lastMov[l.id]),
-        lastMovDate: lastMov[l.id] || null,
-        cat: fluxoCat(l)
-      }));
+      // Enriquece — diasParado como número real ou null (unknown)
+      const enriched = base.map(l => {
+        const key      = String(l.id);
+        const movDate  = lastMov[key];
+        const srcDate  = movDate || l.updated_at || null;
+        let diasParado = null;
+        if (srcDate) {
+          const d = daysDiff(srcDate);
+          if (d >= 0 && d < 9000) diasParado = d;
+        }
+        return { ...l, diasParado, lastMovDate: srcDate, cat: fluxoCat(l) };
+      });
 
-      // Separa categorias
-      const cat3 = enriched.filter(l => l.cat === 3); // parados de verdade
-      const cat1 = enriched.filter(l => l.cat === 1); // espera externa
-      const cat2 = enriched.filter(l => l.cat === 2); // encerrados pela etapa
+      const cat3 = enriched.filter(l => l.cat === 3);
+      const cat1 = enriched.filter(l => l.cat === 1);
+      const cat2 = enriched.filter(l => l.cat === 2);
 
-      // Log de validação
       console.log(
-        `[Fluxo] Total: ${total} | Excluídos pelo AdvBox (exit/closure): ${exclAdvbox} | ` +
+        `[Fluxo] Total: ${total} | Excluídos pelo AdvBox: ${exclAdvbox} | ` +
         `Excluídos pela etapa (cat2): ${cat2.length} | ` +
         `Espera externa (cat1): ${cat1.length} | ` +
         `Ação do escritório (cat3): ${cat3.length}`
       );
-      const etapasCat2 = [...new Set(cat2.map(l => l.step || l.stage || '(sem etapa)'))].sort();
-      console.log('[Fluxo] Etapas excluídas por cat2:', etapasCat2);
-      // Auditoria de grupos detectados em cat3 (parados)
+      console.log('[Fluxo] Etapas excluídas por cat2:', [...new Set(cat2.map(l => l.step || l.stage || '?'))].sort());
       const gruposCat3 = {};
-      cat3.forEach(l => {
-        const k = fluxoNorm(l.type || '') + ' [' + fluxoNorm(l.group || '') + ']';
-        gruposCat3[k] = (gruposCat3[k] || 0) + 1;
-      });
+      cat3.forEach(l => { const k = fluxoNorm(l.type||'') + ' [' + fluxoNorm(l.group||'') + ']'; gruposCat3[k] = (gruposCat3[k]||0)+1; });
       console.log('[Fluxo] Tipos/Grupos em cat3 (parados):', gruposCat3);
-      // Auditoria de grupos detectados em cat1 (espera)
       const gruposCat1 = {};
-      cat1.forEach(l => {
-        const k = fluxoNorm(l.type || '') + ' [' + fluxoNorm(l.group || '') + ']';
-        gruposCat1[k] = (gruposCat1[k] || 0) + 1;
-      });
+      cat1.forEach(l => { const k = fluxoNorm(l.type||'') + ' [' + fluxoNorm(l.group||'') + ']'; gruposCat1[k] = (gruposCat1[k]||0)+1; });
       console.log('[Fluxo] Tipos/Grupos em cat1 (espera):', gruposCat1);
 
-      fluxoLawsuitsParados = cat3; // usado pelo filtro e CSV
+      fluxoLawsuitsParados = cat3;
 
-      // Cards — baseados apenas em cat3
-      document.getElementById('flxSemana').textContent = cat3.filter(l => l.diasParado <= 7).length;
-      document.getElementById('flxMes').textContent    = cat3.filter(l => l.diasParado <= 30).length;
-      document.getElementById('flxP30').textContent    = cat3.filter(l => l.diasParado > 30).length;
-      document.getElementById('flxP90').textContent    = cat3.filter(l => l.diasParado > 90).length;
+      renderHoje(posts);
+      renderGargalosTab(cat3, cat1);
+    }
 
-      // Info row
-      const infoRow = document.getElementById('flxInfoRow');
-      document.getElementById('flxInfoCat1').textContent =
-        `${cat1.length} em espera externa (perícia marcada, aguardando juiz)`;
-      document.getElementById('flxInfoCat2').textContent =
-        `${cat2.length} encerrados pela etapa (excluídos da contagem)`;
-      infoRow.style.display = 'flex';
+    function gargSev(l) {
+      if (l.cat === 1) return 'ext';
+      const d = l.diasParado;
+      if (d === null || d === undefined) return 'warn';
+      return d > 90 ? 'crit' : d > 30 ? 'warn' : 'ok';
+    }
 
-      // Filtro de responsáveis (cat3)
+    function renderGargalosTab(cat3, cat1) {
+      _gargAll   = [...cat3, ...cat1].map(l => ({ ...l, sev: gargSev(l) }));
+      _gargPage  = 1;
+      _gargFaseFilter = '';
+
+      // Counts
+      const critN = cat3.filter(l => l.diasParado !== null && l.diasParado > 90).length;
+      const warnN = cat3.filter(l => l.diasParado !== null && l.diasParado <= 90 && l.diasParado > 30).length;
+      const extN  = cat1.length;
+      const unknN = cat3.filter(l => l.diasParado === null).length;
+
+      document.getElementById('gcCritN').textContent = critN;
+      document.getElementById('gcWarnN').textContent = warnN + (unknN ? ` (+${unknN}?)` : '');
+      document.getElementById('gcExtN').textContent  = extN;
+
+      const updEl = document.getElementById('gargalosUpdatedAt');
+      if (updEl) updEl.textContent =
+        `${_gargAll.length} processos · ${cat3.length} aguardam ação · ${extN} em espera externa` +
+        (unknN ? ` · ${unknN} sem data de movimentação (usando updated_at)` : '');
+
+      // Dropdown de responsáveis
       const resps = [...new Set(cat3.map(l => l.responsible).filter(Boolean))].sort();
-      const sel = document.getElementById('flxRespFiltro');
-      sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
+      const sel = document.getElementById('gargRespFiltro');
+      if (sel) sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
         resps.map(r => `<option>${r}</option>`).join('');
 
-      renderGargalos(cat3, cat1);
-      renderParadosTable(cat3);
-      renderProdutividade(cat3, cat1, posts);
-      renderTarefas(posts);
+      // Chip de fase limpo
+      const faseChip = document.getElementById('gargFaseChip');
+      if (faseChip) faseChip.style.display = 'none';
+
+      renderGargTable();
+      renderGargEtapas(cat3);
     }
 
-    function renderGargalos(cat3, cat1) {
-      function buildMap(list, catNum) {
-        const m = {};
-        list.forEach(l => {
-          const s = l.stage || '(sem fase)';
-          if (!m[s]) m[s] = { cnt: 0, diasTotal: 0, cat: catNum };
-          m[s].cnt++;
-          m[s].diasTotal += l.diasParado === 9999 ? 180 : l.diasParado;
-        });
-        return m;
-      }
-      const map3 = buildMap(cat3, 3);
-      const map1 = buildMap(cat1, 1);
+    function renderGargTable() {
+      const respFilter = (document.getElementById('gargRespFiltro')?.value || '').trim();
+      let list = _gargAll.filter(l => {
+        if (respFilter && l.responsible !== respFilter) return false;
+        if (_gargFaseFilter && (l.stage || '') !== _gargFaseFilter) return false;
+        if (_gargFilter === 'crit') return l.sev === 'crit';
+        if (_gargFilter === 'warn') return l.sev === 'warn' || l.sev === 'ok';
+        if (_gargFilter === 'ext')  return l.sev === 'ext';
+        return true;
+      });
 
-      // Junta: cat3 primeiro (ação), depois cat1 (espera)
-      const rows3 = Object.entries(map3).map(([s,v]) => ({
-        etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal/v.cnt), cat: 3
-      })).sort((a,b) => b.cnt - a.cnt).slice(0, 12);
+      // Ordenação
+      list.sort((a, b) => {
+        let av, bv;
+        if (_gargSort.col === 'dias') {
+          av = a.diasParado ?? 9999; bv = b.diasParado ?? 9999;
+        } else if (_gargSort.col === 'cliente') {
+          av = clientName(a).toLowerCase(); bv = clientName(b).toLowerCase();
+        } else {
+          av = (a.responsible || '').toLowerCase(); bv = (b.responsible || '').toLowerCase();
+        }
+        return _gargSort.asc ? (av > bv ? 1 : av < bv ? -1 : 0) : (av < bv ? 1 : av > bv ? -1 : 0);
+      });
 
-      const rows1 = Object.entries(map1).map(([s,v]) => ({
-        etapa: s, cnt: v.cnt, avg: Math.round(v.diasTotal/v.cnt), cat: 1
-      })).sort((a,b) => b.cnt - a.cnt).slice(0, 5);
+      // Sort indicators
+      ['cliente','dias','resp'].forEach(c => {
+        const el = document.getElementById('gSort' + c.charAt(0).toUpperCase() + c.slice(1));
+        if (!el) return;
+        el.textContent = _gargSort.col === c ? (_gargSort.asc ? '▲' : '▼') : '';
+      });
 
-      const allRows = [...rows3, ...rows1];
-      const maxCnt = Math.max(...allRows.map(r => r.cnt), 1);
+      const visible = list.slice(0, _gargPage * GARG_PER_PAGE);
+      const total   = list.length;
 
-      window._gargaloFases = allRows.map(r => r.etapa);
-
-      const html = allRows.map((r, idx) => {
-        const pct = (r.cnt / maxCnt * 100).toFixed(1);
-        const avgTxt = r.avg >= 9999 ? '—' : `média ${r.avg}d`;
-        const barColor = r.cat === 3 ? '#c0392b' : '#f39c12';
-        const tag = r.cat === 3
-          ? `<span class="gargalo-tag acao">Ação do escritório</span>`
-          : `<span class="gargalo-tag espera">Espera externa</span>`;
-        return `<div class="gargalo-row" onclick="filterByFase(${idx})">
-          <div class="gargalo-etapa" title="${r.etapa}">${r.etapa}</div>
-          ${tag}
-          <div class="gargalo-bar-wrap"><div class="gargalo-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-          <div class="gargalo-cnt">${r.cnt}</div>
-          <div class="gargalo-days">${avgTxt}</div>
-        </div>`;
-      }).join('');
-      document.getElementById('gargaloList').innerHTML = html || '<div class="loading">Sem dados</div>';
-    }
-
-    function renderParadosTable(lista, filtroResp, fase) {
-      let sorted = [...lista].sort((a, b) => b.diasParado - a.diasParado);
-      if (filtroResp) sorted = sorted.filter(l => l.responsible === filtroResp);
-      if (fase)       sorted = sorted.filter(l => (l.stage || '') === fase);
-      const top = sorted.slice(0, 20);
-      const rows = top.map(l => {
-        const dias = l.diasParado === 9999 ? '?' : l.diasParado;
-        const cls  = l.diasParado > 90 ? 'danger' : l.diasParado > 30 ? 'warning' : '';
-        const link = `https://app.advbox.com.br/${l.id}`;
+      const sevLabel = { crit: '🔴', warn: '🟡', ok: '🟢', ext: '🟢' };
+      const rows = visible.map(l => {
+        const link = `https://app.advbox.com.br/lawsuit/${l.id}`;
         const nome = clientName(l);
-        return `<tr class="clickable-row">
-          <td><a class="cell-link" href="${link}" target="_blank">${nome}</a></td>
-          <td><a class="cell-link" href="${link}" target="_blank">${l.type || '—'}</a></td>
-          <td><a class="cell-link" href="${link}" target="_blank">${l.stage || '—'}</a></td>
-          <td class="${cls}" style="font-weight:600"><a class="cell-link" href="${link}" target="_blank">${dias}d</a></td>
-          <td><a class="cell-link" href="${link}" target="_blank">${l.responsible || '—'}</a></td>
-          <td><a href="${link}" target="_blank" class="advbox-link">AdvBox ↗</a></td>
+        const dias = l.diasParado !== null ? l.diasParado + 'd' : '—';
+        const rowCls = l.sev === 'crit' ? 'garg-row-crit' : l.sev === 'warn' ? 'garg-row-warn' : '';
+        return `<tr class="${rowCls}" style="cursor:pointer;" onclick="window.open('${link}','_blank')">
+          <td style="font-weight:500;">${nome}</td>
+          <td style="font-size:12px;color:#666;">${l.type || '—'}</td>
+          <td style="font-size:12px;">${l.stage || '—'}</td>
+          <td style="text-align:center;font-weight:${l.diasParado !== null && l.diasParado > 30 ? '700' : '400'};color:${l.sev === 'crit' ? '#b02020' : l.sev === 'warn' ? '#856404' : '#333'};">${dias}</td>
+          <td style="font-size:12px;color:#555;">${l.responsible || '—'}</td>
+          <td style="text-align:center;">${sevLabel[l.sev] || ''}</td>
+          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
         </tr>`;
       }).join('');
-      const total = sorted.length;
-      const footer = total > 20
-        ? `<tr><td colspan="6" style="text-align:center;font-size:11px;color:var(--text-2);padding:10px">Mostrando 20 de ${total} — use "Exportar CSV" para ver todos</td></tr>`
-        : '';
-      document.getElementById('flxParadosBody').innerHTML =
-        rows ? rows + footer : '<tr><td colspan="6">Nenhum processo</td></tr>';
-    }
 
-    function applyFlxFilter() {
-      const v = document.getElementById('flxRespFiltro').value;
-      renderParadosTable(fluxoLawsuitsParados, v, filtroFase);
-    }
+      document.getElementById('gargTableBody').innerHTML =
+        rows || `<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;">Nenhum processo</td></tr>`;
 
-    function filterByFase(idx) {
-      const etapa = (window._gargaloFases || [])[idx];
-      if (!etapa) return;
-      filtroFase = filtroFase === etapa ? '' : etapa;
-      // Atualiza estado visual dos gargalos
-      document.querySelectorAll('.gargalo-row').forEach((r, i) =>
-        r.classList.toggle('active', i === idx && filtroFase !== '')
-      );
-      // Atualiza label de fase ativa
-      const lbl = document.getElementById('flxFaseLabel');
-      if (filtroFase) {
-        lbl.textContent = filtroFase + '  ✕';
-        lbl.style.display = 'inline';
-      } else {
-        lbl.style.display = 'none';
-      }
-      // Aplica filtro na tabela e rola até ela
-      const resp = document.getElementById('flxRespFiltro').value;
-      renderParadosTable(fluxoLawsuitsParados, resp, filtroFase);
-      if (filtroFase) {
-        document.getElementById('flxParadosBody').closest('.card')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // "Carregar mais"
+      const moreEl = document.getElementById('gargLoadMoreRow');
+      if (moreEl) {
+        if (total > visible.length) {
+          moreEl.innerHTML = `<button class="dist-export-btn" onclick="_gargPage++;renderGargTable()" style="margin:4px auto;">
+            Carregar mais (${visible.length} de ${total})
+          </button>`;
+        } else {
+          moreEl.innerHTML = total > 0
+            ? `<div style="font-size:11px;color:#aaa;padding:6px 0;">${total} processo${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}</div>`
+            : '';
+        }
       }
     }
 
-    function clearFaseFilter() {
-      filtroFase = '';
-      document.querySelectorAll('.gargalo-row').forEach(r => r.classList.remove('active'));
-      document.getElementById('flxFaseLabel').style.display = 'none';
-      const resp = document.getElementById('flxRespFiltro').value;
-      renderParadosTable(fluxoLawsuitsParados, resp, '');
-    }
-
-    function exportFluxoCsv() {
-      const lista = [...fluxoLawsuitsParados].sort((a, b) => b.diasParado - a.diasParado);
-      const rows = [['Cliente','Tipo','Fase','Responsável','Dias parado','Link AdvBox']];
-      lista.forEach(l => {
-        rows.push([
-          clientName(l),
-          l.type || '',
-          l.stage || '',
-          l.responsible || '',
-          l.diasParado === 9999 ? '' : l.diasParado,
-          `https://app.advbox.com.br/${l.id}`
-        ]);
+    function renderGargEtapas(cat3) {
+      const map = {};
+      cat3.forEach(l => {
+        const s = l.stage || '(sem fase)';
+        if (!map[s]) map[s] = { cnt: 0, diasTotal: 0, n: 0 };
+        map[s].cnt++;
+        if (l.diasParado !== null) { map[s].diasTotal += l.diasParado; map[s].n++; }
       });
+
+      const rows = Object.entries(map)
+        .map(([s, v]) => ({ etapa: s, cnt: v.cnt, avg: v.n > 0 ? Math.round(v.diasTotal / v.n) : null }))
+        .sort((a, b) => b.cnt - a.cnt);
+
+      const maxCnt = Math.max(...rows.map(r => r.cnt), 1);
+      window._gargEtapas = rows.map(r => r.etapa);
+
+      document.getElementById('gargEtapaList').innerHTML = rows.map((r, i) => {
+        const pct    = (r.cnt / maxCnt * 100).toFixed(1);
+        const avgTxt = r.avg !== null ? `média ${r.avg}d` : '—';
+        return `<div class="garg-etapa-row" data-etapa="${r.etapa}" onclick="gargFilterFase(${i})">
+          <div class="garg-etapa-nome" title="${r.etapa}">${r.etapa}</div>
+          <div class="garg-etapa-bar-wrap"><div class="garg-etapa-bar-fill" style="width:${pct}%"></div></div>
+          <div class="garg-etapa-cnt">${r.cnt}</div>
+          <div class="garg-etapa-avg">${avgTxt}</div>
+        </div>`;
+      }).join('') || '<div class="empty">Sem dados</div>';
+    }
+
+    function applyGargFilter() {
+      _gargPage = 1;
+      renderGargTable();
+    }
+
+    function gargSetFilter(f) {
+      _gargFilter = (_gargFilter === f && f !== 'all') ? 'all' : f;
+      _gargPage = 1;
+      // Update chips
+      ['All','Crit','Warn','Ext'].forEach(k => {
+        const el = document.getElementById('gcChip' + k);
+        if (el) el.classList.toggle('active', _gargFilter === k.toLowerCase() || (_gargFilter === 'all' && k === 'All'));
+      });
+      // Update card outlines
+      ['gcCrit','gcWarn','gcExt'].forEach(id => { const el = document.getElementById(id); if (el) el.style.outline = ''; });
+      const cardMap = { crit: 'gcCrit', warn: 'gcWarn', ext: 'gcExt' };
+      if (_gargFilter !== 'all' && cardMap[_gargFilter]) {
+        const el = document.getElementById(cardMap[_gargFilter]);
+        if (el) el.style.outline = '2px solid #111';
+      }
+      renderGargTable();
+    }
+
+    function gargSort(col) {
+      if (_gargSort.col === col) {
+        _gargSort.asc = !_gargSort.asc;
+      } else {
+        _gargSort.col = col;
+        _gargSort.asc = col !== 'dias'; // dias: default desc (maior primeiro)
+      }
+      _gargPage = 1;
+      renderGargTable();
+    }
+
+    function gargFilterFase(idx) {
+      const etapa = (window._gargEtapas || [])[idx];
+      if (!etapa) return;
+      _gargFaseFilter = _gargFaseFilter === etapa ? '' : etapa;
+      // Atualiza rows
+      document.querySelectorAll('.garg-etapa-row').forEach((r, i) =>
+        r.classList.toggle('active', i === idx && _gargFaseFilter !== '')
+      );
+      // Chip de fase
+      const chip = document.getElementById('gargFaseChip');
+      if (chip) {
+        if (_gargFaseFilter) { chip.textContent = _gargFaseFilter + ' ✕'; chip.style.display = 'inline-flex'; }
+        else chip.style.display = 'none';
+      }
+      _gargPage = 1;
+      renderGargTable();
+      if (_gargFaseFilter) {
+        document.getElementById('gargTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function gargClearFase() {
+      _gargFaseFilter = '';
+      document.querySelectorAll('.garg-etapa-row').forEach(r => r.classList.remove('active'));
+      const chip = document.getElementById('gargFaseChip');
+      if (chip) chip.style.display = 'none';
+      _gargPage = 1;
+      renderGargTable();
+    }
+
+    function exportGargCsv() {
+      const respFilter = (document.getElementById('gargRespFiltro')?.value || '').trim();
+      const list = [..._gargAll]
+        .filter(l => !respFilter || l.responsible === respFilter)
+        .sort((a, b) => (b.diasParado ?? 9999) - (a.diasParado ?? 9999));
+      const rows = [['Severidade','Cliente','Tipo','Fase','Dias Parado','Responsável','Cat.','Link AdvBox']];
+      const sevLabel = { crit: 'CRÍTICO', warn: 'ATENÇÃO', ok: 'OK', ext: 'ESPERA EXTERNA' };
+      list.forEach(l => rows.push([
+        sevLabel[l.sev] || '',
+        clientName(l), l.type || '', l.stage || '',
+        l.diasParado !== null ? l.diasParado : '',
+        l.responsible || '',
+        l.cat === 1 ? 'Espera Externa' : 'Ação do escritório',
+        `https://app.advbox.com.br/lawsuit/${l.id}`
+      ]));
       const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-      a.download = 'processos_parados_escritorio.csv';
+      a.download = 'gargalos_escritorio.csv';
       a.click();
     }
+
+    // ── Mantém compatibilidade com chamadas legadas ───────────────────────────
+    function applyFlxFilter() { applyGargFilter(); }
+    function exportFluxoCsv() { exportGargCsv(); }
 
     function renderProdutividade(cat3, cat1, posts) {
       // ── Tarefas concluídas por responsável (semana / mês) ──────────────────
