@@ -902,6 +902,178 @@ app.get('/api/audit/kanban-financeiro', async (req, res) => {
   }
 });
 
+// ── Auditoria de Responsável ──────────────────────────────────────────────────
+let _audrCache = null;
+let _audrCacheAt = null;
+const AUDR_TTL_MS = 20 * 60 * 1000;
+
+const AUDR_ZONES = {
+  MARILIA: [
+    'PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA',
+    'PARA DAR ENTRADA','PROTOCOLADO ADM','AUXILIO INCAPACIDADE',
+    'PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS'
+  ],
+  LETICIA_OU_ALICE: [
+    'ELABORAR PETICAO INICIAL','PERICIA MEDICA MARCADA',
+    'SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA',
+    'COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL',
+    'AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA',
+    'PROCEDENTE EM PARTE FAZER RECURSO','IMPROCEDENTE CABE RECURSO',
+    'DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO INICIADO',
+    'APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO',
+    'RECURSO JULGADO ENTRE EM CONTATO','TRANSITO EM JULGADO NAO CABE RECURSO'
+  ],
+  CAU: [
+    'SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO',
+    'RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER',
+    'ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO',
+    'ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE',
+    'ARQUIVADO POR DETERMINACAO JUDICIAL','IGNORAR ESSA ETAPA',
+    'CANCELADO REQUERIMENTO','BENEFICIO CONCEDIDO AGUARDAR'
+  ]
+};
+
+const AUDR_ZONE_LABEL = {
+  MARILIA:          'Ana Marília',
+  LETICIA_OU_ALICE: 'Letícia ou Alice',
+  CAU:              'Claudiana (Cau)'
+};
+
+function audrNorm(s) {
+  return (s || '').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const AUDR_STAGE_MAP = {};
+for (const [zone, stages] of Object.entries(AUDR_ZONES)) {
+  stages.forEach(s => { AUDR_STAGE_MAP[audrNorm(s)] = zone; });
+}
+
+function audrZoneForStage(stage) {
+  const n = audrNorm(stage);
+  if (AUDR_STAGE_MAP[n]) return AUDR_STAGE_MAP[n];
+  // Tolerant: try first 4 words match
+  const nWords4 = n.split(' ').slice(0, 4).join(' ');
+  for (const [mapped, zone] of Object.entries(AUDR_STAGE_MAP)) {
+    const mWords4 = mapped.split(' ').slice(0, 4).join(' ');
+    if (nWords4 === mWords4 && nWords4.length > 5) return zone;
+    if (n.startsWith(mapped) || mapped.startsWith(n)) return zone;
+  }
+  return null;
+}
+
+function audrZoneForResp(responsible) {
+  const n = audrNorm(responsible);
+  if (n.includes('MARILIA')) return 'MARILIA';
+  if (n.includes('LETICIA') || n.includes('ALICE')) return 'LETICIA_OU_ALICE';
+  if (n.includes('CLAUDIANA') || n.includes('CAU')) return 'CAU';
+  return null;
+}
+
+app.get('/api/audit-responsible', async (req, res) => {
+  if (!req.session?.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso restrito a administradores.' });
+  }
+  const now = Date.now();
+  const force = req.query.force === '1';
+  if (!force && _audrCache && _audrCacheAt && (now - _audrCacheAt) < AUDR_TTL_MS) {
+    return res.json(_audrCache);
+  }
+  try {
+    const rawData = await fetchLawsuits(force);
+    const lawsuits = Array.isArray(rawData) ? rawData : (rawData.data || []);
+
+    const items = [];
+    const byPerson = {};
+    const byStage  = {};
+    let totalAuditados = 0, totalCorretos = 0, totalErrados = 0, totalNaoMapeados = 0;
+
+    for (const l of lawsuits) {
+      if (l.status_closure) continue;
+      const stage = l.stage || l.step || '';
+      const responsible = l.responsible || '';
+      const expectedZone = audrZoneForStage(stage);
+      const actualZone   = audrZoneForResp(responsible);
+
+      let clienteNome = '—';
+      if (Array.isArray(l.customers) && l.customers.length) {
+        clienteNome = l.customers[0].name || '—';
+      }
+
+      let status;
+      if (!expectedZone) {
+        status = 'NAO_MAPEADO';
+        totalNaoMapeados++;
+      } else {
+        totalAuditados++;
+        const isCorrect = expectedZone === 'LETICIA_OU_ALICE'
+          ? actualZone === 'LETICIA_OU_ALICE'
+          : actualZone === expectedZone;
+        status = isCorrect ? 'CORRETO' : 'ERRADO';
+        if (isCorrect) totalCorretos++;
+        else {
+          totalErrados++;
+          const respKey = responsible || '(sem responsável)';
+          if (!byPerson[respKey]) byPerson[respKey] = { responsible: respKey, total: 0, correto: 0, errado: 0, errosPorZona: {} };
+          byPerson[respKey].total++;
+          byPerson[respKey].errado++;
+          byPerson[respKey].errosPorZona[expectedZone] = (byPerson[respKey].errosPorZona[expectedZone] || 0) + 1;
+
+          const stageKey = audrNorm(stage);
+          if (!byStage[stageKey]) byStage[stageKey] = { stage, expectedZone, total: 0, errado: 0, respAtualMap: {} };
+          byStage[stageKey].total++;
+          byStage[stageKey].errado++;
+          byStage[stageKey].respAtualMap[responsible] = (byStage[stageKey].respAtualMap[responsible] || 0) + 1;
+        }
+      }
+
+      items.push({
+        id: l.id,
+        cliente: clienteNome,
+        numero: l.code || l.number || l.process_number || '',
+        tipo: l.type || '',
+        stage,
+        responsible,
+        expectedZone: expectedZone || null,
+        expectedRespLabel: expectedZone ? AUDR_ZONE_LABEL[expectedZone] : null,
+        actualZone: actualZone || null,
+        status,
+        link: `https://app.advbox.com.br/lawsuit/${l.id}`
+      });
+    }
+
+    const byPersonArr = Object.values(byPerson).sort((a, b) => b.errado - a.errado);
+    const byStageArr  = Object.values(byStage)
+      .map(s => ({
+        stage: s.stage,
+        expectedZone: s.expectedZone,
+        errado: s.errado,
+        respMaisComum: Object.entries(s.respAtualMap).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—',
+        responsavelEsperado: AUDR_ZONE_LABEL[s.expectedZone] || s.expectedZone
+      }))
+      .sort((a, b) => b.errado - a.errado);
+
+    const taxaAcerto = totalAuditados > 0
+      ? Math.round(totalCorretos / totalAuditados * 100) : 100;
+
+    const top5 = byPersonArr.slice(0, 5).map(p => `${p.responsible}: ${p.errado} erros`);
+    console.log(`[Audit-Resp] ${totalAuditados} auditados | ${totalErrados} erros | ${taxaAcerto}% conformidade`);
+    console.log('[Audit-Resp] Top5 com mais erros:', top5.join(', '));
+
+    _audrCache = {
+      items, summary: { totalAuditados, totalCorretos, totalErrados, totalNaoMapeados, taxaAcerto },
+      byPerson: byPersonArr, byStage: byStageArr,
+      computedAt: new Date().toISOString()
+    };
+    _audrCacheAt = now;
+    res.json(_audrCache);
+  } catch (err) {
+    console.error('[Audit-Resp] Erro:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Dashboard rodando em http://localhost:${PORT}`);
   if (!ADVBOX_TOKEN) {

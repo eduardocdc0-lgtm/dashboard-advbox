@@ -1,0 +1,184 @@
+Preciso adicionar uma nova aba no dashboard chamada "Auditoria de Responsável" 
+(ou um botão dentro da aba Distribuição, escolha o que ficar melhor).
+
+CONTEXTO:
+No AdvBox, cada processo (lawsuit) tem uma fase (stage) e um responsável (responsible).
+Existe uma regra de negócio que diz QUEM deveria ser o responsável conforme a fase.
+Hoje há muitos processos com responsável errado e preciso identificar quais.
+
+REGRA DE NEGÓCIO — Fase → Responsável Esperado:
+
+🟢 ZONA MARILIA (Administrativo/Pré-judicial):
+- Processos Sem Laudos
+- Pericia Marcada/sem Data de Audiencia
+- Para Dar Entrada
+- Protocolado Adm
+- Auxilio Incapacidade
+- Processo Com Guarda/bpc
+- Pericias Marcadas
+- Em Analise Pericias Feitas
+
+🔵 ZONA LETICIA_OU_ALICE (Judicial + Recursos):
+- Elaborar Peticao Inicial
+- Pericia Medica Marcada
+- Sentenca Procedente Verificar Implantacao
+- Pericia Social Marcada
+- Com Prazo
+- Sentenca Improcedente
+- Protocolado Judicial
+- Aguardando Expedicao de Rpv
+- Fazer Acao de Guarda
+- Procedente em Parte - Fazer Recurso
+- Improcedente - Cabe Recurso
+- Desenvolvendo Recurso Aos Tribunais
+- Recurso Protocolado/iniciado
+- Apresentada Resposta a Recurso
+- Aguardando Julgamento do Recurso
+- Recurso Julgado (entre em Contato)
+- Transito em Julgado/nao Cabe Recurso
+
+🟡 ZONA CAU (Pagamento/Arquivamento):
+- Salario Maternidade Parcelado
+- Judicial Parcelado
+- Adm Parcelado
+- Rpv do Mes
+- Rpv do Proximo Mes
+- Judicial Implantado a Receber
+- Adm Implantado a Receber
+- Salario Maternidade Concedido
+- Arquivado - Improcedente
+- Arquivado - Procedente
+- Arquivado Por Determinacao Judicial
+- Ignorar Essa Etapa
+- Cancelado Requerimento
+- Beneficio Concedido Aguardar
+
+OBSERVAÇÕES IMPORTANTES SOBRE O MATCHING:
+1. Os nomes das fases acima são aproximações — no AdvBox eles podem aparecer 
+   truncados ou com pequenas variações. Use comparação tolerante: 
+   normalize (lowercase, sem acento, sem pontuação) e compare por "começa com" 
+   ou "contém" os primeiros termos significativos.
+2. Os nomes dos responsáveis no AdvBox são: MARILIA (Ana Marília), LETICIA, ALICE 
+   (Maria Alice), CAU, EDUARDO, THIAGO, TAMMYRES, CLAUDIANA. 
+   Use comparação tolerante também (a busca por "marilia" deve casar com 
+   "Ana Marília", etc).
+3. Para a ZONA LETICIA_OU_ALICE, qualquer um dos dois é considerado correto. 
+   NÃO sinalizar erro se for Letícia OU Alice.
+4. Se a fase do processo NÃO estiver mapeada em nenhuma das 3 zonas acima, 
+   classificar como "FASE NÃO MAPEADA" e mostrar separadamente (não como erro).
+5. Considerar APENAS processos ATIVOS (status_closure = null). Processos 
+   arquivados/encerrados que estão nas fases de "Arquivado" entram normalmente 
+   na zona da Cau.
+
+O QUE A AUDITORIA DEVE MOSTRAR:
+
+1. CARDS NO TOPO:
+   - Total de processos auditados
+   - Total CORRETOS (verde)
+   - Total ERRADOS (vermelho)
+   - Total em FASES NÃO MAPEADAS (cinza)
+   - Taxa de acerto (%)
+
+2. RESUMO POR PESSOA:
+   - "Eduardo está com X processos que deveriam ser da Marília"
+   - "Thiago está com Y processos que deveriam ser da Cau"
+   - etc.
+
+3. RESUMO POR FASE:
+   - Para cada fase com erros, mostrar: quantos errados, quem é o responsável 
+     atual mais comum, quem deveria ser.
+
+4. TABELA DETALHADA com filtros:
+   Colunas:
+   - Cliente
+   - Número do Processo
+   - Tipo (BPC, Aux Doença, etc)
+   - Fase Atual
+   - Responsável Atual
+   - Zona Esperada (MARILIA / LETICIA_OU_ALICE / CAU)
+   - Responsável Esperado
+   - Status (✅ CORRETO / ❌ ERRADO / ⚪ NÃO MAPEADO)
+   - Link direto pro AdvBox: https://app.advbox.com.br/lawsuit/{lawsuits_id}
+
+   Filtros:
+   - Status (Errado / Correto / Não Mapeado / Todos)
+   - Zona Esperada
+   - Responsável Atual
+   - Tipo de processo
+   - Busca por nome do cliente
+
+5. EXPORTAR CSV (respeitando filtros aplicados)
+
+REQUISITOS TÉCNICOS:
+- Usar o cache existente de /api/lawsuits (não fazer chamada nova à API)
+- Cache de 20 min como as outras abas
+- Layout consistente com o resto do dashboard (preto/branco, DM Serif/DM Sans)
+- Responsivo (precisa funcionar no celular)
+- Apenas perfil ADMIN tem acesso a essa aba
+
+ORDEM DE EXECUÇÃO:
+1. Criar o mapa Fase → Zona no backend (objeto/constante)
+2. Criar endpoint /api/audit-responsible que retorna a auditoria pronta
+3. Adicionar a aba no frontend
+4. Implementar tabela com filtros + export CSV
+5. Testar com os dados reais
+
+Quando terminar, me mostra:
+- Quantos processos erro encontrou no total
+- Os 5 piores casos (pessoa com mais processos errados)
+- A taxa de acerto atual
+
+Pode executar.
+
+Quando o Agent terminar, traz aqui o resultado que ele te mostrar (os 5 piores casos + taxa de acerto). Aí a gente decide o que mover primeiro — provavelmente vai ser melhor priorizar pelo volume de cada pessoa errada, e não fase por fase.Você disse: to achando elçe muito lentop pqpto achando elçe muito lentop pqp15:36Claude respondeu: Pô, entendo.Pô, entendo. Replit Agent fica lento mesmo, principalmente quando o projeto cresce. Vejo aí que você publicou tem 4h e ele tá com várias iterações em fila.
+Algumas coisas que ajudam:
+Causas comuns da lentidão:
+
+Modo "Plan" ativado (vejo na imagem que tá em "Economy" — bom, esse é o mais rápido)
+Projeto grande (3.580 linhas no index.html, ~740 no index.js já é bastante coisa pro Agent reler tudo a cada turno)
+Várias abas/sessões abertas em paralelo (você tá com 9 abas no Replit aberto)
+Horário de pico (servidor lotado)
+
+O que dá pra fazer agora:
+
+Fechar abas paralelas do Replit — vejo "(9) ADVBOX" no título da aba. Se tem 9 sessões abertas, fecha as que não tá usando.
+Não mandar o prompt enorme de auditoria de uma vez — divide em 2 partes:
+
+Parte 1: "Cria o endpoint /api/audit-responsible com a regra de negócio X"
+Parte 2: depois que esse rodar, "Agora cria a aba no frontend"
+
+O Agent processa muito mais rápido prompts curtos.
+Fechar a aba de Preview — ela fica recarregando o app e consumindo recurso enquanto você trabalha.
+Se travar de vez — recarrega a página do Replit (F5). Às vezes a sessão do Agent fica presa, e um reload destrava.
+
+
+Pergunta honesta: ele tá lento pra responder, ou tá rodando mas demorando muito pra terminar a tarefa? São coisas diferentes.
+Se for o segundo, deixa rodando em background e volta depois. Se for o primeiro (input travado), reload resolve.
+Quer que eu reformate o prompt de auditoria em 2 pedaços menores? Costuma render bem mais rápido.Você disse: esse foi o 1 aindaesse foi o 1 ainda15:38Claude respondeu: Ah, então é a primeira tarefa desse prompt — ele ainda nem terminou.Ah, então é a primeira tarefa desse prompt — ele ainda nem terminou.
+Vendo o card "Estrutura nova da aba: 🚧 Gargalos" — isso é de outra coisa (uma aba de Gargalos que ele acabou de fazer, com 3 cards clicáveis, tabela 50 linhas, etc). Não é a auditoria de responsável.
+Confirmando: você ainda nem mandou o prompt de auditoria pro Agent, certo? Esse que tá rodando aí é outro trabalho que ele tava fazendo antes (a aba Gargalos).
+
+Se for isso, espera ele terminar essa primeiro. Não empilha trabalho em cima — vai ficar mais lento ainda.
+Quando essa de Gargalos finalizar (pelo screenshot, ele já publicou — "Published your app 4 hours ago"), aí sim você manda o prompt de auditoria.
+
+Pergunta: você quer aproveitar a aba "Gargalos" que ele acabou de fazer? Pelo que tô vendo na descrição, ela é interessante:
+
+3 cards clicáveis com filtro de severidade
+Tabela com 50 linhas, ordenável por Dias/Cliente/Responsável
+Linhas com cor de fundo por severidade
+Seção "Gargalos por Etapa"
+Exportar CSV
+
+Pode ser que ela já te ajude a identificar parte dos problemas que a auditoria iria mostrar, mas por outro ângulo (tempo parado, não responsável errado).
+Vai abrir a aba pra ver como ficou? Aí decide se manda a auditoria depois, ou se essa aba já resolve.Você disse: pprra, ele ta travado de vddpprra, ele ta travado de vdd15:43Claude respondeu: Reload na página.Reload na página. F5 mesmo.
+Replit Agent às vezes fica preso na conexão de WebSocket — a tela mostra "carregando" mas o backend nem tá processando nada. Reload força reconexão.
+Passo a passo:
+
+F5 na aba do Replit (ou Ctrl+R)
+Se voltar e ele estiver "pensando" mas sem progresso, fecha a aba e abre de novo
+Se ainda tiver travado, abre o terminal do Replit (Shell) e roda: kill 1 — isso reinicia o container inteiro
+
+Não perde trabalho com nenhuma dessas ações. O código tá salvo, o histórico do Agent tá salvo. Só destrava a sessão.
+
+Antes de fazer qualquer coisa, fecha as outras 8 abas do Replit que tão abertas. Cada uma mantém uma conexão ativa com o servidor e isso pesa.
+Tenta o F5 e me fala o que aconteceu.Opus 4.7

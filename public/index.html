@@ -663,6 +663,9 @@
     /* ── AUDITORIA DE RESPONSÁVEL ── */
     .ar-cards-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px; }
     @media(max-width:700px){.ar-cards-row{grid-template-columns:1fr;}}
+    #audrCardsRow { display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px; }
+    @media(max-width:900px){#audrCardsRow{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:600px){#audrCardsRow{grid-template-columns:repeat(2,1fr);}}
     .ar-card { border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:3px;border:1px solid #eee; }
     .ar-card-total { background:#f5f5f5;border-color:#e5e5e5; }
     .ar-card-error { background:#fff5f5;border-color:#fcd5d5; }
@@ -1375,70 +1378,106 @@
         </div>
       </div>
 
-      <!-- ── AUDITORIA DE RESPONSÁVEL ───────────────────────────────────────── -->
-      <details id="arBlock" style="margin-top:22px;" ontoggle="if(this.open)renderAuditResp()">
+      <!-- AUDITORIA DE RESPONSÁVEL — admin only -->
+      <details id="audrBlock" class="admin-only" style="margin-top:22px;" ontoggle="if(this.open && !_audrData)loadAuditResp()">
         <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#f9f9f9;border:1px solid #eee;border-radius:10px;font-weight:600;font-size:14px;">
           <span>🔍 Auditoria de Responsável — fases × quem deveria ser responsável</span>
-          <span style="font-size:11px;color:#bbb;font-weight:400;">clique para expandir</span>
+          <span id="audrSummaryBadge" style="font-size:11px;color:#bbb;font-weight:400;">clique para carregar</span>
         </summary>
 
         <div style="margin-top:18px;">
-          <!-- Toolbar -->
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <select id="arRespFiltro" class="reg-filter" onchange="renderAuditResp()" style="font-size:12px;">
-                <option value="">Todos os responsáveis</option>
-              </select>
-              <select id="arZonaFiltro" class="reg-filter" onchange="renderAuditResp()" style="font-size:12px;">
-                <option value="">Todas as zonas esperadas</option>
-                <option value="MARILIA">🟢 Zona Marília</option>
-                <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
-                <option value="CAU">🟡 Zona Cau</option>
-              </select>
-            </div>
-            <button class="dist-export-btn admin-only" onclick="exportAuditResp()">📊 Exportar CSV</button>
-          </div>
 
-          <!-- Cards resumo -->
-          <div class="ar-cards-row">
+          <!-- 5 cards -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;" id="audrCardsRow">
             <div class="ar-card ar-card-total">
-              <div class="ar-card-label">Processos auditados</div>
-              <div class="ar-card-count" id="arTotalN">—</div>
+              <div class="ar-card-label">Auditados</div>
+              <div class="ar-card-count" id="audrTotalN">—</div>
               <div class="ar-card-sub">fases mapeadas</div>
             </div>
-            <div class="ar-card ar-card-error">
-              <div class="ar-card-label">Com responsável errado</div>
-              <div class="ar-card-count" id="arErroN">—</div>
-              <div class="ar-card-sub">precisam de correção</div>
-            </div>
             <div class="ar-card ar-card-ok">
-              <div class="ar-card-label">Conformidade</div>
-              <div class="ar-card-count" id="arConfN">—</div>
-              <div class="ar-card-sub">% com responsável certo</div>
+              <div class="ar-card-label">Corretos</div>
+              <div class="ar-card-count" id="audrCorretoN">—</div>
+              <div class="ar-card-sub">responsável certo</div>
+            </div>
+            <div class="ar-card ar-card-error">
+              <div class="ar-card-label">Errados</div>
+              <div class="ar-card-count" id="audrErradoN">—</div>
+              <div class="ar-card-sub">precisam corrigir</div>
+            </div>
+            <div class="ar-card" style="background:#f8f8f8;border-color:#e5e5e5;">
+              <div class="ar-card-label">Não mapeados</div>
+              <div class="ar-card-count" id="audrNaoMapN" style="color:#999;">—</div>
+              <div class="ar-card-sub">fase desconhecida</div>
+            </div>
+            <div class="ar-card" style="background:#fffbea;border-color:#fde68a;">
+              <div class="ar-card-label">Taxa de acerto</div>
+              <div class="ar-card-count" id="audrTaxaN" style="color:#92400e;">—</div>
+              <div class="ar-card-sub">conformidade</div>
             </div>
           </div>
 
-          <!-- Grupos de erro (accordion por zona esperada) -->
-          <div id="arGroups" style="margin-top:4px;"></div>
+          <!-- Filtros -->
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
+            <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+              <option value="ERRADO">❌ Somente errados</option>
+              <option value="">Todos (correto + errado)</option>
+              <option value="CORRETO">✅ Somente corretos</option>
+              <option value="NAO_MAPEADO">⚪ Não mapeados</option>
+            </select>
+            <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+              <option value="">Todas as zonas</option>
+              <option value="MARILIA">🟢 Zona Marília</option>
+              <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
+              <option value="CAU">🟡 Zona Cau</option>
+            </select>
+            <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+              <option value="">Todos os responsáveis</option>
+            </select>
+            <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
+            <button class="dist-export-btn" onclick="exportAuditResp()" style="margin-left:auto;">📊 Exportar CSV</button>
+            <button class="dist-export-btn" onclick="loadAuditResp(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
+          </div>
 
-          <!-- Tabela flat -->
-          <div style="overflow-x:auto;margin-top:12px;">
-            <table class="fin-table">
+          <!-- Loading state -->
+          <div id="audrLoading" style="display:none;text-align:center;padding:28px;color:#aaa;font-size:13px;">Carregando auditoria…</div>
+
+          <!-- Resumo por Pessoa -->
+          <details style="margin-bottom:10px;" open>
+            <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#fff5f5;border-radius:7px;border:1px solid #fcd5d5;list-style:none;">
+              ⚠ Resumo por Pessoa <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span>
+            </summary>
+            <div id="audrByPerson" style="margin-top:8px;"></div>
+          </details>
+
+          <!-- Resumo por Fase -->
+          <details style="margin-bottom:10px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">
+              📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span>
+            </summary>
+            <div id="audrByStage" style="margin-top:8px;overflow-x:auto;"></div>
+          </details>
+
+          <!-- Tabela detalhada -->
+          <div style="overflow-x:auto;margin-top:4px;">
+            <table class="fin-table" style="width:100%;">
               <thead><tr>
                 <th>Cliente</th>
-                <th>Fase atual</th>
-                <th>Responsável atual</th>
-                <th>Deveria ser</th>
-                <th style="text-align:center;">Zona</th>
+                <th>Tipo</th>
+                <th>Fase Atual</th>
+                <th>Responsável Atual</th>
+                <th>Zona Esperada</th>
+                <th>Responsável Esperado</th>
+                <th style="text-align:center;">Status</th>
                 <th></th>
               </tr></thead>
-              <tbody id="arTableBody"></tbody>
+              <tbody id="audrTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:24px;color:#aaa;">Clique em "Auditoria de Responsável" acima para carregar.</td></tr>
+              </tbody>
             </table>
           </div>
-          <div style="text-align:center;margin-top:6px;" id="arLoadMore"></div>
+          <div style="text-align:center;margin-top:8px;" id="audrLoadMore"></div>
           <div style="font-size:11px;color:#bbb;margin-top:12px;padding:8px 4px;border-top:1px solid #f0f0f0;">
-            ⓘ Apenas processos com fase conhecida na regra de negócio são auditados. Processos encerrados são excluídos.
-            Zona 🟢 Marília = Administrativo/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo
+            ⓘ Somente processos ativos (sem status_closure). 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo
           </div>
         </div>
       </details>
@@ -2819,210 +2858,173 @@
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // AUDITORIA DE RESPONSÁVEL (Fase → Responsável Esperado)
+    // AUDITORIA DE RESPONSÁVEL — chama /api/audit-responsible (backend)
     // ══════════════════════════════════════════════════════════════════════════
 
-    // Regra de negócio: quais etapas pertencem a qual zona
-    const AR_ZONES = {
-      MARILIA: [
-        'PROCESSOS SEM LAUDOS','PERICIA MARCADA/SEM DATA DE AUDIENCIA',
-        'PARA DAR ENTRADA','PROTOCOLADO ADM','AUXILIO INCAPACIDADE',
-        'PROCESSO COM GUARDA/BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS'
-      ],
-      LETICIA_OU_ALICE: [
-        'ELABORAR PETICAO INICIAL','PERICIA MEDICA MARCADA',
-        'SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA',
-        'COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL',
-        'AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA',
-        'PROCEDENTE EM PARTE - FAZER RECURSO','IMPROCEDENTE - CABE RECURSO',
-        'DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO/INICIADO',
-        'APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO',
-        'RECURSO JULGADO (ENTRE EM CONTATO)','TRANSITO EM JULGADO/NAO CABE RECURSO'
-      ],
-      CAU: [
-        'SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO',
-        'RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER',
-        'ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO',
-        'ARQUIVADO - IMPROCEDENTE','ARQUIVADO - PROCEDENTE',
-        'ARQUIVADO POR DETERMINACAO JUDICIAL','IGNORAR ESSA ETAPA',
-        'CANCELADO REQUERIMENTO','BENEFICIO CONCEDIDO AGUARDAR'
-      ]
+    let _audrData     = null; // cache da resposta do backend
+    let _audrPage     = 1;
+    const AUDR_PER_PAGE = 60;
+
+    const AUDR_ZONE_LABEL_FE = {
+      MARILIA:          '🟢 Ana Marília',
+      LETICIA_OU_ALICE: '🔵 Letícia ou Alice',
+      CAU:              '🟡 Claudiana (Cau)'
+    };
+    const AUDR_BADGE_CLS = {
+      MARILIA: 'ar-badge-marilia', LETICIA_OU_ALICE: 'ar-badge-leticia', CAU: 'ar-badge-cau'
     };
 
-    // Nomes esperados por zona (para exibição)
-    const AR_ZONE_LABEL = {
-      MARILIA:         '🟢 Ana Marília',
-      LETICIA_OU_ALICE:'🔵 Letícia ou Alice',
-      CAU:             '🟡 Claudiana (Cau)'
-    };
-
-    const AR_ZONE_BADGE_CLASS = {
-      MARILIA:          'ar-badge-marilia',
-      LETICIA_OU_ALICE: 'ar-badge-leticia',
-      CAU:              'ar-badge-cau'
-    };
-
-    function arNorm(s) {
-      return (s || '').toUpperCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^A-Z0-9/ ]/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-    // Stage → zone
-    const AR_STAGE_MAP = {};
-    for (const [zone, stages] of Object.entries(AR_ZONES)) {
-      stages.forEach(s => { AR_STAGE_MAP[s] = zone; });
-    }
-
-    function arZoneForStage(stage) {
-      return AR_STAGE_MAP[arNorm(stage)] || null;
-    }
-
-    // Responsible → zone
-    function arZoneForResp(responsible) {
-      const n = arNorm(responsible);
-      if (n.includes('MARILIA') || n.includes('MARILIA')) return 'MARILIA';
-      if (n.includes('LETICIA') || n.includes('ALICE'))   return 'LETICIA_OU_ALICE';
-      if (n.includes('CLAUDIANA') || n.includes('CAU'))   return 'CAU';
-      return null;
-    }
-
-    let _arPage = 1;
-    const AR_PER_PAGE = 60;
-    let _arMismatches = []; // todos os erros computados
-
-    function computeAuditResp() {
-      const mismatches = [];
-      const totAuditados = { all: 0 };
-
-      allLawsuitsData.forEach(l => {
-        if (l.exit_production || l.exit_execution || l.status_closure) return;
-        const stage       = l.stage || l.step || '';
-        const expectedZone = arZoneForStage(stage);
-        if (!expectedZone) return; // fase não mapeada → skip
-
-        totAuditados.all++;
-        const responsible = l.responsible || '';
-        const actualZone  = arZoneForResp(responsible);
-
-        const isMatch = expectedZone === 'LETICIA_OU_ALICE'
-          ? actualZone === 'LETICIA_OU_ALICE'
-          : actualZone === expectedZone;
-
-        if (!isMatch) {
-          mismatches.push({
-            id: l.id,
-            cliente: clientName(l),
-            stage,
-            responsible,
-            expectedZone,
-            actualZone,
-            link: `https://app.advbox.com.br/lawsuit/${l.id}`
-          });
-        }
-      });
-
-      return { mismatches, totalAuditados: totAuditados.all };
-    }
-
-    function renderAuditResp(noPageReset) {
-      if (!noPageReset) _arPage = 1;
-      if (!allLawsuitsData.length) {
-        document.getElementById('arTableBody').innerHTML =
-          '<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Dados ainda não carregados. Aguarde o carregamento inicial do dashboard.</td></tr>';
-        return;
-      }
-
-      const respFilter  = (document.getElementById('arRespFiltro')?.value  || '').trim();
-      const zonaFilter  = (document.getElementById('arZonaFiltro')?.value  || '').trim();
-
-      // Computa (ou usa cache)
-      if (!_arMismatches.length) {
-        const result = computeAuditResp();
-        _arMismatches = result.mismatches;
-        document.getElementById('arTotalN').textContent = result.totalAuditados;
-        document.getElementById('arErroN').textContent  = result.mismatches.length;
-        const conf = result.totalAuditados > 0
-          ? Math.round((result.totalAuditados - result.mismatches.length) / result.totalAuditados * 100)
-          : 100;
-        document.getElementById('arConfN').textContent = conf + '%';
+    async function loadAuditResp(force) {
+      const loadEl = document.getElementById('audrLoading');
+      if (loadEl) loadEl.style.display = 'block';
+      const badge = document.getElementById('audrSummaryBadge');
+      if (badge) badge.textContent = 'carregando…';
+      try {
+        const url = '/api/audit-responsible' + (force ? '?force=1' : '');
+        const data = await fetchJson(url);
+        _audrData = data;
+        // Cards
+        const s = data.summary;
+        document.getElementById('audrTotalN').textContent   = s.totalAuditados;
+        document.getElementById('audrCorretoN').textContent = s.totalCorretos;
+        document.getElementById('audrErradoN').textContent  = s.totalErrados;
+        document.getElementById('audrNaoMapN').textContent  = s.totalNaoMapeados;
+        document.getElementById('audrTaxaN').textContent    = s.taxaAcerto + '%';
+        if (badge) badge.textContent = `${s.totalErrados} erros · ${s.taxaAcerto}% conformidade`;
 
         // Popula dropdown de responsáveis
-        const resps = [...new Set(_arMismatches.map(m => m.responsible).filter(Boolean))].sort();
-        const sel = document.getElementById('arRespFiltro');
+        const resps = [...new Set(data.items.map(i => i.responsible).filter(Boolean))].sort();
+        const sel = document.getElementById('audrRespFiltro');
         if (sel) sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
           resps.map(r => `<option>${r}</option>`).join('');
-      }
 
-      // Aplica filtros
-      let lista = _arMismatches.filter(m => {
-        if (respFilter && m.responsible !== respFilter) return false;
-        if (zonaFilter && m.expectedZone !== zonaFilter)  return false;
+        // Resumo por Pessoa
+        _renderAudrByPerson(data.byPerson);
+
+        // Resumo por Fase
+        _renderAudrByStage(data.byStage);
+
+        _audrPage = 1;
+        renderAuditRespTable();
+      } catch (e) {
+        if (badge) badge.textContent = 'erro ao carregar';
+        document.getElementById('audrTableBody').innerHTML =
+          `<tr><td colspan="8" style="text-align:center;padding:24px;color:#b02020;">Erro: ${e.message}</td></tr>`;
+      } finally {
+        if (loadEl) loadEl.style.display = 'none';
+      }
+    }
+
+    function _renderAudrByPerson(byPerson) {
+      const el = document.getElementById('audrByPerson');
+      const title = document.getElementById('audrByPersonTitle');
+      if (!el) return;
+      const errados = byPerson.filter(p => p.errado > 0);
+      if (title) title.textContent = `— ${errados.length} pessoa${errados.length !== 1 ? 's' : ''} com processos errados`;
+      if (!errados.length) { el.innerHTML = '<div style="padding:12px;color:#aaa;font-size:13px;">Nenhum erro encontrado!</div>'; return; }
+      el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">` +
+        errados.map(p => {
+          const zones = Object.entries(p.errosPorZona || {})
+            .sort((a,b)=>b[1]-a[1])
+            .map(([z, cnt]) => `<span style="font-size:11px;color:#888;">${AUDR_ZONE_LABEL_FE[z]||z}: ${cnt}</span>`)
+            .join(' · ');
+          const pct = p.total > 0 ? Math.round(p.errado / p.total * 100) : 0;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fff9f9;border-radius:8px;border-left:4px solid #e05252;flex-wrap:wrap;gap:4px;">
+            <div>
+              <div style="font-weight:600;font-size:13px;">${p.responsible}</div>
+              <div style="margin-top:2px;">${zones}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.3rem;font-family:'DM Serif Display',serif;color:#b02020;">${p.errado}</div>
+              <div style="font-size:11px;color:#888;">de ${p.total} (${pct}% errado)</div>
+            </div>
+          </div>`;
+        }).join('') + '</div>';
+    }
+
+    function _renderAudrByStage(byStage) {
+      const el = document.getElementById('audrByStage');
+      const title = document.getElementById('audrByStageTitle');
+      if (!el) return;
+      if (title) title.textContent = `— ${byStage.length} fase${byStage.length !== 1 ? 's' : ''} com erros`;
+      if (!byStage.length) { el.innerHTML = '<div style="padding:12px;color:#aaa;font-size:13px;">Nenhuma fase com erros!</div>'; return; }
+      const rows = byStage.map(s =>
+        `<tr>
+          <td style="font-size:12px;font-weight:500;">${s.stage}</td>
+          <td style="text-align:center;"><span class="ar-badge ${AUDR_BADGE_CLS[s.expectedZone]||'ar-badge-unknown'}">${s.errado}</span></td>
+          <td style="font-size:12px;color:#b02020;">${s.respMaisComum}</td>
+          <td style="font-size:12px;">${AUDR_ZONE_LABEL_FE[s.expectedZone] || s.expectedZone}</td>
+        </tr>`).join('');
+      el.innerHTML = `<table class="fin-table" style="width:100%;margin-top:4px;">
+        <thead><tr><th>Fase</th><th style="text-align:center;">Erros</th><th>Resp. mais comum</th><th>Deveria ser</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+
+    function renderAuditRespTable(noPageReset) {
+      if (!noPageReset) _audrPage = 1;
+      if (!_audrData) return;
+
+      const statusF = (document.getElementById('audrStatusFiltro')?.value || '').trim();
+      const zonaF   = (document.getElementById('audrZonaFiltro')?.value   || '').trim();
+      const respF   = (document.getElementById('audrRespFiltro')?.value   || '').trim();
+      const buscaF  = (document.getElementById('audrBusca')?.value        || '').toLowerCase().trim();
+
+      const lista = _audrData.items.filter(i => {
+        if (statusF && i.status !== statusF) return false;
+        if (zonaF   && i.expectedZone !== zonaF) return false;
+        if (respF   && i.responsible !== respF)   return false;
+        if (buscaF  && !(i.cliente || '').toLowerCase().includes(buscaF)) return false;
         return true;
       });
 
-      // Grupos resumo por zona
-      const groups = {};
-      lista.forEach(m => {
-        if (!groups[m.expectedZone]) groups[m.expectedZone] = [];
-        groups[m.expectedZone].push(m);
-      });
+      const visible = lista.slice(0, _audrPage * AUDR_PER_PAGE);
+      const rows = visible.map(i => {
+        const statusIcon = i.status === 'CORRETO' ? '✅' : i.status === 'ERRADO' ? '❌' : '⚪';
+        const rowCls = i.status === 'ERRADO' ? 'ar-err-row' : '';
+        return `<tr class="${rowCls}" style="cursor:pointer;" onclick="window.open('${i.link}','_blank')">
+          <td style="font-weight:500;max-width:200px;white-space:normal;">${i.cliente}</td>
+          <td style="font-size:11px;color:#888;">${i.tipo || '—'}</td>
+          <td style="font-size:12px;">${i.stage || '—'}</td>
+          <td style="font-size:12px;${i.status==='ERRADO'?'color:#b02020;':''}">${i.responsible || '—'}</td>
+          <td style="font-size:12px;">${i.expectedZone ? (AUDR_ZONE_LABEL_FE[i.expectedZone]||i.expectedZone) : '<span style="color:#aaa">—</span>'}</td>
+          <td style="font-size:12px;">${i.expectedRespLabel || '<span style="color:#aaa">—</span>'}</td>
+          <td style="text-align:center;">${statusIcon}</td>
+          <td><a href="${i.link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
+        </tr>`;
+      }).join('');
 
-      const ZONE_ORDER = ['MARILIA','LETICIA_OU_ALICE','CAU'];
-      const zoneCls = { MARILIA:'ar-zone-marilia', LETICIA_OU_ALICE:'ar-zone-leticia', CAU:'ar-zone-cau' };
-      const groupsHtml = ZONE_ORDER
-        .filter(z => groups[z]?.length)
-        .map(z => {
-          const cnt = groups[z].length;
-          const etapas = [...new Set(groups[z].map(m => m.stage))];
-          return `<div class="ar-zone-header ${zoneCls[z]}">
-            <div>
-              <div class="ar-zone-label">${AR_ZONE_LABEL[z]}</div>
-              <div style="font-size:11px;color:#888;margin-top:2px;">Fases: ${etapas.join(' · ')}</div>
-            </div>
-            <div class="ar-zone-cnt">${cnt} processo${cnt!==1?'s':''} errado${cnt!==1?'s':''}</div>
-          </div>`;
-        }).join('');
-      document.getElementById('arGroups').innerHTML = groupsHtml;
+      document.getElementById('audrTableBody').innerHTML =
+        rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#166534;">✅ Nenhum processo com os filtros atuais.</td></tr>';
 
-      // Tabela flat paginada
-      const visible = lista.slice(0, _arPage * AR_PER_PAGE);
-      const badgeCls = z => AR_ZONE_BADGE_CLASS[z] || 'ar-badge-unknown';
-
-      const rows = visible.map(m => `<tr class="ar-err-row" style="cursor:pointer;" onclick="window.open('${m.link}','_blank')">
-        <td style="font-weight:500;">${m.cliente}</td>
-        <td style="font-size:12px;">${m.stage || '—'}</td>
-        <td style="font-size:12px;color:#b02020;">${m.responsible || '—'}</td>
-        <td style="font-size:12px;">${AR_ZONE_LABEL[m.expectedZone] || '—'}</td>
-        <td style="text-align:center;"><span class="ar-badge ${badgeCls(m.expectedZone)}">${m.expectedZone === 'LETICIA_OU_ALICE' ? 'Judicial' : m.expectedZone === 'MARILIA' ? 'Adm' : 'Pag.'}</span></td>
-        <td><a href="${m.link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
-      </tr>`).join('');
-
-      document.getElementById('arTableBody').innerHTML =
-        rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#166534;">✅ Nenhum erro de responsável encontrado com os filtros atuais!</td></tr>';
-
-      // "Carregar mais"
-      const moreEl = document.getElementById('arLoadMore');
+      const moreEl = document.getElementById('audrLoadMore');
       if (moreEl) {
         if (lista.length > visible.length) {
-          moreEl.innerHTML = `<button class="dist-export-btn" onclick="_arPage++;renderAuditResp(true)">Carregar mais (${visible.length} de ${lista.length})</button>`;
+          moreEl.innerHTML = `<button class="dist-export-btn" onclick="_audrPage++;renderAuditRespTable(true)">Carregar mais (${visible.length} de ${lista.length})</button>`;
         } else {
-          moreEl.innerHTML = lista.length > 0
-            ? `<div style="font-size:11px;color:#aaa;padding:4px;">${lista.length} processo${lista.length!==1?'s':''} com erro</div>`
-            : '';
+          moreEl.innerHTML = `<div style="font-size:11px;color:#aaa;padding:4px;">${lista.length} processo${lista.length!==1?'s':''}</div>`;
         }
       }
     }
 
     function exportAuditResp() {
-      if (!_arMismatches.length) { alert('Abra o painel de auditoria primeiro.'); return; }
-      const rows = [['Cliente','Fase Atual','Responsável Atual','Zona Esperada','Responsável Esperado','Link AdvBox']];
-      _arMismatches.forEach(m => rows.push([
-        m.cliente, m.stage, m.responsible,
-        m.expectedZone, AR_ZONE_LABEL[m.expectedZone] || '',
-        m.link
-      ]));
-      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      if (!_audrData) { alert('Abra o painel de auditoria primeiro.'); return; }
+      const statusF = (document.getElementById('audrStatusFiltro')?.value || '').trim();
+      const zonaF   = (document.getElementById('audrZonaFiltro')?.value   || '').trim();
+      const respF   = (document.getElementById('audrRespFiltro')?.value   || '').trim();
+      const buscaF  = (document.getElementById('audrBusca')?.value        || '').toLowerCase().trim();
+      const lista = _audrData.items.filter(i => {
+        if (statusF && i.status !== statusF) return false;
+        if (zonaF   && i.expectedZone !== zonaF) return false;
+        if (respF   && i.responsible !== respF)   return false;
+        if (buscaF  && !(i.cliente || '').toLowerCase().includes(buscaF)) return false;
+        return true;
+      });
+      const header = ['Cliente','Tipo','Fase Atual','Responsável Atual','Zona Esperada','Responsável Esperado','Status','Link AdvBox'];
+      const rows = [header, ...lista.map(i => [
+        i.cliente, i.tipo, i.stage, i.responsible,
+        i.expectedZone || '', i.expectedRespLabel || '', i.status, i.link
+      ])];
+      const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
       a.download = 'auditoria-responsavel.csv';
@@ -4474,9 +4476,11 @@
     function applyRole(role) {
       _userRole = role;
       const isTeam = role === 'team';
-      // Esconde abas admin-only para o time
       document.querySelectorAll('.admin-tab').forEach(btn => {
         btn.style.display = isTeam ? 'none' : '';
+      });
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = isTeam ? 'none' : '';
       });
       // Time começa na aba Clientes
       if (isTeam) {
