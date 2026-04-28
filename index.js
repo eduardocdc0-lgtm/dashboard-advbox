@@ -5,15 +5,15 @@
 // Ele resolve o problema de CORS e mantém o token seguro no servidor.
 
 const express = require('express');
-const fetch = require('node-fetch');
 const path = require('path');
 const cookieSession = require('cookie-session');
+const AdvBoxClient = require('./services/advbox-client');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const ADVBOX_TOKEN    = process.env.ADVBOX_TOKEN || '';
-const ADVBOX_BASE_URL = 'https://app.advbox.com.br/api/v1';
+const ADVBOX_TOKEN = process.env.ADVBOX_TOKEN || '';
+const advboxClient = new AdvBoxClient(ADVBOX_TOKEN);
 
 // ── Credenciais ──────────────────────────────────────────────────────────────
 const USERS = {
@@ -82,36 +82,18 @@ app.use('/api', (req, res, next) => {
   res.status(401).json({ error: 'não autenticado' });
 });
 
-// Função auxiliar que chama a API do AdvBox
+// Wrapper de compatibilidade — usa o cliente robusto internamente
 async function callAdvBox(endpoint) {
   if (!ADVBOX_TOKEN) {
     throw new Error('Token nao configurado. Configure a variavel ADVBOX_TOKEN em Secrets.');
   }
-  const url = `${ADVBOX_BASE_URL}${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${ADVBOX_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  if (response.status === 429) {
-    throw new Error('RATE_LIMIT');
-  }
-  const ct = response.headers.get('content-type') || '';
-  if (!ct.includes('json')) {
-    throw new Error(`RATE_LIMIT`); // HTML = redirecionamento por rate limit / auth
-  }
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || data.message || `Erro ${response.status}`);
-  }
-  return data;
+  return advboxClient.request(endpoint);
 }
 
 // Rotas do proxy - cada uma chama um endpoint do AdvBox
 app.get('/api/settings', async (req, res) => {
   try {
-    const data = await callAdvBox('/settings');
+    const data = await advboxClient.getSettings();
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -124,27 +106,12 @@ let sharedLawsuitsAt = null;
 let sharedLawsuitsPromise = null;
 const LAWSUITS_TTL_MS = 20 * 60 * 1000;
 
-async function fetchAllLawsuitPages() {
-  const all = [];
-  let page = 0;
-  while (page < 30) {
-    const data = await callAdvBox(`/lawsuits?limit=500&offset=${page * 500}`);
-    const arr = Array.isArray(data) ? data : (data.data || []);
-    if (!arr.length) break;
-    all.push(...arr);
-    page++;
-    if (arr.length < 500) break;
-    await new Promise(r => setTimeout(r, 200));
-  }
-  return all;
-}
-
 async function fetchLawsuits(force = false) {
   const now = Date.now();
   const stale = !sharedLawsuitsAt || (now - sharedLawsuitsAt) > LAWSUITS_TTL_MS;
   if (!force && !stale && sharedLawsuitsCache) return sharedLawsuitsCache;
   if (sharedLawsuitsPromise) return sharedLawsuitsPromise;
-  sharedLawsuitsPromise = fetchAllLawsuitPages().then(data => {
+  sharedLawsuitsPromise = advboxClient.getAllLawsuits().then(data => {
     sharedLawsuitsCache = data;
     sharedLawsuitsAt = Date.now();
     sharedLawsuitsPromise = null;
@@ -703,25 +670,15 @@ app.get('/api/evolucao', async (req, res) => {
     const byMonth    = {};
     const faturMonth = {};
     const expecMonth = {};
-    let page = 0;
 
-    while (page < 20) {
-      const data = await callAdvBox(`/lawsuits?limit=500&offset=${page * 500}`);
-      const arr  = Array.isArray(data) ? data : (data.data || []);
-      if (!arr.length) break;
-
-      arr.forEach(l => {
-        const dt = (l.created_at || l.process_date || '').slice(0, 7);
-        if (!dt || dt < '2025-01' || dt > '2030-12') return;
-        byMonth[dt]    = (byMonth[dt]    || 0) + 1;
-        if (l.fees_money)  faturMonth[dt] = (faturMonth[dt] || 0) + parseFloat(l.fees_money);
-        if (l.fees_expec)  expecMonth[dt] = (expecMonth[dt] || 0) + parseFloat(l.fees_expec);
-      });
-
-      page++;
-      if (arr.length < 500) break;
-      await new Promise(r => setTimeout(r, 200));
-    }
+    const allLawsuits = await fetchLawsuits();
+    allLawsuits.forEach(l => {
+      const dt = (l.created_at || l.process_date || '').slice(0, 7);
+      if (!dt || dt < '2025-01' || dt > '2030-12') return;
+      byMonth[dt]    = (byMonth[dt]    || 0) + 1;
+      if (l.fees_money)  faturMonth[dt] = (faturMonth[dt] || 0) + parseFloat(l.fees_money);
+      if (l.fees_expec)  expecMonth[dt] = (expecMonth[dt] || 0) + parseFloat(l.fees_expec);
+    });
 
     // Gera série completa desde 2025-01 até mês corrente
     const curYM = new Date().toISOString().slice(0, 7);
