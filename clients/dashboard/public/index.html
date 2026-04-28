@@ -1013,6 +1013,7 @@
       <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
+      <button class="tab admin-tab" onclick="showTab('admin', event)">⚙ Admin</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -1699,6 +1700,53 @@
       </div>
     </div>
 
+    <!-- ABA ADMIN -->
+    <div id="admin" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">Painel Administrativo</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="adminUpdatedAt">—</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="refresh-btn" onclick="loadAdmin(true)" id="adminRefreshBtn">↺ Atualizar</button>
+          <button class="logout-btn" onclick="adminInvalidateCache()" id="adminInvalidateBtn">🗑 Limpar Cache</button>
+        </div>
+      </div>
+
+      <div id="adminLoading" style="display:none;text-align:center;padding:48px;color:#aaa;font-size:14px;">Carregando painel…</div>
+
+      <!-- Conformidade de responsável -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">Conformidade de Responsável</div>
+      <div class="metrics" id="adminConformCards" style="margin-bottom:28px;">
+        <div class="metric-card"><div class="metric-label">Taxa de acerto</div><div class="metric-value" id="adTaxaAcerto">—</div></div>
+        <div class="metric-card"><div class="metric-label">Auditados</div><div class="metric-value" id="adTotalAuditados">—</div></div>
+        <div class="metric-card red"><div class="metric-label">Com erro</div><div class="metric-value danger" id="adTotalErros">—</div></div>
+        <div class="metric-card"><div class="metric-label">Não mapeados</div><div class="metric-value" style="color:#999;" id="adNaoMapeados">—</div></div>
+      </div>
+
+      <!-- Erros por pessoa -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">Erros por Colaborador</div>
+      <div id="adByPersonWrap" style="margin-bottom:28px;">
+        <div style="color:#aaa;font-size:13px;padding:16px 0;">Carregando…</div>
+      </div>
+
+      <!-- Top fases com erros -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">Fases com Mais Erros de Responsável</div>
+      <div style="overflow-x:auto;margin-bottom:28px;">
+        <table class="fin-table" style="width:100%;">
+          <thead><tr><th>Fase</th><th>Zona esperada</th><th>Responsável esperado</th><th style="text-align:right;">Erros</th></tr></thead>
+          <tbody id="adByStageBody"><tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Cache status -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">Status do Cache</div>
+      <div id="adCacheGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:8px;">
+        <div style="color:#aaa;font-size:13px;padding:16px 0;">Carregando…</div>
+      </div>
+      <div style="font-size:11px;color:#bbb;margin-top:6px;">ⓘ Clique em "Limpar Cache" para forçar atualização de todos os dados na próxima requisição.</div>
+    </div>
+
   </div>
 
   <script>
@@ -1709,10 +1757,11 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(name).classList.add('active');
       if (evt) evt.target.classList.add('active');
-      if (name === 'metaads'   && !metaRawData)  loadMetaAds();
-      if (name === 'evolucao'  && !window._evoData) loadEvolucao();
-      if (name === 'auditoria' && !auditData)   loadAudit();
-      if (name === 'auditresp' && !_audrData)   loadAuditResp();
+      if (name === 'metaads'   && !metaRawData)      loadMetaAds();
+      if (name === 'evolucao'  && !window._evoData)  loadEvolucao();
+      if (name === 'auditoria' && !auditData)        loadAudit();
+      if (name === 'auditresp' && !_audrData)        loadAuditResp();
+      if (name === 'admin'     && !window._adminData) loadAdmin();
     }
 
     function showError(msg) {
@@ -4592,6 +4641,125 @@
     document.getElementById('loginUser').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('loginPass').focus();
     });
+
+    // ── ADMIN ─────────────────────────────────────────────────────────────────
+    window._adminData = null;
+
+    const AUDR_ZONE_LABEL_FE = {
+      MARILIA: 'Ana Marília', LETICIA_OU_ALICE: 'Letícia / Alice',
+      CAU: 'Claudiana (Cau)', TAMMYRES: 'Tammyres', EDUARDO: 'Eduardo',
+    };
+
+    async function loadAdmin(force = false) {
+      if (!force && window._adminData) return;
+      window._adminData = null;
+      const loading = document.getElementById('adminLoading');
+      const btn = document.getElementById('adminRefreshBtn');
+      loading.style.display = 'block';
+      btn.disabled = true; btn.textContent = 'Carregando…';
+      try {
+        const [audit, cacheStatus] = await Promise.all([
+          fetchJson('/api/audit-responsible' + (force ? '?force=1' : '')),
+          fetchJson('/api/cache-status'),
+        ]);
+        window._adminData = { audit, cacheStatus };
+        renderAdmin(audit, cacheStatus);
+      } catch (e) {
+        document.getElementById('adByPersonWrap').innerHTML =
+          `<div style="color:var(--danger);font-size:13px;padding:16px 0;">Erro: ${e.message}</div>`;
+      } finally {
+        loading.style.display = 'none';
+        btn.disabled = false; btn.textContent = '↺ Atualizar';
+      }
+    }
+
+    function renderAdmin(audit, cacheStatus) {
+      const s = audit.summary;
+
+      // ── Conformidade cards ──
+      const taxaColor = s.taxaAcerto >= 80 ? '' : s.taxaAcerto >= 60 ? ' warning' : ' danger';
+      document.getElementById('adTaxaAcerto').textContent    = s.taxaAcerto + '%';
+      document.getElementById('adTaxaAcerto').className      = 'metric-value' + taxaColor;
+      document.getElementById('adTotalAuditados').textContent = s.totalAuditados.toLocaleString('pt-BR');
+      document.getElementById('adTotalErros').textContent    = s.totalErrados.toLocaleString('pt-BR');
+      document.getElementById('adNaoMapeados').textContent   = s.totalNaoMapeados.toLocaleString('pt-BR');
+      if (audit.computedAt) {
+        const d = new Date(audit.computedAt);
+        document.getElementById('adminUpdatedAt').textContent =
+          'Atualizado em ' + d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      }
+
+      // ── Por pessoa ──
+      const wrap = document.getElementById('adByPersonWrap');
+      if (!audit.byPerson || !audit.byPerson.length) {
+        wrap.innerHTML = '<div style="color:#aaa;font-size:13px;padding:12px 0;">Nenhum erro encontrado.</div>';
+      } else {
+        const maxErr = audit.byPerson[0].errado;
+        wrap.innerHTML = audit.byPerson.map(p => {
+          const pct = maxErr > 0 ? Math.round(p.errado / maxErr * 100) : 0;
+          const barColor = p.errado > 10 ? 'var(--danger)' : p.errado > 4 ? 'var(--warning)' : '#aaa';
+          return `<div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div style="flex:0 0 180px;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.responsible}</div>
+            <div style="flex:1;background:#f0f0f0;border-radius:3px;height:8px;">
+              <div style="width:${pct}%;height:8px;border-radius:3px;background:${barColor};"></div>
+            </div>
+            <div style="flex:0 0 52px;text-align:right;font-size:13px;font-weight:600;color:${barColor};">${p.errado}</div>
+            <div style="flex:0 0 80px;text-align:right;font-size:11px;color:var(--text-2);">de ${p.total}</div>
+          </div>`;
+        }).join('');
+      }
+
+      // ── Por fase ──
+      const tbody = document.getElementById('adByStageBody');
+      if (!audit.byStage || !audit.byStage.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">Sem dados.</td></tr>';
+      } else {
+        tbody.innerHTML = audit.byStage.slice(0, 12).map(st => `
+          <tr>
+            <td style="font-size:13px;">${st.stage}</td>
+            <td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#f5f5f5;border:1px solid #ddd;">${AUDR_ZONE_LABEL_FE[st.expectedZone] || st.expectedZone}</span></td>
+            <td style="font-size:13px;color:var(--text-2);">${st.responsavelEsperado}</td>
+            <td style="text-align:right;font-weight:600;color:var(--danger);">${st.errado}</td>
+          </tr>`).join('');
+      }
+
+      // ── Cache status ──
+      const cacheGrid = document.getElementById('adCacheGrid');
+      const entries = Object.entries(cacheStatus);
+      if (!entries.length) {
+        cacheGrid.innerHTML = '<div style="color:#aaa;font-size:13px;">Sem entradas no cache.</div>';
+      } else {
+        cacheGrid.innerHTML = entries.map(([key, v]) => {
+          const staleStyle = v.stale ? 'border-color:#f5c6c6;background:#fff8f8;' : 'border-color:#c6e5c6;background:#f8fff8;';
+          const staleLabel = v.stale ? '<span style="color:var(--danger);font-weight:600;">stale</span>' : '<span style="color:var(--success);font-weight:600;">ok</span>';
+          const since = v.fetchedAt ? (() => {
+            const mins = Math.round((Date.now() - new Date(v.fetchedAt).getTime()) / 60000);
+            return mins < 1 ? 'agora' : mins + ' min atrás';
+          })() : '—';
+          const pending = v.pending ? '<span style="color:var(--warning);font-size:10px;"> · carregando</span>' : '';
+          return `<div class="metric-card" style="${staleStyle}padding:14px 16px;">
+            <div class="metric-label" style="margin-bottom:6px;">${key}</div>
+            <div style="font-size:12px;">${staleLabel}${pending}</div>
+            <div style="font-size:11px;color:var(--text-2);margin-top:4px;">TTL: ${v.ttlMin} min</div>
+            <div style="font-size:11px;color:var(--text-2);">Último: ${since}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    async function adminInvalidateCache() {
+      const btn = document.getElementById('adminInvalidateBtn');
+      btn.disabled = true; btn.textContent = 'Limpando…';
+      try {
+        await fetch('/api/cache-invalidate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        window._adminData = null;
+        await loadAdmin();
+      } catch (e) {
+        alert('Erro ao limpar cache: ' + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = '🗑 Limpar Cache';
+      }
+    }
 
     // ── INIT ─────────────────────────────────────────────────────────────────
     (async function init() {
