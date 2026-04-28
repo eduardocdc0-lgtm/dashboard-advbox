@@ -1,11 +1,5 @@
 /**
  * SmartCache — cache em memória com TTLs por chave, invalidação manual e deduplicação de requests concorrentes.
- *
- * Uso:
- *   cache.define('lawsuits', 20 * 60 * 1000);
- *   const data = await cache.getOrFetch('lawsuits', fetcher, force);
- *   cache.invalidate('lawsuits');
- *   cache.status();
  */
 
 class CacheEntry {
@@ -50,10 +44,9 @@ class SmartCache {
     return this._store[key];
   }
 
-  isStale(key) { return this._entry(key).isStale(); }
-  getData(key) { return this._entry(key).data; }
-
-  set(key, data) { return this._entry(key).set(data); }
+  isStale(key)  { return this._entry(key).isStale(); }
+  getData(key)  { return this._entry(key).data; }
+  set(key, data){ return this._entry(key).set(data); }
 
   invalidate(key) {
     this._entry(key).invalidate();
@@ -72,27 +65,14 @@ class SmartCache {
     return this;
   }
 
-  /**
-   * Busca dado do cache ou executa o fetcher.
-   * Deduplica requests concorrentes: se já há uma promise pendente, aguarda ela.
-   */
   async getOrFetch(key, fetcher, force = false) {
     const entry = this._entry(key);
-
-    if (!force && !entry.isStale() && entry.data !== null) {
-      return entry.data;
-    }
-
+    if (!force && !entry.isStale() && entry.data !== null) return entry.data;
     if (entry.promise) return entry.promise;
-
     entry.promise = Promise.resolve()
       .then(() => fetcher())
       .then(data => entry.set(data))
-      .catch(err => {
-        entry.promise = null;
-        throw err;
-      });
-
+      .catch(err => { entry.promise = null; throw err; });
     return entry.promise;
   }
 

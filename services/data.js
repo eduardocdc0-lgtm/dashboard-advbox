@@ -3,18 +3,12 @@
  */
 
 const client = require('./advbox-instance');
-const cache  = require('./cache');
-
-const TTL = {
-  LAWSUITS:     20 * 60 * 1000,
-  TRANSACTIONS: 30 * 60 * 1000,
-  FLOW:         20 * 60 * 1000,
-};
+const cache  = require('../cache');
 
 cache
-  .define('lawsuits',     TTL.LAWSUITS)
-  .define('transactions', TTL.TRANSACTIONS)
-  .define('flow',         TTL.FLOW);
+  .define('lawsuits',     20 * 60 * 1000)
+  .define('transactions', 30 * 60 * 1000)
+  .define('flow',         20 * 60 * 1000);
 
 async function fetchLawsuits(force = false) {
   return cache.getOrFetch('lawsuits', () => client.getAllLawsuits(), force);

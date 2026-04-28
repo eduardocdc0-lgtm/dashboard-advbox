@@ -1,18 +1,17 @@
 const { Router } = require('express');
 const fetch = require('node-fetch');
-const cache = require('../services/cache');
+const cache = require('../../../cache');
 
 const META_TOKEN      = process.env.META_TOKEN      || '';
 const META_AD_ACCOUNT = process.env.META_AD_ACCOUNT || '';
 const META_BASE       = 'https://graph.facebook.com/v19.0';
-const META_TTL        = 15 * 60 * 1000;
 
 const router = Router();
 
 router.get('/meta-ads', async (req, res, next) => {
   const preset = req.query.date_preset || 'last_30d';
   const key    = `meta:${preset}`;
-  cache.define(key, META_TTL);
+  cache.define(key, 15 * 60 * 1000);
 
   try {
     const data = await cache.getOrFetch(key, async () => {
@@ -20,26 +19,23 @@ router.get('/meta-ads', async (req, res, next) => {
         throw Object.assign(new Error('META_TOKEN ou META_AD_ACCOUNT não configurados.'), { status: 500 });
       }
 
-      const fields  = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time';
-      const cRes    = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`);
-      const cJson   = await cRes.json();
+      const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time';
+      const cRes   = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`);
+      const cJson  = await cRes.json();
       if (cJson.error) throw new Error('Campaigns: ' + cJson.error.message);
-      const campaigns = cJson.data || [];
 
       const iFields = 'campaign_id,campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
       const iRes    = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${iFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`);
       const iJson   = await iRes.json();
       if (iJson.error) throw new Error('Insights: ' + iJson.error.message);
-      const insights = iJson.data || [];
 
-      const byId   = {};
-      const byName = {};
-      insights.forEach(i => {
+      const byId = {}, byName = {};
+      iJson.data.forEach(i => {
         if (i.campaign_id)   byId[i.campaign_id]     = i;
         if (i.campaign_name) byName[i.campaign_name] = i;
       });
 
-      const result = campaigns.map(c => {
+      const campaigns = (cJson.data || []).map(c => {
         const ins      = byId[c.id] || byName[c.name] || {};
         const actions  = ins.actions || [];
         const whatsapp = actions.find(a => a.action_type === 'onsite_conversion.total_messaging_connection');
@@ -56,8 +52,8 @@ router.get('/meta-ads', async (req, res, next) => {
         };
       });
 
-      console.log(`[Meta] ${campaigns.length} campanhas | ${insights.length} insights | ${preset}`);
-      return { campaigns: result, period: preset, fetchedAt: new Date().toISOString() };
+      console.log(`[Meta] ${campaigns.length} campanhas | ${(iJson.data || []).length} insights | ${preset}`);
+      return { campaigns, period: preset, fetchedAt: new Date().toISOString() };
     }, req.query.force === '1');
 
     res.json(data);

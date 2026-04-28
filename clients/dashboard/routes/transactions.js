@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { fetchTransactions } = require('../services/data');
+const { fetchTransactions } = require('../../../services/data');
 
 const router = Router();
 

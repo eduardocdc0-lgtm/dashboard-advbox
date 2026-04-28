@@ -1,6 +1,6 @@
 const { Router } = require('express');
-const { fetchLawsuits } = require('../services/data');
-const cache = require('../services/cache');
+const { fetchLawsuits } = require('../../../services/data');
+const cache = require('../../../cache');
 
 cache.define('evolucao', 30 * 60 * 1000);
 
@@ -34,7 +34,7 @@ router.get('/evolucao', async (req, res, next) => {
         contratos:   months.map(m => byMonth[m]    || 0),
         faturamento: months.map(m => Math.round(faturMonth[m] || 0)),
         expec:       months.map(m => Math.round(expecMonth[m] || 0)),
-        fetchedAt: new Date().toISOString(),
+        fetchedAt:   new Date().toISOString(),
       };
     }, req.query.force === '1');
 
