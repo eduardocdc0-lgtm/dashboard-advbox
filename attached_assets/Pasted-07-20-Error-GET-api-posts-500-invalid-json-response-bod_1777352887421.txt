@@ -1,0 +1,48 @@
+07:20
+[Error] GET /api/posts → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:20
+[Error] GET /api/birthdays → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:20
+[Error] GET /api/last-movements → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:20
+[Error] GET /api/lawsuits → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:20
+[Cadastros] Erro: invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:22
+[Error] GET /api/distribution → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/flow → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Cadastros] Erro: invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/lawsuits → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/customers → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/posts → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/last-movements → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/transactions → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/settings → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:24
+[Error] GET /api/birthdays → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:25
+[Error] GET /api/audit/kanban-financeiro → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:27
+[Error] GET /api/audit-responsible → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:27
+[Error] GET /api/distribution → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:28
+[Cadastros] Erro: invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:28
+[Error] GET /api/flow → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:30
+[Error] GET /api/audit/kanban-financeiro → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:32
+[Error] GET /api/audit/kanban-financeiro → 500 invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:37
+[Cadastros] Erro: invalid json response body at https://app.advbox.com.br/login reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+04-28 02:07:37
+[Cadastros] Erro: invalid json response bo
