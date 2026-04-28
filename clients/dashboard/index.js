@@ -6,7 +6,7 @@ const express       = require('express');
 const path          = require('path');
 const cookieSession = require('cookie-session');
 
-const errorHandler = require('../../middleware/errorHandler');
+const { errorHandler } = require('../../middleware/errorHandler');
 const apiRoutes    = require('./routes/index');
 
 const app  = express();
