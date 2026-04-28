@@ -3,10 +3,42 @@
 Dashboard interno para escritório de advocacia conectado à API do AdvBox.
 
 ## Stack
-- **Backend**: Node.js + Express (arquivo: `index.js`)
+- **Backend**: Node.js + Express — ponto de entrada: `index.js`
 - **Frontend**: HTML/CSS/JS puro (`public/index.html`)
-- **Dependências**: `express`, `node-fetch`
+- **Dependências**: `express`, `node-fetch`, `cookie-session`
 - **Porta**: 5000
+
+## Arquitetura do Backend
+
+```
+index.js                    ← entry point: auth, sessão, server
+services/
+  advbox-client.js          ← HTTP client com retry, backoff exponencial, rate limiting
+  advbox-instance.js        ← singleton do AdvBoxClient
+  cache.js                  ← SmartCache: TTL por chave, deduplicação, invalidação
+  data.js                   ← fetchLawsuits, fetchTransactions, fetchAllPosts (com cache)
+middleware/
+  auth.js                   ← requireAuth, requireAdmin
+  errorHandler.js           ← handler centralizado de erros
+routes/
+  index.js                  ← combina todos os routers
+  settings.js               ← GET /api/settings
+  lawsuits.js               ← GET /api/lawsuits
+  customers.js              ← GET /api/customers, /api/birthdays
+  transactions.js           ← GET /api/transactions
+  flow.js                   ← GET /api/flow, /api/last-movements, /api/posts
+  distribution.js           ← GET /api/distribution
+  evolucao.js               ← GET /api/evolucao
+  meta.js                   ← GET /api/meta-ads
+  registrations.js          ← GET /api/incomplete-registrations
+  audit.js                  ← GET /api/audit/kanban-financeiro, /api/audit-responsible, /api/audit-debug-stages
+public/
+  index.html                ← frontend completo (~4500 linhas)
+```
+
+## Endpoints de administração do cache (admin only)
+- `GET /api/cache-status` — estado de todos os caches
+- `POST /api/cache-invalidate` `{ key?: string }` — invalida chave específica ou todos
 
 ## Configuração
 - `ADVBOX_TOKEN` — token Bearer da API do AdvBox (Secrets)

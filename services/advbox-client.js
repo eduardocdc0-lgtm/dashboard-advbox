@@ -9,129 +9,119 @@ class AdvBoxClient {
     this.token = token;
     this.baseURL = 'https://app.advbox.com.br/api/v1';
     this.maxRetries = options.maxRetries || 3;
-    this.retryDelay = options.retryDelay || 1000;
+    this.baseDelay = options.baseDelay || 1000;
     this.timeout = options.timeout || 30000;
-    this.requestCount = 0;
-    this.lastRequestTime = 0;
-    this.minRequestInterval = options.minRequestInterval || 100;
+    this.minInterval = options.minInterval || 120;
+    this._lastReq = 0;
   }
 
-  async enforceRateLimit() {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    if (timeSinceLastRequest < this.minRequestInterval) {
-      await new Promise(resolve =>
-        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
-      );
-    }
-    this.lastRequestTime = Date.now();
+  async _rateLimit() {
+    const wait = this.minInterval - (Date.now() - this._lastReq);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    this._lastReq = Date.now();
   }
 
-  async request(endpoint, options = {}) {
-    let lastError;
+  async request(endpoint, opts = {}) {
+    if (!this.token) throw new Error('ADVBOX_TOKEN não configurado.');
 
+    let lastErr;
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      await this._rateLimit();
+
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), this.timeout);
+
       try {
-        await this.enforceRateLimit();
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-        const response = await fetch(`${this.baseURL}${endpoint}`, {
-          ...options,
+        const resp = await fetch(`${this.baseURL}${endpoint}`, {
+          ...opts,
           headers: {
-            'Authorization': `Bearer ${this.token}`,
+            Authorization: `Bearer ${this.token}`,
             'Content-Type': 'application/json',
-            ...options.headers,
+            ...opts.headers,
           },
-          signal: controller.signal,
+          signal: ctrl.signal,
         });
+        clearTimeout(tid);
 
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          return data;
+        if (resp.ok) {
+          return await resp.json();
         }
 
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '0') || (this.retryDelay * attempt);
-          console.warn(`[AdvBox] Rate limited. Aguardando ${retryAfter}ms (tentativa ${attempt}/${this.maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, retryAfter));
+        if (resp.status === 429) {
+          const after = parseInt(resp.headers.get('Retry-After') || '0') || this.baseDelay * attempt;
+          console.warn(`[AdvBox] 429 – aguardando ${after}ms (tent. ${attempt}/${this.maxRetries})`);
+          await new Promise(r => setTimeout(r, after));
           continue;
         }
 
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(`Autenticação falhou (${response.status}). Verifique o ADVBOX_TOKEN.`);
+        if (resp.status === 401 || resp.status === 403) {
+          throw new Error(`Autenticação falhou (${resp.status}). Verifique ADVBOX_TOKEN.`);
         }
 
-        if (response.status >= 500) {
-          lastError = new Error(`Servidor AdvBox erro ${response.status}`);
-          console.warn(`[AdvBox] ${lastError.message} (tentativa ${attempt}/${this.maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
-          continue;
-        }
-
-        const ct = response.headers.get('content-type') || '';
+        const ct = resp.headers.get('content-type') || '';
         if (!ct.includes('json')) {
-          lastError = new Error(`RATE_LIMIT`);
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
+          lastErr = new Error('RATE_LIMIT');
+          const backoff = this.baseDelay * Math.pow(2, attempt - 1);
+          console.warn(`[AdvBox] Resposta não-JSON (tent. ${attempt}) – aguardando ${backoff}ms`);
+          await new Promise(r => setTimeout(r, backoff));
           continue;
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API error ${response.status}: ${errorData.message || errorData.error || 'Erro desconhecido'}`);
-
-      } catch (error) {
-        lastError = error;
-
-        if (error.name === 'AbortError' || error.code === 'ECONNRESET' || error.code === 'ECONNREFUSED') {
-          console.warn(`[AdvBox] Timeout/Rede (tentativa ${attempt}/${this.maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
+        if (resp.status >= 500) {
+          const backoff = this.baseDelay * Math.pow(2, attempt - 1);
+          lastErr = new Error(`Servidor AdvBox ${resp.status}`);
+          console.warn(`[AdvBox] ${lastErr.message} (tent. ${attempt}) – backoff ${backoff}ms`);
+          await new Promise(r => setTimeout(r, backoff));
           continue;
         }
 
-        throw error;
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(`API ${resp.status}: ${body.message || body.error || 'Erro desconhecido'}`);
+
+      } catch (err) {
+        clearTimeout(tid);
+        lastErr = err;
+
+        if (err.name === 'AbortError') {
+          console.warn(`[AdvBox] Timeout ${this.timeout}ms (tent. ${attempt}/${this.maxRetries})`);
+          await new Promise(r => setTimeout(r, this.baseDelay * attempt));
+          continue;
+        }
+
+        if (['ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND'].includes(err.code)) {
+          const backoff = this.baseDelay * Math.pow(2, attempt - 1);
+          console.warn(`[AdvBox] Rede ${err.code} (tent. ${attempt}) – backoff ${backoff}ms`);
+          await new Promise(r => setTimeout(r, backoff));
+          continue;
+        }
+
+        throw err;
       }
     }
 
-    throw lastError || new Error('Requisição falhou após todas as tentativas');
-  }
-
-  async getLawsuitsPage(limit = 500, offset = 0) {
-    return this.request(`/lawsuits?limit=${limit}&offset=${offset}`);
+    throw lastErr || new Error('Requisição falhou após todas as tentativas');
   }
 
   async getAllLawsuits(pageSize = 500) {
     const all = [];
     let page = 0;
     while (page < 30) {
-      const data = await this.getLawsuitsPage(pageSize, page * pageSize);
-      const arr = Array.isArray(data) ? data : (data.data || []);
+      const data = await this.request(`/lawsuits?limit=${pageSize}&offset=${page * pageSize}`);
+      const arr  = Array.isArray(data) ? data : (data.data || []);
       if (!arr.length) break;
       all.push(...arr);
       page++;
       if (arr.length < pageSize) break;
-      await new Promise(r => setTimeout(r, 200));
     }
+    console.log(`[AdvBox] Processos carregados: ${all.length} (${page} páginas)`);
     return all;
   }
 
-  async getTransactions(limit = 1000) {
-    return this.request(`/transactions?limit=${limit}`);
-  }
-
-  async getCustomers(limit = 1000) {
-    return this.request(`/customers?limit=${limit}`);
-  }
-
-  async getLastMovements(limit = 20) {
-    return this.request(`/last_movements?limit=${limit}`);
-  }
-
-  async getSettings() {
-    return this.request('/settings');
-  }
+  getTransactions(limit = 1000) { return this.request(`/transactions?limit=${limit}`); }
+  getCustomers(limit = 1000)    { return this.request(`/customers?limit=${limit}`); }
+  getBirthdays()                { return this.request('/customers/birthdays'); }
+  getLastMovements(limit = 500) { return this.request(`/last_movements?limit=${limit}`); }
+  getSettings()                 { return this.request('/settings'); }
 }
 
 module.exports = AdvBoxClient;
