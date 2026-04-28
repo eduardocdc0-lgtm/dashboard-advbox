@@ -57,7 +57,8 @@ app.get('/api/me', (req, res) => {
 
 // ── Protege /api/* ────────────────────────────────────────────────────────────
 app.use('/api', (req, res, next) => {
-  if (['/api/login', '/api/logout', '/api/me'].includes(req.path)) return next();
+  const open = ['/login', '/logout', '/me', '/webhooks/chatguru'];
+  if (open.includes(req.path)) return next();
   if (req.session?.user) return next();
   res.status(401).json({ error: 'Não autenticado.' });
 });

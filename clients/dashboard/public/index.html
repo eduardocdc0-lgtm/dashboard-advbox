@@ -1042,6 +1042,7 @@
       <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
+      <button class="tab admin-tab" onclick="showTab('leads', event)">Leads</button>
       <button class="tab admin-tab" onclick="showTab('admin', event)">⚙ Admin</button>
     </div>
 
@@ -1729,6 +1730,53 @@
       </div>
     </div>
 
+    <!-- ABA LEADS -->
+    <div id="leads" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">Leads</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="leadsUpdatedAt">—</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="leadsStageFilter" class="reg-filter" onchange="loadLeads()" style="font-size:12px;">
+            <option value="">Todas as fases</option>
+            <option value="TRIAGEM">Triagem</option>
+            <option value="PROTOCOLO_ADM">Protocolo ADM</option>
+            <option value="IMPLANTACAO">Implantação</option>
+            <option value="CONCLUIDO">Concluído</option>
+            <option value="CANCELADO">Cancelado</option>
+          </select>
+          <button class="refresh-btn" onclick="loadLeads(true)">↺ Atualizar</button>
+        </div>
+      </div>
+
+      <!-- KPI cards por fase -->
+      <div class="metrics" id="leadsKpiCards" style="margin-bottom:28px;"></div>
+
+      <!-- Tabela de leads -->
+      <div style="overflow-x:auto;">
+        <table class="fin-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nome</th>
+              <th>Telefone</th>
+              <th>Campanha</th>
+              <th>Tipo</th>
+              <th>Responsável</th>
+              <th style="text-align:center;">Fase</th>
+              <th>Recebido</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="leadsTableBody">
+            <tr><td colspan="9" style="text-align:center;padding:32px;color:#aaa;">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="leadsEmpty" style="display:none;text-align:center;padding:48px;color:#aaa;font-size:14px;">Nenhum lead encontrado.</div>
+    </div>
+
     <!-- ABA ADMIN -->
     <div id="admin" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1786,11 +1834,12 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(name).classList.add('active');
       if (evt) evt.target.classList.add('active');
-      if (name === 'metaads'   && !metaRawData)      loadMetaAds();
-      if (name === 'evolucao'  && !window._evoData)  loadEvolucao();
-      if (name === 'auditoria' && !auditData)        loadAudit();
-      if (name === 'auditresp' && !_audrData)        loadAuditResp();
+      if (name === 'metaads'   && !metaRawData)       loadMetaAds();
+      if (name === 'evolucao'  && !window._evoData)   loadEvolucao();
+      if (name === 'auditoria' && !auditData)         loadAudit();
+      if (name === 'auditresp' && !_audrData)         loadAuditResp();
       if (name === 'admin'     && !window._adminData) loadAdmin();
+      if (name === 'leads')                           loadLeads();
     }
 
     function showError(msg) {
@@ -4670,6 +4719,99 @@
     document.getElementById('loginUser').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('loginPass').focus();
     });
+
+    // ── LEADS ─────────────────────────────────────────────────────────────────
+    const LEAD_STAGE_LABEL = {
+      TRIAGEM:        'Triagem',
+      PROTOCOLO_ADM:  'Protocolo ADM',
+      IMPLANTACAO:    'Implantação',
+      CONCLUIDO:      'Concluído',
+      CANCELADO:      'Cancelado',
+    };
+    const LEAD_STAGE_NEXT = {
+      TRIAGEM:       'PROTOCOLO_ADM',
+      PROTOCOLO_ADM: 'IMPLANTACAO',
+      IMPLANTACAO:   'CONCLUIDO',
+    };
+    const LEAD_ZONE_LABEL = {
+      MARILIA: 'Marília', LETICIA_OU_ALICE: 'Letícia/Alice',
+      CAU: 'Claudiana', TAMMYRES: 'Tammyres', EDUARDO: 'Eduardo',
+    };
+
+    async function loadLeads(force = false) {
+      const stage = document.getElementById('leadsStageFilter')?.value || '';
+      const url = '/api/leads' + (stage ? `?stage=${stage}` : '');
+      const tbody = document.getElementById('leadsTableBody');
+      const empty = document.getElementById('leadsEmpty');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:#aaa;">Carregando…</td></tr>';
+      empty.style.display = 'none';
+      try {
+        const [data, stats] = await Promise.all([
+          fetchJson(url),
+          fetchJson('/api/leads/stats'),
+        ]);
+        renderLeadsKpis(stats.byStage);
+        renderLeadsTable(data.leads);
+        document.getElementById('leadsUpdatedAt').textContent =
+          data.total + ' lead(s) · atualizado ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--danger);">Erro: ${e.message}</td></tr>`;
+      }
+    }
+
+    function renderLeadsKpis(byStage) {
+      const order = ['TRIAGEM','PROTOCOLO_ADM','IMPLANTACAO','CONCLUIDO','CANCELADO'];
+      const grid = document.getElementById('leadsKpiCards');
+      grid.innerHTML = order.map(s => {
+        const total = byStage[s]?.total || 0;
+        const color = s === 'CONCLUIDO' ? 'success' : s === 'CANCELADO' ? '' : total > 0 ? '' : '';
+        return `<div class="metric-card">
+          <div class="metric-label">${LEAD_STAGE_LABEL[s]}</div>
+          <div class="metric-value ${color}" style="${s==='CONCLUIDO'?'color:var(--success)':s==='CANCELADO'?'color:#999':''}">${total}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderLeadsTable(leads) {
+      const tbody = document.getElementById('leadsTableBody');
+      const empty = document.getElementById('leadsEmpty');
+      if (!leads || !leads.length) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      tbody.innerHTML = leads.map(l => {
+        const next = LEAD_STAGE_NEXT[l.stage];
+        const nextBtn = next
+          ? `<button onclick="advanceLead(${l.id},'${next}')" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--text);color:#fff;cursor:pointer;white-space:nowrap;">→ ${LEAD_STAGE_LABEL[next]}</button>`
+          : '';
+        const stageColor = l.stage === 'CONCLUIDO' ? 'color:var(--success);' : l.stage === 'CANCELADO' ? 'color:#999;' : l.stage === 'TRIAGEM' ? 'color:var(--warning);' : '';
+        const date = l.created_at ? new Date(l.created_at).toLocaleDateString('pt-BR') : '—';
+        return `<tr>
+          <td style="font-size:12px;color:#aaa;">#${l.id}</td>
+          <td style="font-weight:500;">${l.name || '—'}</td>
+          <td style="font-size:13px;">${l.phone || '—'}</td>
+          <td><span style="font-size:11px;padding:2px 8px;background:#f5f5f5;border:1px solid #ddd;border-radius:10px;">${l.campaign || '—'}</span></td>
+          <td style="font-size:13px;color:var(--text-2);">${l.tipo || '—'}</td>
+          <td style="font-size:13px;">${LEAD_ZONE_LABEL[l.responsible_zone] || l.responsible_zone || '—'}</td>
+          <td style="text-align:center;font-size:12px;font-weight:600;${stageColor}">${LEAD_STAGE_LABEL[l.stage] || l.stage}</td>
+          <td style="font-size:12px;color:var(--text-2);">${date}</td>
+          <td style="text-align:right;">${nextBtn}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function advanceLead(id, stage) {
+      try {
+        await fetch(`/api/leads/${id}/stage`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage }),
+        });
+        loadLeads();
+      } catch (e) { alert('Erro: ' + e.message); }
+    }
 
     // ── ADMIN ─────────────────────────────────────────────────────────────────
     window._adminData = null;
