@@ -7,6 +7,7 @@ const path          = require('path');
 const cookieSession = require('cookie-session');
 
 const { errorHandler } = require('../../middleware/errorHandler');
+const { migrate }  = require('../../services/db');
 const apiRoutes    = require('./routes/index');
 
 const app  = express();
@@ -82,7 +83,10 @@ app.post('/api/cache-invalidate', (req, res) => {
 app.use('/api', apiRoutes);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Dashboard rodando em http://localhost:${PORT}`);
-  if (!process.env.ADVBOX_TOKEN) console.warn('ATENÇÃO: ADVBOX_TOKEN não configurado.');
+migrate().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Dashboard rodando em http://localhost:${PORT}`);
+    if (!process.env.ADVBOX_TOKEN)   console.warn('ATENÇÃO: ADVBOX_TOKEN não configurado.');
+    if (!process.env.DATABASE_URL)   console.warn('ATENÇÃO: DATABASE_URL não configurado — leads desativados.');
+  });
 });
