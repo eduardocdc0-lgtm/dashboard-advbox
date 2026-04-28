@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "MJQsd2cShoCkKkfHLlNr8"
+uri = "file://dashboard_advbox.tar.gz"
+type = "unspecified"
+title = "dashboard_advbox.tar.gz — código completo"
