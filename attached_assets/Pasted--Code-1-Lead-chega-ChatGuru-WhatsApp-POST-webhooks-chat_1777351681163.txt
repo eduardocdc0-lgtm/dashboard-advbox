@@ -1,0 +1,87 @@
+
+Code
+1. Lead chega ChatGuru (WhatsApp)
+   ↓ POST /webhooks/chatguru
+   ↓
+2. Sistema classifica:
+   • Campanha: "Laudo SUS"
+   • Tipo: "ADM"
+   • Responsável: "Marília"
+   • Fase: "TRIAGEM"
+   ↓
+3. Cria Lead + Processo automaticamente
+   ↓
+4. Marília vê em dashboard:
+   • Lead novo em TRIAGEM
+   • Clica "Qualificar"
+   ↓
+5. Sistema move para "PROTOCOLO_ADM"
+   ↓
+6. Marília trabalha o caso
+   ↓
+7. Marília marca "IMPLANTACAO"
+   ↓
+8. Sistema passa para Claudiana
+   ↓
+9. Claudiana marca "CONCLUIDO"
+   ✅ FIM
+Pronto? Quer que eu crie o migration file ou já bora testar? 🎯
+
+You said: Entendi o fluxo. O que você quer
+Entendi o fluxo. O que você quer que eu faça com isso — implementar o webhook /webhooks/chatguru e a lógica de classificação/roteamento aqui no projeto, ou é uma especificação que você está passando para outro dev?
+
+Copilot said: Ótima pergunta! Deixa eu ser claro: **Isso é
+Ótima pergunta! Deixa eu ser claro:
+
+Isso é pra você implementar AGORA no projeto. Não é especificação pra outro dev.
+
+Aqui está o que você precisa fazer:
+
+🎯 Próximos Passos (Para Você)
+1️⃣ Criar as migrations (banco de dados)
+bash
+# Gerar migration
+npx drizzle-kit generate
+
+# Executar
+npx drizzle-kit push
+2️⃣ Copiar os arquivos TypeScript pra seu projeto
+Code
+src/
+├── integrations/
+│   └── chatguru-advbox.integration.ts  (COPIAR)
+├── routes/
+│   └── integration.routes.ts           (COPIAR)
+├── db/
+│   └── schema.ts                       (ATUALIZAR com novo schema)
+└── app.ts                              (REGISTRAR rotas)
+3️⃣ Configurar .env
+env
+# Já existem?
+DATABASE_URL=postgresql://...
+CHATGURU_API_KEY=...
+CHATGURU_ACCOUNT_ID=...
+CHATGURU_PHONE_ID=...
+
+# Adicionar
+ADVBOX_WEBHOOK_SECRET=seu_secret_aqui
+4️⃣ Registrar webhook no ChatGuru
+ChatGuru Admin → Integrações → Webhooks
+URL: https://seu-dominio.com/webhooks/chatguru
+Evento: "Novo Lead"
+Ativa
+5️⃣ Testar
+bash
+# Localmente
+npm run dev
+
+# Mandar um POST de teste
+curl -X POST http://localhost:3000/webhooks/chatguru \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "test-123",
+    "name": "João Silva",
+    "phone": "+5511999999999",
+    "email": "joao@test.com",
+    "message": "Quero laudo SUS"
+  }'
