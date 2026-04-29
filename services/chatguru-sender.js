@@ -25,31 +25,31 @@ async function sendWhatsApp(toPhone, message) {
   if (!ACCOUNT_ID) throw new Error('CHATGURU_ACCOUNT_ID não configurado.');
   if (!PHONE_ID)   throw new Error('CHATGURU_PHONE_ID não configurado.');
 
-  const url = `${BASE_URL}/accounts/${ACCOUNT_ID}/contacts/send_message`;
-
-  const body = {
-    phone_id: PHONE_ID,
-    to:       phone,
+  // ChatGuru usa POST /api/v1 com form-urlencoded
+  const params = new URLSearchParams({
+    key:        API_KEY,
+    account_id: ACCOUNT_ID,
+    action:     'send_message',
+    phone_id:   PHONE_ID,
+    to:         phone,
     message,
-    type:     'text',
-  };
+  });
 
-  const resp = await fetch(url, {
+  const resp = await fetch(BASE_URL, {
     method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
-      'api_access_token': API_KEY,
-    },
-    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    params.toString(),
   });
 
   const text = await resp.text();
   let json;
-  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  try { json = JSON.parse(text); } catch { json = { raw: text.slice(0, 300) }; }
 
-  if (!resp.ok) {
-    const msg = json.message || json.error || json.raw || `HTTP ${resp.status}`;
+  // ChatGuru retorna { code: 200, result: "success" } em sucesso
+  if (json.result === 'success' || json.code === 200) return json;
+
+  if (!resp.ok || json.result === 'error') {
+    const msg = json.description || json.message || json.error || `HTTP ${resp.status}`;
     throw Object.assign(new Error(msg), { status: resp.status, body: json });
   }
 
