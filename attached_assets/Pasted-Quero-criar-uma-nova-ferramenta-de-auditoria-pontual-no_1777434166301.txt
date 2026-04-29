@@ -1,0 +1,101 @@
+Quero criar uma nova ferramenta de auditoria pontual no Dashboard chamada "🔍 Conferência INSS x AdvBox".
+
+CONTEXTO:
+Periodicamente eu preciso conferir se os processos administrativos estão na fase correta no AdvBox baseado no status atual deles no INSS. Hoje faço isso na mão, comparando duas listas. Quero automatizar essa conferência.
+
+COMO VAI FUNCIONAR (UX):
+
+1. Adicionar nova aba/menu "🔍 Conferência INSS"
+
+2. Nessa aba, mostrar 3 áreas de upload de arquivo Word (.docx):
+   - 📄 Upload "EM ANÁLISE.docx"
+   - 📄 Upload "EM EXIGÊNCIA.docx"
+   - 📄 Upload "CONCLUÍDOS.docx"
+   
+   Cada arquivo contém uma tabela com os processos do INSS naquele status. As colunas que aparecem nos arquivos: protocolo, tipo de benefício, NOME DO CLIENTE, CPF, data, órgão, status, data limite.
+
+3. Botão "▶️ Gerar Relatório" abaixo dos uploads
+
+4. Ao clicar em Gerar Relatório, o sistema deve:
+   a. Ler cada arquivo .docx, extrair a tabela e pegar os NOMES dos clientes
+   b. Buscar cada nome no AdvBox (cruzamento por nome, com tolerância: ignorar acento, espaço extra, maiúscula/minúscula)
+   c. Conferir se a fase atual no AdvBox bate com o status do INSS, conforme as REGRAS abaixo
+   d. Mostrar um relatório dividido em seções
+
+REGRAS DE VALIDAÇÃO:
+
+[REGRA A] Para clientes do arquivo "EM ANÁLISE":
+No AdvBox tem que estar em UMA dessas 7 fases. Se estiver em qualquer outra fase = ERRO.
+1. Pericias Marcadas
+2. Em Analise Pericias Feitas
+3. Processos Sem Laudos
+4. Pericia Marcada/sem Data de...
+5. Protocolado Adm
+6. Auxilio Incapacidade
+7. Processo Com Guarda/bpc
+
+[REGRA B] Para clientes do arquivo "EM EXIGÊNCIA":
+Mesmas 7 fases da Regra A. Se estiver em qualquer outra fase = ERRO.
+
+[REGRA C] Para clientes do arquivo "CONCLUÍDOS":
+No AdvBox tem que estar em uma fase dos grupos JUDICIAL, FINANCEIRO ou ARQUIVAMENTO. Se estiver em qualquer fase fora desses 3 grupos = ERRO.
+
+Fases válidas pro CONCLUÍDO (todas dos 3 grupos):
+JUDICIAL: Elaborar Petição Inicial, Pericia Medica Marcada, Sentença Procedente Verifica..., Pericia Social Marcada, Com Prazo, Sentença Improcedente, Protocolado Judicial, Aguardando Expedição de Rpv, Fazer Ação..., Beneficio Concedido Aguarda..., Analisado e Não Distribuído
+FINANCEIRO: Salario Maternidade Parcelado, Judicial Parcelado, Adm Parcelado, Rpv do Mês, Rpv do Proximo Mês, Judicial Implantado a Receber, Adm Implantado a Receber, Salario Maternidade Concedido
+ARQUIVAMENTO: Arquivado - Improcedente, Arquivado - Procedente, Arquivado Por Determinação..., Ignorar Essa Etapa, Cancelado Requerimento, Arquivado/Encerrado
+
+NOTA: Como o AdvBox agrupa essas fases visualmente em colunas/grupos (Judicial, Financeiro, Arquivamento), idealmente o sistema deve reconhecer pelo grupo da fase. Se a estrutura do AdvBox não expor o grupo facilmente, use a lista explícita de fases acima.
+
+FORMATO DO RELATÓRIO:
+
+Mostrar 4 seções:
+
+📊 RESUMO
+- Total de processos analisados: X
+- ✅ Coerentes: Y (Z%)
+- ⚠️ Divergentes (na fase errada): W
+- ❓ Não encontrados no AdvBox: V
+
+⚠️ DIVERGENTES (FASE ERRADA)
+Listar cada cliente com problema, mostrando:
+- Nome do cliente
+- Status no INSS (qual arquivo veio: ANÁLISE / EXIGÊNCIA / CONCLUÍDO)
+- Fase ATUAL no AdvBox (errada)
+- Responsável atual no AdvBox
+- Quais fases SERIAM válidas pra esse status (sugerir as opções)
+
+Exemplo:
+MARIA AVELINO FERREIRA
+INSS: EM EXIGÊNCIA | AdvBox atual: "Sentença Procedente" | Responsável: Letícia
+Deveria estar em: Pericias Marcadas, Em Analise Pericias Feitas, Processos Sem Laudos, Pericia Marcada/sem Data, Protocolado Adm, Auxilio Incapacidade, ou Processo Com Guarda/bpc
+
+❓ NÃO ENCONTRADOS NO ADVBOX
+Listar nomes que estão no INSS mas não foram encontrados no AdvBox.
+
+✅ COERENTES
+Listar (em formato compacto, talvez colapsado por padrão) os clientes que estão certos.
+
+AÇÕES NO RELATÓRIO:
+- Botão "📋 Copiar lista de divergentes" — copia em formato de texto pronto pra colar em WhatsApp/email da equipe
+- Botão "📥 Exportar relatório completo (CSV)"
+- Filtro pra ver só divergentes de um responsável específico
+- Filtro pra ver só divergentes de um status específico (ANÁLISE / EXIGÊNCIA / CONCLUÍDO)
+
+PERSISTÊNCIA:
+- Não precisa salvar os arquivos de upload no banco
+- Mas SALVE no banco o resultado de cada conferência feita (data, quantidade de divergentes, quantidade de não encontrados) pra ter histórico
+- Criar uma sub-aba "📊 Histórico de Conferências" mostrando todos os relatórios feitos com data e botão pra reabrir
+
+OBSERVAÇÕES TÉCNICAS:
+- Use uma biblioteca confiável pra ler .docx (mammoth ou docx-parser)
+- A tabela dentro do .docx tem o nome do cliente na 3ª coluna
+- Faça matching de nome tolerante: ignore acento, normalize espaços, ignore caso
+- Considere também um match parcial em caso de "MARIA AVELINO FERREIRA" no INSS bater com "MARIA AVELINO" no AdvBox (com confirmação visual no relatório)
+
+Antes de implementar, me confirme:
+1. Que entendeu a regra das 3 categorias
+2. Como vai estruturar a leitura do .docx
+3. Se a estrutura atual do AdvBox no banco já tem o "grupo" da fase ou só o nome da fase
+
+Depois de implementar, dê Republish.

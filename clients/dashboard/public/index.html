@@ -1103,6 +1103,7 @@
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
       <button class="tab admin-tab" onclick="showTab('leads', event)">Leads</button>
       <button class="tab admin-tab" onclick="showTab('aniversarios', event)">🎂 Aniversários</button>
+      <button class="tab admin-tab" onclick="showTab('inssConf', event)">🔍 Conf. INSS</button>
       <button class="tab admin-tab" onclick="showTab('admin', event)">⚙ Admin</button>
     </div>
 
@@ -1974,6 +1975,137 @@
       </div>
     </div>
 
+    <!-- ABA: CONFERÊNCIA INSS x ADVBOX -->
+    <div id="inssConf" class="tab-content">
+      <style>
+        .inss-sub-tab-btn { background:none;border:none;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;padding:7px 16px;border-bottom:2px solid transparent;color:#555;font-weight:500;transition:all .18s; }
+        .inss-sub-tab-btn.active { border-bottom:2px solid #111;color:#111;font-weight:600; }
+        .inss-upload-zone { border:2px dashed #ccc;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .18s,background .18s;background:#fafafa; }
+        .inss-upload-zone:hover, .inss-upload-zone.has-file { border-color:#111;background:#f5f5f5; }
+        .inss-upload-zone input[type=file] { display:none; }
+        .inss-upload-label { font-size:13px;color:#555;margin-top:6px;display:block; }
+        .inss-run-btn { background:#111;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:600;transition:background .18s; }
+        .inss-run-btn:hover { background:#333; }
+        .inss-run-btn:disabled { background:#999;cursor:not-allowed; }
+        .inss-section-title { font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6B6B6B;border-bottom:1px solid #E5E5E5;padding-bottom:8px;margin-bottom:14px;margin-top:28px; }
+        .inss-card { background:#fff;border:1px solid #E5E5E5;border-radius:10px;padding:16px 18px;margin-bottom:10px;transition:box-shadow .15s; }
+        .inss-card:hover { box-shadow:0 3px 12px rgba(0,0,0,.07); }
+        .inss-badge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em;display:inline-block; }
+        .inss-badge.analise   { background:#EBF5FB;color:#1A5276; }
+        .inss-badge.exigencia { background:#FEF9E7;color:#7D6608; }
+        .inss-badge.concluido { background:#EAFAF1;color:#1E8449; }
+        .inss-badge.parcial   { background:#FDF2F8;color:#884EA0; }
+        .inss-badge.erro      { background:#FDEDEC;color:#C0392B; }
+        .inss-summary-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:8px; }
+        .inss-scard { border:1px solid #E5E5E5;border-radius:10px;padding:14px 16px;text-align:center; }
+        .inss-scard-num { font-size:28px;font-weight:700;font-family:'DM Serif Display',serif; }
+        .inss-scard-lbl { font-size:11px;color:#888;margin-top:3px; }
+        .inss-filter-row { display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px; }
+        .inss-filter-row select { font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:#fff; }
+        .inss-action-btn { font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;transition:background .15s; }
+        .inss-action-btn:hover { background:#f0f0f0; }
+        .inss-hist-row { display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid #E5E5E5;border-radius:8px;margin-bottom:8px;font-size:13px; }
+        .inss-coherent-list { columns:2;column-gap:24px;font-size:12px;color:#555;line-height:1.9; }
+        @media(max-width:600px){ .inss-coherent-list { columns:1; } }
+      </style>
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🔍 Conferência INSS × AdvBox</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;">Cruza o status INSS com as fases do AdvBox e aponta divergências</div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div style="border-bottom:1px solid #E5E5E5;margin-bottom:22px;display:flex;gap:0;">
+        <button class="inss-sub-tab-btn active" id="inssBtnConf"    onclick="inssSubTab('conferencia')">▶️ Nova Conferência</button>
+        <button class="inss-sub-tab-btn"         id="inssBtnHist"    onclick="inssSubTab('historico')">📊 Histórico</button>
+      </div>
+
+      <!-- PAINEL: NOVA CONFERÊNCIA -->
+      <div id="inssPanelConf">
+        <!-- Upload área -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+          <!-- EM ANÁLISE -->
+          <div class="inss-upload-zone" id="zoneAnalise" onclick="document.getElementById('fileAnalise').click()">
+            <div style="font-size:28px;">📄</div>
+            <div style="font-weight:600;font-size:13px;margin-top:6px;">EM ANÁLISE</div>
+            <input type="file" id="fileAnalise" accept=".docx" onchange="inssFileChosen('analise',this)">
+            <span class="inss-upload-label" id="lblAnalise">Clique para escolher o arquivo .docx</span>
+          </div>
+          <!-- EM EXIGÊNCIA -->
+          <div class="inss-upload-zone" id="zoneExigencia" onclick="document.getElementById('fileExigencia').click()">
+            <div style="font-size:28px;">📄</div>
+            <div style="font-weight:600;font-size:13px;margin-top:6px;">EM EXIGÊNCIA</div>
+            <input type="file" id="fileExigencia" accept=".docx" onchange="inssFileChosen('exigencia',this)">
+            <span class="inss-upload-label" id="lblExigencia">Clique para escolher o arquivo .docx</span>
+          </div>
+          <!-- CONCLUÍDOS -->
+          <div class="inss-upload-zone" id="zoneConcluidos" onclick="document.getElementById('fileConcluidos').click()">
+            <div style="font-size:28px;">📄</div>
+            <div style="font-weight:600;font-size:13px;margin-top:6px;">CONCLUÍDOS</div>
+            <input type="file" id="fileConcluidos" accept=".docx" onchange="inssFileChosen('concluidos',this)">
+            <span class="inss-upload-label" id="lblConcluidos">Clique para escolher o arquivo .docx</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:28px;">
+          <button class="inss-run-btn" id="inssRunBtn" onclick="inssGerarRelatorio()">▶️ Gerar Relatório</button>
+          <div style="font-size:11px;color:#aaa;margin-top:6px;" id="inssRunStatus"></div>
+        </div>
+
+        <!-- Relatório (oculto até gerar) -->
+        <div id="inssRelatorio" style="display:none;">
+          <!-- Resumo -->
+          <div class="inss-section-title">📊 Resumo</div>
+          <div class="inss-summary-grid">
+            <div class="inss-scard"><div class="inss-scard-num" id="inssTotal">0</div><div class="inss-scard-lbl">Total analisados</div></div>
+            <div class="inss-scard" style="border-color:#27AE60;"><div class="inss-scard-num" style="color:#27AE60;" id="inssCoer">0</div><div class="inss-scard-lbl">✅ Coerentes</div></div>
+            <div class="inss-scard" style="border-color:#E67E22;"><div class="inss-scard-num" style="color:#E67E22;" id="inssDiverg">0</div><div class="inss-scard-lbl">⚠️ Divergentes</div></div>
+            <div class="inss-scard" style="border-color:#8E44AD;"><div class="inss-scard-num" style="color:#8E44AD;" id="inssNaoEnc">0</div><div class="inss-scard-lbl">❓ Não encontrados</div></div>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:6px;" id="inssGeradoEm"></div>
+
+          <!-- Filtros -->
+          <div class="inss-filter-row" style="margin-top:20px;">
+            <select id="inssFilterStatus" onchange="inssRenderListas()">
+              <option value="">Todos os status</option>
+              <option value="ANALISE">Em Análise</option>
+              <option value="EXIGENCIA">Em Exigência</option>
+              <option value="CONCLUIDO">Concluído</option>
+            </select>
+            <select id="inssFilterResp" onchange="inssRenderListas()">
+              <option value="">Todos os responsáveis</option>
+            </select>
+            <button class="inss-action-btn" onclick="inssCopiarDivergentes()">📋 Copiar divergentes</button>
+            <button class="inss-action-btn" onclick="inssExportCSV()">📥 Exportar CSV</button>
+          </div>
+
+          <!-- Divergentes -->
+          <div class="inss-section-title">⚠️ Divergentes — Fase Errada</div>
+          <div id="inssDivergList"></div>
+
+          <!-- Não encontrados -->
+          <div class="inss-section-title">❓ Não Encontrados no AdvBox</div>
+          <div id="inssNaoEncList"></div>
+
+          <!-- Coerentes (colapsado) -->
+          <details style="margin-top:10px;">
+            <summary style="cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6B6B6B;border-bottom:1px solid #E5E5E5;padding-bottom:8px;margin-bottom:14px;list-style:none;">
+              ✅ Coerentes (clique para expandir) — <span id="inssCoerCount">0</span>
+            </summary>
+            <div id="inssCoerList" class="inss-coherent-list" style="margin-top:12px;"></div>
+          </details>
+        </div>
+      </div>
+
+      <!-- PAINEL: HISTÓRICO -->
+      <div id="inssPanelHist" style="display:none;">
+        <div id="inssHistList"><div class="loading">Carregando histórico...</div></div>
+      </div>
+    </div>
+    <!-- FIM ABA CONFERÊNCIA INSS -->
+
   </div>
 
   <script>
@@ -1990,6 +2122,7 @@
       if (name === 'auditresp' && !_audrData)         loadAuditResp();
       if (name === 'admin'     && !window._adminData) loadAdmin();
       if (name === 'leads')                           loadLeads();
+      if (name === 'inssConf')                        inssSubTab('conferencia');
       if (name === 'aniversarios')                   loadBirthday();
     }
 
@@ -5531,6 +5664,227 @@
       `).join('');
     }
     // ── FIM ANIVERSÁRIOS ─────────────────────────────────────────────────────
+
+    // ── CONFERÊNCIA INSS × ADVBOX ─────────────────────────────────────────────
+
+    let _inssData = null; // resultado da última conferência
+
+    function inssSubTab(tab) {
+      document.getElementById('inssBtnConf').classList.toggle('active', tab === 'conferencia');
+      document.getElementById('inssBtnHist').classList.toggle('active', tab === 'historico');
+      document.getElementById('inssPanelConf').style.display = tab === 'conferencia' ? '' : 'none';
+      document.getElementById('inssPanelHist').style.display = tab === 'historico' ? '' : 'none';
+      if (tab === 'historico') inssLoadHistorico();
+    }
+
+    function inssFileChosen(tipo, input) {
+      const zoneMap = { analise:'zoneAnalise', exigencia:'zoneExigencia', concluidos:'zoneConcluidos' };
+      const lblMap  = { analise:'lblAnalise',  exigencia:'lblExigencia',  concluidos:'lblConcluidos' };
+      const zone = document.getElementById(zoneMap[tipo]);
+      const lbl  = document.getElementById(lblMap[tipo]);
+      if (input.files && input.files[0]) {
+        zone.classList.add('has-file');
+        lbl.textContent = '✅ ' + input.files[0].name;
+      } else {
+        zone.classList.remove('has-file');
+        lbl.textContent = 'Clique para escolher o arquivo .docx';
+      }
+    }
+
+    async function inssGerarRelatorio() {
+      const fa = document.getElementById('fileAnalise').files[0];
+      const fe = document.getElementById('fileExigencia').files[0];
+      const fc = document.getElementById('fileConcluidos').files[0];
+      if (!fa && !fe && !fc) { alert('Selecione pelo menos um arquivo .docx para gerar o relatório.'); return; }
+
+      const btn = document.getElementById('inssRunBtn');
+      const status = document.getElementById('inssRunStatus');
+      btn.disabled = true;
+      btn.textContent = '⏳ Processando...';
+      status.textContent = 'Lendo arquivos e consultando AdvBox, aguarde...';
+
+      try {
+        const fd = new FormData();
+        if (fa) fd.append('analise',   fa);
+        if (fe) fd.append('exigencia', fe);
+        if (fc) fd.append('concluidos',fc);
+
+        const r = await fetch('/api/inss-conference/run', { method:'POST', body: fd });
+        if (!r.ok) throw new Error(await r.text());
+        _inssData = await r.json();
+
+        inssRenderResumo();
+        inssPopularFiltroResp();
+        inssRenderListas();
+        document.getElementById('inssRelatorio').style.display = '';
+        status.textContent = 'Relatório gerado em ' + new Date(_inssData.geradoEm).toLocaleString('pt-BR');
+      } catch(e) {
+        status.textContent = '❌ Erro: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '▶️ Gerar Relatório';
+      }
+    }
+
+    function inssRenderResumo() {
+      if (!_inssData) return;
+      const r = _inssData.resumo;
+      document.getElementById('inssTotal').textContent  = r.totalAnalisados;
+      document.getElementById('inssCoer').textContent   = r.coerentes;
+      document.getElementById('inssDiverg').textContent = r.divergentes;
+      document.getElementById('inssNaoEnc').textContent = r.naoEncontrados;
+      document.getElementById('inssGeradoEm').textContent =
+        `Analisados — EM ANÁLISE: ${_inssData.arquivos.analise} | EM EXIGÊNCIA: ${_inssData.arquivos.exigencia} | CONCLUÍDOS: ${_inssData.arquivos.concluidos}`;
+      document.getElementById('inssCoerCount').textContent = r.coerentes;
+    }
+
+    function inssPopularFiltroResp() {
+      if (!_inssData) return;
+      const resp = [...new Set((_inssData.itens || []).map(i => i.advbox?.responsible).filter(Boolean))].sort();
+      const sel = document.getElementById('inssFilterResp');
+      sel.innerHTML = '<option value="">Todos os responsáveis</option>';
+      resp.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
+    }
+
+    function inssFiltrarItens(status) {
+      if (!_inssData) return [];
+      const filtSt = document.getElementById('inssFilterStatus').value;
+      const filtRp = document.getElementById('inssFilterResp').value;
+      return (_inssData.itens || []).filter(i => {
+        if (i.status !== status) return false;
+        if (filtSt && i.category !== filtSt) return false;
+        if (filtRp && (!i.advbox || i.advbox.responsible !== filtRp)) return false;
+        return true;
+      });
+    }
+
+    function inssCatBadge(cat) {
+      const map = { ANALISE:'analise', EXIGENCIA:'exigencia', CONCLUIDO:'concluido' };
+      const lbl = { ANALISE:'EM ANÁLISE', EXIGENCIA:'EM EXIGÊNCIA', CONCLUIDO:'CONCLUÍDO' };
+      return `<span class="inss-badge ${map[cat]||''}">${lbl[cat]||cat}</span>`;
+    }
+
+    function inssRenderListas() {
+      // Divergentes
+      const diverg = inssFiltrarItens('DIVERGENTE');
+      const naoEnc = inssFiltrarItens('NAO_ENCONTRADO');
+      const coer   = inssFiltrarItens('CORRETO');
+
+      document.getElementById('inssDivergList').innerHTML = diverg.length === 0
+        ? '<div style="font-size:13px;color:#888;padding:12px 0;">Nenhum divergente encontrado com os filtros atuais.</div>'
+        : diverg.map(i => `
+          <div class="inss-card">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+              <span style="font-weight:600;font-size:14px;">${i.inssNome}</span>
+              ${inssCatBadge(i.category)}
+              ${i.matchTipo==='parcial' ? '<span class="inss-badge parcial">match parcial</span>' : ''}
+              <span class="inss-badge erro">FASE ERRADA</span>
+            </div>
+            <div style="font-size:12px;color:#555;line-height:1.8;">
+              <b>Fase atual no AdvBox:</b> ${i.advbox?.stage || '—'}
+              ${i.advbox?.responsible ? ` &nbsp;·&nbsp; <b>Responsável:</b> ${i.advbox.responsible}` : ''}
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:5px;">
+              <b>Fases válidas para ${i.category==='ANALISE'?'EM ANÁLISE':i.category==='EXIGENCIA'?'EM EXIGÊNCIA':'CONCLUÍDO'}:</b><br>
+              ${i.fasesSugeridas}
+            </div>
+            ${i.advbox?.link ? `<div style="margin-top:7px;"><a href="${i.advbox.link}" target="_blank" style="font-size:12px;color:#1a73e8;">Abrir no AdvBox ↗</a></div>` : ''}
+          </div>`).join('');
+
+      // Não encontrados
+      document.getElementById('inssNaoEncList').innerHTML = naoEnc.length === 0
+        ? '<div style="font-size:13px;color:#888;padding:12px 0;">Todos os nomes foram localizados no AdvBox.</div>'
+        : naoEnc.map(i => `
+          <div class="inss-card" style="border-color:#8E44AD22;">
+            <span style="font-weight:600;font-size:13px;">${i.inssNome}</span>
+            &nbsp; ${inssCatBadge(i.category)}
+            <div style="font-size:11px;color:#888;margin-top:4px;">Não encontrado — verifique o nome no AdvBox manualmente.</div>
+          </div>`).join('');
+
+      // Coerentes
+      document.getElementById('inssCoerList').innerHTML = coer.length === 0
+        ? '<div style="font-size:12px;color:#888;">Nenhum coerente com os filtros atuais.</div>'
+        : coer.map(i => `<div>${i.inssNome} ${i.matchTipo==='parcial'?'<span class="inss-badge parcial" style="font-size:9px;">parcial</span>':''}</div>`).join('');
+      document.getElementById('inssCoerCount').textContent = coer.length;
+    }
+
+    function inssCopiarDivergentes() {
+      if (!_inssData) return;
+      const diverg = (_inssData.itens||[]).filter(i => i.status==='DIVERGENTE');
+      const filtSt = document.getElementById('inssFilterStatus').value;
+      const filtRp = document.getElementById('inssFilterResp').value;
+      const list = diverg.filter(i => {
+        if (filtSt && i.category !== filtSt) return false;
+        if (filtRp && (!i.advbox || i.advbox.responsible !== filtRp)) return false;
+        return true;
+      });
+      const catLabel = { ANALISE:'EM ANÁLISE', EXIGENCIA:'EM EXIGÊNCIA', CONCLUIDO:'CONCLUÍDO' };
+      const texto = '⚠️ DIVERGENTES — Conferência INSS × AdvBox\n'
+        + new Date().toLocaleDateString('pt-BR') + '\n\n'
+        + list.map((i,idx) =>
+          `${idx+1}. ${i.inssNome}\n`
+          + `   INSS: ${catLabel[i.category]||i.category}\n`
+          + `   AdvBox atual: "${i.advbox?.stage||'—'}" | Resp.: ${i.advbox?.responsible||'—'}\n`
+          + `   Deveria estar em: ${i.fasesSugeridas}`
+        ).join('\n\n');
+      navigator.clipboard.writeText(texto).then(() => alert('✅ Lista copiada!'));
+    }
+
+    function inssExportCSV() {
+      if (!_inssData) return;
+      const catLabel = { ANALISE:'EM ANÁLISE', EXIGENCIA:'EM EXIGÊNCIA', CONCLUIDO:'CONCLUÍDO' };
+      const statusLabel = { CORRETO:'Coerente', DIVERGENTE:'Divergente', NAO_ENCONTRADO:'Não encontrado' };
+      const rows = [['Nome INSS','Status INSS','Resultado','Tipo Match','Fase AdvBox','Responsável AdvBox','Fases Válidas']];
+      (_inssData.itens||[]).forEach(i => {
+        rows.push([
+          i.inssNome,
+          catLabel[i.category]||i.category,
+          statusLabel[i.status]||i.status,
+          i.matchTipo||'—',
+          i.advbox?.stage||'—',
+          i.advbox?.responsible||'—',
+          i.fasesSugeridas||'—',
+        ]);
+      });
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `conferencia_inss_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+
+    async function inssLoadHistorico() {
+      const el = document.getElementById('inssHistList');
+      el.innerHTML = '<div class="loading">Carregando...</div>';
+      try {
+        const r = await fetch('/api/inss-conference/history');
+        const rows = await r.json();
+        if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:#888;padding:16px 0;">Nenhuma conferência realizada ainda.</div>'; return; }
+        el.innerHTML = rows.map(row => {
+          const det = row.detalhes ? (typeof row.detalhes==='string' ? JSON.parse(row.detalhes) : row.detalhes) : {};
+          const arq = det.arquivos || {};
+          const dt  = new Date(row.conferido_em).toLocaleString('pt-BR');
+          return `
+          <div class="inss-hist-row">
+            <div>
+              <div style="font-weight:600;font-size:13px;">${dt}</div>
+              <div style="font-size:11px;color:#888;margin-top:2px;">
+                Total: ${row.total} &nbsp;·&nbsp;
+                <span style="color:#27AE60;">✅ ${row.coerentes} coerentes</span> &nbsp;·&nbsp;
+                <span style="color:#E67E22;">⚠️ ${row.divergentes} divergentes</span> &nbsp;·&nbsp;
+                <span style="color:#8E44AD;">❓ ${row.nao_encontrados} não encontrados</span>
+              </div>
+              ${arq.analise !== undefined ? `<div style="font-size:11px;color:#aaa;margin-top:2px;">Análise:${arq.analise} · Exigência:${arq.exigencia} · Concluídos:${arq.concluidos}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+      } catch(e) {
+        el.innerHTML = `<div style="color:#c0392b;font-size:13px;">Erro ao carregar histórico: ${e.message}</div>`;
+      }
+    }
+
+    // ── FIM CONFERÊNCIA INSS ──────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->
