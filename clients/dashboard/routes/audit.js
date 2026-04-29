@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { requireAdmin } = require('../../../middleware/auth');
 const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
 const cache = require('../../../cache');
+const { query: dbQuery } = require('../../../services/db');
 
 const router = Router();
 
@@ -163,6 +164,44 @@ router.get('/audit-responsible', requireAdmin, async (req, res, next) => {
     }, req.query.force === '1');
 
     res.json(data);
+  } catch (err) { next(err); }
+});
+
+// ── Marcar processo como passado ─────────────────────────────────────────────
+router.post('/audit-responsible/resolve', requireAdmin, async (req, res, next) => {
+  try {
+    const { lawsuitId, cliente, fase, responsible, destinoZone, destinoLabel } = req.body || {};
+    if (!lawsuitId) return res.status(400).json({ error: 'lawsuitId obrigatório' });
+    await dbQuery(
+      `INSERT INTO audit_resolved (lawsuit_id, cliente, fase, responsible, destino_zone, destino_label)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [String(lawsuitId), cliente || '', fase || '', responsible || '', destinoZone || '', destinoLabel || '']
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Registrar geração de lista de cobrança ───────────────────────────────────
+router.post('/audit-responsible/cobranca-log', requireAdmin, async (req, res, next) => {
+  try {
+    const { personName, quantidade, detalhes } = req.body || {};
+    if (!personName) return res.status(400).json({ error: 'personName obrigatório' });
+    await dbQuery(
+      `INSERT INTO audit_cobranca_log (person_name, quantidade, detalhes) VALUES ($1, $2, $3)`,
+      [personName, Number(quantidade) || 0, detalhes || '']
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Histórico (resolvidos + cobranças) ───────────────────────────────────────
+router.get('/audit-responsible/history', requireAdmin, async (req, res, next) => {
+  try {
+    const [resolved, cobrancas] = await Promise.all([
+      dbQuery(`SELECT * FROM audit_resolved ORDER BY resolved_at DESC LIMIT 200`),
+      dbQuery(`SELECT * FROM audit_cobranca_log ORDER BY logged_at DESC LIMIT 100`)
+    ]);
+    res.json({ resolved: resolved.rows, cobrancas: cobrancas.rows });
   } catch (err) { next(err); }
 });
 

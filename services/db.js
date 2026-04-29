@@ -84,6 +84,31 @@ async function migrate() {
         FOR EACH ROW EXECUTE FUNCTION update_updated_at();
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_resolved (
+        id           SERIAL PRIMARY KEY,
+        lawsuit_id   VARCHAR(100) NOT NULL,
+        cliente      VARCHAR(500),
+        fase         VARCHAR(255),
+        responsible  VARCHAR(255),
+        destino_zone VARCHAR(100),
+        destino_label VARCHAR(255),
+        resolved_by  VARCHAR(100) DEFAULT 'admin',
+        resolved_at  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_resolved_at ON audit_resolved(resolved_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_resolved_lid ON audit_resolved(lawsuit_id);
+
+      CREATE TABLE IF NOT EXISTS audit_cobranca_log (
+        id           SERIAL PRIMARY KEY,
+        person_name  VARCHAR(255) NOT NULL,
+        quantidade   INTEGER NOT NULL,
+        detalhes     TEXT,
+        logged_at    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_cob_at ON audit_cobranca_log(logged_at DESC);
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);

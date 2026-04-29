@@ -791,6 +791,65 @@
     .audit-btn-cobrar:hover { background:#333; }
     .audit-btn-advbox { font-size:11px;color:#555;text-decoration:none;border:1px solid #ddd;padding:4px 10px;border-radius:5px; }
     .audit-btn-advbox:hover { background:#f5f5f5; }
+    /* ── Ranking de Culpados ── */
+    .audr-ranking { display:flex;flex-direction:column;gap:6px; }
+    .audr-rank-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid #eee;background:#fff;flex-wrap:wrap; }
+    .audr-rank-pos { font-family:'DM Serif Display',serif;font-size:1.3rem;width:26px;text-align:center;flex-shrink:0;color:#888; }
+    .audr-rank-name { font-weight:700;font-size:13px;flex:1;min-width:100px; }
+    .audr-rank-bar-wrap { flex:2;min-width:60px;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden; }
+    .audr-rank-bar { height:100%;border-radius:4px; }
+    .audr-rank-count { font-family:'DM Serif Display',serif;font-size:1.25rem;color:#b02020;min-width:32px;text-align:right; }
+    .audr-rank-pct { font-size:11px;color:#aaa;min-width:34px;text-align:right; }
+    .audr-rank-btn { font-size:10px;border:1px solid #ddd;background:#f9f9f9;border-radius:5px;padding:3px 8px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap; }
+    .audr-rank-btn:hover { background:#f0f0f0; }
+    .audr-rank-top { background:#fff9f9;border-color:#fcd5d5; }
+    .audr-rank-mid { background:#fffbea;border-color:#fde68a; }
+    .audr-rank-zero { background:#f0faf5;border-color:#bbf0d0; }
+    /* ── View toggle ── */
+    .audr-view-toggle { display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#f5f5f5; }
+    .audr-view-btn { border:none;background:transparent;padding:7px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .audr-view-btn.active { background:#111;color:#fff; }
+    .audr-view-btn:hover:not(.active) { background:#e8e8e8; }
+    /* ── Kanban ── */
+    .audr-kanban-filters { display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px 12px;background:#f9f9f9;border-radius:8px; }
+    .audr-kanban-board { display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;min-height:300px; }
+    .audr-kanban-board::-webkit-scrollbar { height:6px; }
+    .audr-kanban-board::-webkit-scrollbar-track { background:#f0f0f0;border-radius:4px; }
+    .audr-kanban-board::-webkit-scrollbar-thumb { background:#ccc;border-radius:4px; }
+    .audr-kanban-col { width:280px;min-width:280px;background:#f8f8f8;border-radius:10px;border:1px solid #eee;display:flex;flex-direction:column;max-height:calc(100vh - 300px); }
+    .audr-kanban-col-header { padding:12px 14px;background:#fff;border-radius:10px 10px 0 0;border-bottom:1px solid #eee;flex-shrink:0; }
+    .audr-kanban-col-title { display:flex;justify-content:space-between;align-items:center; }
+    .audr-kanban-col-name { font-weight:700;font-size:13px; }
+    .audr-kanban-col-count { font-family:'DM Serif Display',serif;font-size:1.15rem;color:#b02020; }
+    .audr-kanban-col-body { overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;flex:1; }
+    .audr-kanban-col-body::-webkit-scrollbar { width:4px; }
+    .audr-kanban-col-body::-webkit-scrollbar-thumb { background:#ddd;border-radius:4px; }
+    .audr-kanban-group-hdr { font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:5px;margin:5px 0 2px;letter-spacing:.04em;display:flex;justify-content:space-between; }
+    .audr-kanban-card { background:#fff;border-radius:7px;border:1px solid #eee;padding:9px 11px;cursor:pointer;transition:box-shadow .15s; }
+    .audr-kanban-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.1); }
+    .audr-kanban-card-cliente { font-weight:600;font-size:12px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .audr-kanban-card-tipo { font-size:10.5px;color:#888; }
+    .audr-kanban-card-fase { font-size:10.5px;font-weight:600;margin:4px 0 3px;padding:2px 6px;background:#fff3f3;border-radius:4px;color:#b02020;display:inline-block; }
+    .audr-kanban-card-dest { font-size:10.5px;margin-top:3px; }
+    .audr-kanban-card-actions { margin-top:7px;display:flex;gap:5px; }
+    .audr-kb-btn-ok { border:1px solid #bbf0d0;background:#f0faf5;color:#166534;border-radius:5px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600; }
+    .audr-kb-btn-ok:hover { background:#dcfce7; }
+    .audr-kb-btn-link { font-size:10.5px;color:#555;text-decoration:none;border:1px solid #ddd;padding:3px 7px;border-radius:5px;background:#f9f9f9; }
+    .audr-kanban-col-footer { padding:8px 10px;border-top:1px solid #eee;background:#fff;border-radius:0 0 10px 10px;flex-shrink:0; }
+    .audr-kb-btn-cobrar { width:100%;border:none;background:#111;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600; }
+    .audr-kb-btn-cobrar:hover { background:#333; }
+    .audr-kanban-empty { padding:32px;text-align:center;color:#aaa;font-size:13px;width:100%; }
+    .audr-zone-MARILIA { color:#166534;background:#dcfce7;border-color:#bbf0d0; }
+    .audr-zone-LETICIA_OU_ALICE { color:#1e40af;background:#dbeafe;border-color:#bfdbfe; }
+    .audr-zone-CAU { color:#92400e;background:#fef9c3;border-color:#fde68a; }
+    .audr-zone-TAMMYRES { color:#6b21a8;background:#f3e8ff;border-color:#e9d5ff; }
+    .audr-zone-EDUARDO { color:#fff;background:#1a1a1a;border-color:#444; }
+    /* ── Histórico ── */
+    .audr-hist-section { margin-bottom:22px; }
+    .audr-hist-title { font-weight:700;font-size:13px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center; }
+    .audr-hist-row { display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f5f5f5;font-size:12px;flex-wrap:wrap;gap:4px; }
+    .audr-hist-row:hover { background:#fafafa; }
+    .audr-hist-empty { padding:24px;text-align:center;color:#aaa;font-size:13px; }
     /* Monitor row */
     .audit-monitor-row { display:flex;justify-content:space-between;align-items:center;padding:9px 6px;border-bottom:1px solid #f5f5f5;flex-wrap:wrap;gap:6px; }
     .audit-monitor-row:last-child{border-bottom:none;}
@@ -1437,39 +1496,84 @@
         <div class="ar-card" style="background:#f8f8f8;border-color:#e5e5e5;"><div class="ar-card-label">Não mapeados</div><div class="ar-card-count" id="audrNaoMapN" style="color:#999;">—</div><div class="ar-card-sub">fase desconhecida</div></div>
         <div class="ar-card" style="background:#fffbea;border-color:#fde68a;"><div class="ar-card-label">Taxa de acerto</div><div class="ar-card-count" id="audrTaxaN" style="color:#92400e;">—</div><div class="ar-card-sub">conformidade</div></div>
       </div>
-      <details style="margin-bottom:10px;" open>
-        <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#fff5f5;border-radius:7px;border:1px solid #fcd5d5;list-style:none;">⚠ Resumo por Pessoa <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
-        <div id="audrByPerson" style="margin-top:8px;"></div>
-      </details>
-      <details style="margin-bottom:10px;">
+      <!-- Ranking de Culpados -->
+      <div style="margin-bottom:16px;background:#fff;border:1px solid #fcd5d5;border-radius:10px;padding:14px 16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-weight:700;font-size:13px;">🏆 Ranking de Responsáveis com Mais Erros <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></div>
+          <button class="audr-rank-btn" style="font-size:11px;padding:5px 12px;" onclick="audrGerarCobrancaGeral()">📋 Gerar lista de cobrança geral</button>
+        </div>
+        <div id="audrByPerson" class="audr-ranking"></div>
+      </div>
+
+      <!-- Resumo por Fase -->
+      <details style="margin-bottom:14px;">
         <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
         <div id="audrByStage" style="margin-top:8px;overflow-x:auto;"></div>
       </details>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
-        <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-          <option value="ERRADO">❌ Somente errados</option>
-          <option value="">Todos</option>
-          <option value="CORRETO">✅ Somente corretos</option>
-          <option value="NAO_MAPEADO">⚪ Não mapeados</option>
-        </select>
-        <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-          <option value="">Todas as zonas</option>
-          <option value="MARILIA">🟢 Zona Marília</option>
-          <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
-          <option value="CAU">🟡 Zona Cau</option>
-          <option value="TAMMYRES">🟣 Zona Tammyres</option>
-          <option value="EDUARDO">⚫ Zona Eduardo</option>
-        </select>
-        <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;"><option value="">Todos os responsáveis</option></select>
-        <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
+
+      <!-- View toggle -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="audr-view-toggle">
+          <button class="audr-view-btn active" id="audrBtnLista" onclick="audrSetView('lista')">📋 Lista</button>
+          <button class="audr-view-btn" id="audrBtnKanban" onclick="audrSetView('kanban')">📌 Kanban</button>
+          <button class="audr-view-btn" id="audrBtnHistorico" onclick="audrSetView('historico')">📊 Histórico</button>
+        </div>
+        <div style="font-size:11px;color:#bbb;" id="audrViewNote">Vista atual: Lista de processos</div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="fin-table" style="width:100%;">
-          <thead><tr><th>Cliente</th><th>Tipo</th><th>Fase Atual</th><th>Responsável Atual</th><th>Zona Esperada</th><th>Responsável Esperado</th><th style="text-align:center;">Status</th><th></th></tr></thead>
-          <tbody id="audrTableBody"><tr><td colspan="8" style="text-align:center;padding:32px;color:#aaa;">Clique em ↺ Atualizar para carregar a auditoria.</td></tr></tbody>
-        </table>
+
+      <!-- Vista: Lista -->
+      <div id="audrListaContainer">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
+          <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+            <option value="ERRADO">❌ Somente errados</option>
+            <option value="">Todos</option>
+            <option value="CORRETO">✅ Somente corretos</option>
+            <option value="NAO_MAPEADO">⚪ Não mapeados</option>
+          </select>
+          <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
+            <option value="">Todas as zonas</option>
+            <option value="MARILIA">🟢 Zona Marília</option>
+            <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
+            <option value="CAU">🟡 Zona Cau</option>
+            <option value="TAMMYRES">🟣 Zona Tammyres</option>
+            <option value="EDUARDO">⚫ Zona Eduardo</option>
+          </select>
+          <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;"><option value="">Todos os responsáveis</option></select>
+          <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="fin-table" style="width:100%;">
+            <thead><tr><th>Cliente</th><th>Tipo</th><th>Fase Atual</th><th>Responsável Atual</th><th>Zona Esperada</th><th>Responsável Esperado</th><th style="text-align:center;">Status</th><th></th></tr></thead>
+            <tbody id="audrTableBody"><tr><td colspan="8" style="text-align:center;padding:32px;color:#aaa;">Clique em ↺ Atualizar para carregar a auditoria.</td></tr></tbody>
+          </table>
+        </div>
+        <div style="text-align:center;margin-top:8px;" id="audrLoadMore"></div>
       </div>
-      <div style="text-align:center;margin-top:8px;" id="audrLoadMore"></div>
+
+      <!-- Vista: Kanban -->
+      <div id="audrKanbanContainer" style="display:none;">
+        <div class="audr-kanban-filters">
+          <select id="audrKbTipoFiltro" class="reg-filter" onchange="renderAuditKanban()" style="font-size:12px;">
+            <option value="">Todos os tipos</option>
+          </select>
+          <select id="audrKbDestinoFiltro" class="reg-filter" onchange="renderAuditKanban()" style="font-size:12px;">
+            <option value="">Todos os destinos</option>
+            <option value="MARILIA">🟢 Para Ana Marília</option>
+            <option value="LETICIA_OU_ALICE">🔵 Para Letícia/Alice</option>
+            <option value="CAU">🟡 Para Claudiana (Cau)</option>
+            <option value="TAMMYRES">🟣 Para Tammyres</option>
+            <option value="EDUARDO">⚫ Para Eduardo</option>
+          </select>
+          <span id="audrKbStats" style="font-size:11px;color:#888;margin-left:4px;"></span>
+        </div>
+        <div class="audr-kanban-board" id="audrKanbanBoard"></div>
+      </div>
+
+      <!-- Vista: Histórico -->
+      <div id="audrHistoricoContainer" style="display:none;padding:4px 0;">
+        <div id="audrHistoricoContent"><div class="audr-hist-empty">Clique em "Histórico" para carregar.</div></div>
+      </div>
+
       <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">ⓘ Somente processos ativos. 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo. Cache 20 min.</div>
     </div>
 
@@ -2996,6 +3100,8 @@
 
     let _audrData     = null; // cache da resposta do backend
     let _audrPage     = 1;
+    let _audrKanbanView = 'lista';
+    let _audrResolved = new Set(); // IDs marcados como passados nesta sessão
     const AUDR_PER_PAGE = 60;
 
     const AUDR_ZONE_LABEL_FE = {
@@ -3055,27 +3161,30 @@
       const el = document.getElementById('audrByPerson');
       const title = document.getElementById('audrByPersonTitle');
       if (!el) return;
-      const errados = byPerson.filter(p => p.errado > 0);
+      const errados = byPerson.filter(p => p.errado > 0).sort((a,b) => b.errado - a.errado);
       if (title) title.textContent = `— ${errados.length} pessoa${errados.length !== 1 ? 's' : ''} com processos errados`;
-      if (!errados.length) { el.innerHTML = '<div style="padding:12px;color:#aaa;font-size:13px;">Nenhum erro encontrado!</div>'; return; }
-      el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">` +
-        errados.map(p => {
-          const zones = Object.entries(p.errosPorZona || {})
-            .sort((a,b)=>b[1]-a[1])
-            .map(([z, cnt]) => `<span style="font-size:11px;color:#888;">${AUDR_ZONE_LABEL_FE[z]||z}: ${cnt}</span>`)
-            .join(' · ');
-          const pct = p.total > 0 ? Math.round(p.errado / p.total * 100) : 0;
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fff9f9;border-radius:8px;border-left:4px solid #e05252;flex-wrap:wrap;gap:4px;">
-            <div>
-              <div style="font-weight:600;font-size:13px;">${p.responsible}</div>
-              <div style="margin-top:2px;">${zones}</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:1.3rem;font-family:'DM Serif Display',serif;color:#b02020;">${p.errado}</div>
-              <div style="font-size:11px;color:#888;">de ${p.total} (${pct}% errado)</div>
-            </div>
-          </div>`;
-        }).join('') + '</div>';
+      if (!errados.length) { el.innerHTML = '<div style="padding:12px;color:#aaa;font-size:13px;">Nenhum erro encontrado! ✅</div>'; return; }
+      const totalErros = errados.reduce((s, p) => s + p.errado, 0);
+      const maxErros = errados[0]?.errado || 1;
+      const medals = ['🥇','🥈','🥉'];
+      el.innerHTML = errados.map((p, i) => {
+        const pct = totalErros > 0 ? Math.round(p.errado / totalErros * 100) : 0;
+        const barPct = Math.round(p.errado / maxErros * 100);
+        const cls = i < 3 ? 'audr-rank-top' : (p.errado > 0 ? 'audr-rank-mid' : 'audr-rank-zero');
+        const barColor = i < 3 ? '#e05252' : '#f59e0b';
+        const pos = medals[i] || `${i+1}º`;
+        const destinos = Object.entries(p.errosPorZona || {}).sort((a,b)=>b[1]-a[1])
+          .map(([z,cnt]) => `${AUDR_ZONE_LABEL_FE[z]||z}: ${cnt}`).join(' · ');
+        const erradosItems = (_audrData?.items||[]).filter(it => it.status==='ERRADO' && it.responsible===p.responsible && !_audrResolved.has(String(it.id)));
+        return `<div class="audr-rank-item ${cls}">
+          <div class="audr-rank-pos">${pos}</div>
+          <div class="audr-rank-name">${p.responsible}<div style="font-size:10.5px;color:#aaa;font-weight:400;margin-top:2px;">${destinos}</div></div>
+          <div class="audr-rank-bar-wrap"><div class="audr-rank-bar" style="width:${barPct}%;background:${barColor};"></div></div>
+          <div class="audr-rank-count">${p.errado}</div>
+          <div class="audr-rank-pct">${pct}%</div>
+          <button class="audr-rank-btn" onclick="audrGerarCobranca(${JSON.stringify(p.responsible)}, ${JSON.stringify(erradosItems)})">📋 Lista</button>
+        </div>`;
+      }).join('');
     }
 
     function _renderAudrByStage(byStage) {
@@ -3165,6 +3274,262 @@
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
       a.download = 'auditoria-responsavel.csv';
       a.click();
+    }
+
+    // ── View toggle ──────────────────────────────────────────────────────────
+    function audrSetView(view) {
+      _audrKanbanView = view;
+      ['lista','kanban','historico'].forEach(v => {
+        const c = document.getElementById('audrBtn' + v.charAt(0).toUpperCase() + v.slice(1));
+        if (c) c.classList.toggle('active', v === view);
+        const el = document.getElementById('audr' + v.charAt(0).toUpperCase() + v.slice(1) + 'Container');
+        if (el) el.style.display = v === view ? '' : 'none';
+      });
+      const note = document.getElementById('audrViewNote');
+      if (note) note.textContent = view === 'lista' ? 'Vista atual: Lista de processos' : view === 'kanban' ? 'Vista atual: Kanban de pendências' : 'Vista atual: Histórico de ações';
+      if (view === 'kanban') renderAuditKanban();
+      if (view === 'historico') renderAuditHistorico();
+    }
+
+    // ── Kanban de Pendências ──────────────────────────────────────────────────
+    function renderAuditKanban() {
+      const board = document.getElementById('audrKanbanBoard');
+      if (!board) return;
+      if (!_audrData) { board.innerHTML = '<div class="audr-kanban-empty">Carregue a auditoria primeiro (botão ↺ Atualizar).</div>'; return; }
+
+      const tipoF    = (document.getElementById('audrKbTipoFiltro')?.value || '');
+      const destinoF = (document.getElementById('audrKbDestinoFiltro')?.value || '');
+
+      const errados = _audrData.items.filter(i =>
+        i.status === 'ERRADO' &&
+        !_audrResolved.has(String(i.id)) &&
+        (!tipoF || i.tipo === tipoF) &&
+        (!destinoF || i.expectedZone === destinoF)
+      );
+
+      // Popula filtro de tipo na primeira vez
+      const tipoSel = document.getElementById('audrKbTipoFiltro');
+      if (tipoSel && tipoSel.options.length <= 1) {
+        const tipos = [...new Set(_audrData.items.filter(i=>i.status==='ERRADO').map(i=>i.tipo).filter(Boolean))].sort();
+        tipoSel.innerHTML = '<option value="">Todos os tipos</option>' + tipos.map(t=>`<option>${t}</option>`).join('');
+      }
+
+      const stats = document.getElementById('audrKbStats');
+      if (stats) stats.textContent = `${errados.length} processo${errados.length!==1?'s':''} com erro`;
+
+      if (!errados.length) {
+        board.innerHTML = '<div class="audr-kanban-empty">Nenhum processo com erro nos filtros atuais. ✅</div>';
+        return;
+      }
+
+      // Agrupar por responsável (culpado)
+      const byResp = {};
+      for (const item of errados) {
+        const k = item.responsible || '(sem responsável)';
+        if (!byResp[k]) byResp[k] = [];
+        byResp[k].push(item);
+      }
+      const columns = Object.entries(byResp).sort((a,b) => b[1].length - a[1].length);
+
+      board.innerHTML = columns.map(([resp, items]) => {
+        // Agrupar por zona destino
+        const byDest = {};
+        for (const it of items) {
+          const d = it.expectedZone || 'NAO_MAPEADO';
+          if (!byDest[d]) byDest[d] = [];
+          byDest[d].push(it);
+        }
+        const destGroups = Object.entries(byDest).sort((a,b) => b[1].length - a[1].length);
+
+        const cardsHtml = destGroups.map(([zone, gitems]) => {
+          const zoneLabel = AUDR_ZONE_LABEL_FE[zone] || zone;
+          const zoneCls   = 'audr-zone-' + zone;
+          const groupHdr  = `<div class="audr-kanban-group-hdr ${zoneCls}"><span>→ Para ${zoneLabel}</span><span>${gitems.length}</span></div>`;
+          const cards = gitems.map(it => {
+            const safeIt = JSON.stringify(it).replace(/'/g,"&#39;");
+            return `<div class="audr-kanban-card" onclick='audrOpenDetailModal(${safeIt})'>
+              <div class="audr-kanban-card-cliente">${it.cliente}</div>
+              <div class="audr-kanban-card-tipo">${it.tipo || '—'}</div>
+              <div class="audr-kanban-card-fase">${it.stage || '—'}</div>
+              <div class="audr-kanban-card-dest">→ <strong>${zoneLabel}</strong></div>
+              <div class="audr-kanban-card-actions">
+                <button class="audr-kb-btn-ok" onclick="event.stopPropagation();audrMarkResolved('${it.id}',${safeIt})">✅ Passado</button>
+                <a href="${it.link}" target="_blank" class="audr-kb-btn-link" onclick="event.stopPropagation()">↗ AdvBox</a>
+              </div>
+            </div>`;
+          }).join('');
+          return groupHdr + cards;
+        }).join('');
+
+        const colItems = items;
+        const safeResp = JSON.stringify(resp);
+        const safeItems = JSON.stringify(colItems).replace(/'/g,"&#39;");
+        const initials = resp.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+        return `<div class="audr-kanban-col">
+          <div class="audr-kanban-col-header">
+            <div class="audr-kanban-col-title">
+              <div>
+                <span style="display:inline-flex;width:28px;height:28px;background:#111;color:#fff;border-radius:50%;font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-right:7px;">${initials}</span>
+                <span class="audr-kanban-col-name">${resp}</span>
+              </div>
+              <span class="audr-kanban-col-count">${items.length}</span>
+            </div>
+          </div>
+          <div class="audr-kanban-col-body">${cardsHtml}</div>
+          <div class="audr-kanban-col-footer">
+            <button class="audr-kb-btn-cobrar" onclick="audrGerarCobranca(${safeResp}, JSON.parse(this.dataset.items))" data-items='${safeItems}'>📋 Gerar lista de cobrança</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function audrOpenDetailModal(item) {
+      const html = `<div style="padding:4px;">
+        <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:12px;">${item.cliente}</div>
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+          ${[['Tipo',item.tipo||'—'],['Nº Processo',item.numero||'—'],['Fase Atual',item.stage||'—'],['Responsável Atual',item.responsible||'—'],['Deveria ir para',item.expectedRespLabel||'—'],['Status',item.status]].map(([k,v])=>`<tr><td style="padding:6px 4px;color:#888;font-size:12px;white-space:nowrap;">${k}</td><td style="padding:6px 4px;font-weight:500;">${v}</td></tr>`).join('')}
+        </table>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="${item.link}" target="_blank" class="dist-export-btn" style="text-decoration:none;">↗ Abrir no AdvBox</a>
+          <button class="dist-export-btn" style="background:#f0faf5;color:#166534;border:1px solid #bbf0d0;" onclick="audrMarkResolved('${item.id}',${JSON.stringify(item)});document.getElementById('audrDetailModal').style.display='none'">✅ Marcar como passado</button>
+        </div>
+      </div>`;
+      document.getElementById('audrDetailModalBody').innerHTML = html;
+      document.getElementById('audrDetailModal').style.display = 'flex';
+    }
+
+    function audrMarkResolved(id, item) {
+      if (!confirm(`Confirma que o processo de "${item.cliente||id}" foi passado para ${item.expectedRespLabel||'o destino correto'}?`)) return;
+      _audrResolved.add(String(id));
+      // Persistir no backend
+      fetch('/api/audit-responsible/resolve', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ lawsuitId: id, cliente: item.cliente, fase: item.stage, responsible: item.responsible, destinoZone: item.expectedZone, destinoLabel: item.expectedRespLabel })
+      }).catch(()=>{});
+      renderAuditKanban();
+      if (_audrData) _renderAudrByPerson(_audrData.byPerson);
+    }
+
+    function audrGerarCobranca(personName, items) {
+      const errados = items.filter(i => !_audrResolved.has(String(i.id)));
+      if (!errados.length) { alert('Nenhum processo pendente para ' + personName); return; }
+
+      // Agrupar por destino
+      const byDest = {};
+      for (const it of errados) {
+        const k = it.expectedZone || 'NAO_MAPEADO';
+        if (!byDest[k]) byDest[k] = [];
+        byDest[k].push(it);
+      }
+      const destGroups = Object.entries(byDest).sort((a,b)=>b[1].length-a[1].length);
+
+      let texto = `Olá ${personName.split(' ')[0]}, você tem ${errados.length} processo${errados.length!==1?'s':''} para repassar:\n`;
+      for (const [zone, gitems] of destGroups) {
+        const label = AUDR_ZONE_LABEL_FE[zone]?.replace(/^[^ ]+ /,'') || zone;
+        texto += `\nPARA ${label.toUpperCase()} — ${gitems.length} processo${gitems.length!==1?'s':''}:\n`;
+        texto += gitems.map(it => `- ${it.cliente} (${it.tipo||'—'}) — ${it.stage||'—'}`).join('\n');
+      }
+
+      const csvRows = [['Cliente','Tipo','Fase Atual','Responsável Atual','Deveria ir para'],
+        ...errados.map(i=>[i.cliente,i.tipo||'',i.stage||'',i.responsible||'',i.expectedRespLabel||''])];
+      const csv = csvRows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+
+      const modal = document.getElementById('audrCobrancaModal');
+      document.getElementById('audrCobrancaTitle').textContent = `Lista de cobrança — ${personName} (${errados.length} processos)`;
+      document.getElementById('audrCobrancaText').value = texto;
+      document.getElementById('audrCobrancaCsvBtn').onclick = () => {
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+        a.download = `cobranca-${personName.replace(/\s+/g,'-')}.csv`;
+        a.click();
+      };
+      document.getElementById('audrCobrancaCopyBtn').onclick = () => {
+        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✅ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='📋 Copiar',2000); });
+      };
+      modal.style.display = 'flex';
+      // Log no backend
+      fetch('/api/audit-responsible/cobranca-log', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ personName, quantidade: errados.length, detalhes: texto })
+      }).catch(()=>{});
+    }
+
+    function audrGerarCobrancaGeral() {
+      if (!_audrData) { alert('Carregue a auditoria primeiro.'); return; }
+      const errados = _audrData.items.filter(i => i.status==='ERRADO' && !_audrResolved.has(String(i.id)));
+      if (!errados.length) { alert('Nenhum processo com erro encontrado!'); return; }
+      // Agrupar por responsável, depois por destino
+      const byResp = {};
+      for (const it of errados) {
+        const k = it.responsible || '(sem responsável)';
+        if (!byResp[k]) byResp[k] = [];
+        byResp[k].push(it);
+      }
+      let texto = `📋 RELATÓRIO GERAL DE PENDÊNCIAS — ${errados.length} processos\n${'─'.repeat(50)}\n`;
+      for (const [resp, items] of Object.entries(byResp).sort((a,b)=>b[1].length-a[1].length)) {
+        texto += `\n${resp.toUpperCase()} — ${items.length} processo${items.length!==1?'s':''} a repassar:\n`;
+        const byDest = {};
+        for (const it of items) { const d=it.expectedZone||'—'; if(!byDest[d])byDest[d]=[]; byDest[d].push(it); }
+        for (const [zone, gitems] of Object.entries(byDest).sort((a,b)=>b[1].length-a[1].length)) {
+          const label = AUDR_ZONE_LABEL_FE[zone]?.replace(/^[^ ]+ /,'') || zone;
+          texto += `  Para ${label} (${gitems.length}):\n`;
+          texto += gitems.map(it=>`    - ${it.cliente} (${it.tipo||'—'}) — ${it.stage||'—'}`).join('\n') + '\n';
+        }
+      }
+      const modal = document.getElementById('audrCobrancaModal');
+      document.getElementById('audrCobrancaTitle').textContent = `Lista de cobrança geral (${errados.length} processos)`;
+      document.getElementById('audrCobrancaText').value = texto;
+      document.getElementById('audrCobrancaCsvBtn').onclick = () => {
+        const csv = [['Responsável Atual','Cliente','Tipo','Fase Atual','Deveria ir para'],
+          ...errados.map(i=>[i.responsible||'',i.cliente,i.tipo||'',i.stage||'',i.expectedRespLabel||''])];
+        const csvStr = csv.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csvStr);
+        a.download = 'cobranca-geral.csv'; a.click();
+      };
+      document.getElementById('audrCobrancaCopyBtn').onclick = () => {
+        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✅ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='📋 Copiar',2000); });
+      };
+      modal.style.display = 'flex';
+      fetch('/api/audit-responsible/cobranca-log', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ personName: 'GERAL', quantidade: errados.length, detalhes: `Relatório geral gerado` })
+      }).catch(()=>{});
+    }
+
+    async function renderAuditHistorico() {
+      const el = document.getElementById('audrHistoricoContent');
+      if (!el) return;
+      el.innerHTML = '<div class="audr-hist-empty">Carregando histórico…</div>';
+      try {
+        const data = await fetchJson('/api/audit-responsible/history');
+        const fmtDate = s => s ? new Date(s).toLocaleString('pt-BR',{timeZone:'America/Recife',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        const resolvedHtml = data.resolved.length
+          ? data.resolved.map(r=>`<div class="audr-hist-row">
+              <div><strong>${r.cliente||'—'}</strong> <span style="color:#888;font-size:11px;">${r.fase||''}</span></div>
+              <div style="text-align:right;"><span style="font-size:11px;color:#166534;background:#f0faf5;padding:2px 7px;border-radius:10px;">→ ${r.destino_label||r.destino_zone||'—'}</span><div style="font-size:10.5px;color:#aaa;margin-top:2px;">${fmtDate(r.resolved_at)}</div></div>
+            </div>`).join('')
+          : '<div class="audr-hist-empty">Nenhum processo marcado como passado ainda.</div>';
+
+        const cobHtml = data.cobrancas.length
+          ? data.cobrancas.map(c=>`<div class="audr-hist-row">
+              <div><strong>${c.person_name}</strong> — ${c.quantidade} processo${c.quantidade!==1?'s':''}</div>
+              <div style="font-size:10.5px;color:#aaa;">${fmtDate(c.logged_at)}</div>
+            </div>`).join('')
+          : '<div class="audr-hist-empty">Nenhuma lista de cobrança gerada ainda.</div>';
+
+        el.innerHTML = `
+          <div class="audr-hist-section">
+            <div class="audr-hist-title">✅ Processos marcados como passados (${data.resolved.length})</div>
+            ${resolvedHtml}
+          </div>
+          <div class="audr-hist-section">
+            <div class="audr-hist-title">📋 Listas de cobrança geradas (${data.cobrancas.length})</div>
+            ${cobHtml}
+          </div>`;
+      } catch (e) {
+        el.innerHTML = `<div class="audr-hist-empty">Erro ao carregar histórico: ${e.message}</div>`;
+      }
     }
 
     // ── MODAL DE FASES (diagnóstico) ─────────────────────────────────────────
@@ -5185,6 +5550,35 @@
       <div class="ar-modal-footer">
         <span id="arFooterCount"></span>
         <strong id="arFooterTotal"></strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detalhe do processo (auditoria kanban) -->
+  <div id="audrDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)document.getElementById('audrDetailModal').style.display='none'">
+    <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0;">
+        <div style="font-family:'DM Serif Display',serif;font-size:17px;">Detalhe do Processo</div>
+        <button onclick="document.getElementById('audrDetailModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1;">×</button>
+      </div>
+      <div id="audrDetailModalBody" style="padding:18px 20px;"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Lista de cobrança (auditoria) -->
+  <div id="audrCobrancaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)document.getElementById('audrCobrancaModal').style.display='none'">
+    <div style="background:#fff;border-radius:14px;max-width:600px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0;">
+        <div style="font-weight:700;font-size:14px;" id="audrCobrancaTitle">Lista de cobrança</div>
+        <button onclick="document.getElementById('audrCobrancaModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1;">×</button>
+      </div>
+      <div style="padding:16px 20px;">
+        <textarea id="audrCobrancaText" style="width:100%;height:300px;font-family:monospace;font-size:12px;border:1px solid #e5e5e5;border-radius:8px;padding:10px;resize:vertical;box-sizing:border-box;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button id="audrCobrancaCopyBtn" class="dist-export-btn" style="background:#111;color:#fff;">📋 Copiar</button>
+          <button id="audrCobrancaCsvBtn" class="dist-export-btn">📊 Exportar CSV</button>
+          <button onclick="document.getElementById('audrCobrancaModal').style.display='none'" class="dist-export-btn" style="background:#f5f5f5;color:#555;">Fechar</button>
+        </div>
       </div>
     </div>
   </div>

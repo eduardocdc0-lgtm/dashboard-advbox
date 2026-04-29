@@ -1,0 +1,100 @@
+Quero turbinar a tela de Auditoria de Responsável com 2 visualizações: ranking E kanban.
+
+CONTEXTO:
+A auditoria já está funcionando corretamente — detecta processos com a pessoa errada baseado na fase. A regra do escritório: cada pessoa tem um setor, cada setor cobre certas fases. Quem está com o processo deveria estar de acordo com a fase atual.
+
+REGRA DE CULPA (importante):
+Toda vez que um processo aparece como errado, o CULPADO é a pessoa que aparece em "Responsável Atual" — porque era responsabilidade dela passar pra próxima pessoa quando a fase mudou.
+
+O QUE PRECISO IMPLEMENTAR:
+
+==== PARTE 1: RANKING DE CULPADOS ====
+
+No topo da aba Auditoria, criar um ranking visual:
+
+- Nome da pessoa
+- Quantos processos errados estão sob responsabilidade dela (que ela deveria ter passado)
+- % do total de erros
+- Cor: vermelho (top 3 piores), amarelo (meio), verde (zero erros)
+- Ordenar do que mais errou pro que menos errou
+
+==== PARTE 2: VISUALIZAÇÃO KANBAN ====
+
+Criar uma nova visualização "📋 Kanban de Pendências" — pode ser um botão/aba que alterna entre "Lista" (visão atual) e "Kanban".
+
+ESTRUTURA DO KANBAN:
+
+- Cada COLUNA representa uma PESSOA que está segurando processos errados
+- Cabeçalho da coluna: foto/inicial da pessoa, nome, contador de processos pendentes
+- Cada CARD na coluna é um processo errado, mostrando:
+  * Nome do cliente
+  * Tipo de processo (Auxílio Doença, Benefício Assistencial, etc)
+  * Fase atual (em destaque)
+  * Pra quem deveria passar (com cor do setor: 🟡 Claudiana, 🟢 Ana Marília, 🔵 Letícia/Alice, 🟣 Tammyres, ⚫ Eduardo)
+  * Botão "✅ Marcar como passado" (que move o card pra um arquivo "Resolvidos hoje")
+
+LARGURA E SCROLL:
+- Cada coluna deve ter largura fixa (uns 280px)
+- Scroll horizontal pro caso de ter muitas pessoas
+- Scroll vertical dentro de cada coluna (porque pode ter dezenas de cards)
+
+ORDENAÇÃO DAS COLUNAS:
+- Da pessoa com MAIS processos pendentes pra menos
+- Pessoa sem nenhum erro não aparece no kanban
+
+ORDENAÇÃO DOS CARDS DENTRO DA COLUNA:
+- Por prioridade: agrupar primeiro pelos cards que vão pra mesma pessoa de destino
+- Tipo: na coluna do Thiago, primeiro todos os 19 que vão pra Claudiana, depois os 8 que vão pra Tammyres, etc.
+- Separar visualmente cada grupo com um mini-cabeçalho colorido tipo "→ Para Claudiana (19)"
+
+INTERAÇÕES:
+- Clicar em um card abre detalhes completos do processo (modal)
+- Botão "Marcar como passado" no card: confirma com modal "Confirma que esse processo foi passado pra [destino]?" e remove o card do kanban (registra em log)
+- Filtro no topo: "Mostrar apenas erros de tipo [todos / ADM / Judicial / Trabalhista / etc]"
+- Filtro no topo: "Filtrar por destino [todos / pra Claudiana / pra Ana Marília / etc]"
+
+==== PARTE 3: GERAR LISTA DE COBRANÇA ====
+
+Em cada coluna do kanban (e no ranking), botão "📋 Gerar lista de cobrança" que:
+- Abre modal com lista formatada
+- Botão "Copiar lista" pra colar no WhatsApp/email
+- Botão "Exportar CSV"
+
+Formato do texto copiado:
+"Olá [Nome], você tem [X] processos para repassar:
+
+PARA [DESTINO 1] — [N] processos:
+- [Cliente] ([Tipo]) — [Fase]
+- [Cliente] ([Tipo]) — [Fase]
+...
+
+PARA [DESTINO 2] — [N] processos:
+- [Cliente] ([Tipo]) — [Fase]
+..."
+
+==== PARTE 4: HISTÓRICO ====
+
+Toda vez que:
+- Clicar "Gerar lista de cobrança" — registra em log (data, pessoa cobrada, quantidade)
+- Clicar "Marcar como passado" no card — registra em log (data, processo, quem moveu)
+
+Criar uma sub-aba "📊 Histórico" mostrando:
+- Cobranças feitas (data, pessoa, quantidade de processos cobrados)
+- Processos resolvidos (data, processo, quem marcou como passado)
+
+==== PARTE 5: SINCRONIZAÇÃO COM O ADVBOX ====
+
+Quando um processo for "marcado como passado" no kanban, idealmente o sistema deveria:
+- Verificar se de fato a mudança ocorreu no AdvBox (próxima sincronização)
+- Se não ocorreu em 24h, voltar o card pro kanban com um aviso "❌ Não foi efetivamente passado no AdvBox"
+
+Se essa parte de sincronização for complexa, sinaliza pra mim antes de implementar.
+
+==== ANTES DE COMEÇAR ====
+
+Confirme:
+1. Que entendeu a lógica de "culpado = quem está com o processo"
+2. Como vai estruturar o kanban tecnicamente (componente novo? biblioteca?)
+3. Se a sincronização da Parte 5 é viável
+
+Depois de implementar tudo, dê Republish e me confirme. Vou testar com a equipe.
