@@ -6,6 +6,7 @@ const express       = require('express');
 const path          = require('path');
 const cookieSession = require('cookie-session');
 
+const cron       = require('node-cron');
 const { errorHandler } = require('../../middleware/errorHandler');
 const { migrate }  = require('../../services/db');
 const apiRoutes    = require('./routes/index');
@@ -89,4 +90,27 @@ migrate().then(() => {
     if (!process.env.ADVBOX_TOKEN)   console.warn('ATENÇÃO: ADVBOX_TOKEN não configurado.');
     if (!process.env.DATABASE_URL)   console.warn('ATENÇÃO: DATABASE_URL não configurado — leads desativados.');
   });
+
+  // ── Cron: mensagens de aniversário — 09:00 America/Recife (desativado por padrão) ──
+  cron.schedule('0 9 * * *', async () => {
+    try {
+      const { getConfig, processarAniversariantesHoje } = require('../../services/birthday');
+      const { fetchCustomers } = require('../../services/data');
+      const enabled = await getConfig();
+      if (!enabled) {
+        console.log('[Cron Birthday] Envio automático desativado — pulando.');
+        return;
+      }
+      console.log('[Cron Birthday] Iniciando envio de aniversários...');
+      const customers = await fetchCustomers();
+      const resultados = await processarAniversariantesHoje(customers);
+      const ok   = resultados.filter(r => r.status === 'sent').length;
+      const fail = resultados.filter(r => r.status === 'failed').length;
+      console.log(`[Cron Birthday] Concluído — ${ok} enviados, ${fail} falhas.`);
+    } catch (err) {
+      console.error('[Cron Birthday] Erro:', err.message);
+    }
+  }, { timezone: 'America/Recife' });
+
+  console.log('[Cron Birthday] Agendado para 09:00 America/Recife (ativar via painel).');
 });

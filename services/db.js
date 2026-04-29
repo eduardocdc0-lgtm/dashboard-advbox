@@ -51,6 +51,26 @@ async function migrate() {
     `);
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS birthday_messages_log (
+        id            SERIAL PRIMARY KEY,
+        client_id     INTEGER,
+        client_name   VARCHAR(500),
+        client_phone  VARCHAR(50),
+        variation_used SMALLINT,
+        sent_at       TIMESTAMP DEFAULT NOW(),
+        status        VARCHAR(20) NOT NULL DEFAULT 'sent',
+        error_message TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_bml_sent_at   ON birthday_messages_log(sent_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_bml_client_id ON birthday_messages_log(client_id);
+
+      CREATE TABLE IF NOT EXISTS app_config (
+        key   VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+
+    await pool.query(`
       CREATE OR REPLACE FUNCTION update_updated_at()
       RETURNS TRIGGER AS $$
       BEGIN NEW.updated_at = NOW(); RETURN NEW; END;

@@ -8,10 +8,18 @@ const cache  = require('../cache');
 cache
   .define('lawsuits',     20 * 60 * 1000)
   .define('transactions', 30 * 60 * 1000)
+  .define('customers',    30 * 60 * 1000)
   .define('flow',         20 * 60 * 1000);
 
 async function fetchLawsuits(force = false) {
   return cache.getOrFetch('lawsuits', () => client.getAllLawsuits(), force);
+}
+
+async function fetchCustomers(force = false) {
+  return cache.getOrFetch('customers', async () => {
+    const data = await client.getCustomers(1000);
+    return Array.isArray(data) ? data : (data.data || []);
+  }, force);
 }
 
 async function fetchTransactions(force = false) {
@@ -41,4 +49,4 @@ async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 600) {
   return all;
 }
 
-module.exports = { fetchLawsuits, fetchTransactions, fetchAllPosts, client };
+module.exports = { fetchLawsuits, fetchCustomers, fetchTransactions, fetchAllPosts, client };

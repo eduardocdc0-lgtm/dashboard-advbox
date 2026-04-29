@@ -13,5 +13,6 @@ router.use(require('./meta'));
 router.use(require('./registrations'));
 router.use(require('./audit'));
 router.use(require('./webhook'));
+router.use(require('./birthday'));
 
 module.exports = router;

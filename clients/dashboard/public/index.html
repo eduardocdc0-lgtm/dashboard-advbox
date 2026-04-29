@@ -1043,6 +1043,7 @@
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
       <button class="tab admin-tab" onclick="showTab('leads', event)">Leads</button>
+      <button class="tab admin-tab" onclick="showTab('aniversarios', event)">🎂 Aniversários</button>
       <button class="tab admin-tab" onclick="showTab('admin', event)">⚙ Admin</button>
     </div>
 
@@ -1824,6 +1825,51 @@
       <div style="font-size:11px;color:#bbb;margin-top:6px;">ⓘ Clique em "Limpar Cache" para forçar atualização de todos os dados na próxima requisição.</div>
     </div>
 
+    <!-- ABA: ANIVERSÁRIOS -->
+    <div id="aniversarios" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🎂 Aniversários</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="bdUpdatedAt">—</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+            <div id="bdAutoToggle" onclick="toggleBdAuto()"
+              style="width:44px;height:24px;border-radius:12px;background:#ccc;position:relative;cursor:pointer;transition:background .2s;">
+              <div id="bdAutoKnob" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>
+            </div>
+            <span id="bdAutoLabel" style="color:#888;">Envio automático desativado</span>
+          </label>
+          <button class="refresh-btn" onclick="loadBirthday(true)">↺ Atualizar</button>
+          <button class="logout-btn" onclick="sendAllBirthdays()" id="bdSendAllBtn" style="display:none;">📤 Enviar todos hoje</button>
+        </div>
+      </div>
+
+      <!-- Aniversariantes do dia -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">
+        Aniversariantes de Hoje
+      </div>
+      <div id="bdHojeList" style="margin-bottom:32px;">
+        <div class="loading">Carregando...</div>
+      </div>
+
+      <!-- Histórico -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">
+        Histórico de Envios
+      </div>
+      <div id="bdHistoricoWrap" style="overflow-x:auto;margin-bottom:32px;">
+        <div class="loading">Carregando...</div>
+      </div>
+
+      <!-- Preview das variações -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6B6B6B;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #D4D4D4;">
+        Prévia das 4 Variações
+      </div>
+      <div id="bdPreviewWrap" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:32px;">
+        <div class="loading">Carregando...</div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -1840,6 +1886,7 @@
       if (name === 'auditresp' && !_audrData)         loadAuditResp();
       if (name === 'admin'     && !window._adminData) loadAdmin();
       if (name === 'leads')                           loadLeads();
+      if (name === 'aniversarios')                   loadBirthday();
     }
 
     function showError(msg) {
@@ -4954,11 +5001,171 @@
           applyRole(me.role);
           loadAll();
         }
-        // Se não logado, overlay já está visível — aguarda o usuário fazer login
-      } catch (e) {
-        // silencioso — overlay continua visível
-      }
+      } catch (e) {}
     })();
+
+    // ── ANIVERSÁRIOS ─────────────────────────────────────────────────────────
+    let _bdAutoEnabled = false;
+    let _bdLoaded = false;
+
+    async function loadBirthday(force = false) {
+      if (_bdLoaded && !force) return;
+      _bdLoaded = true;
+      document.getElementById('bdUpdatedAt').textContent = 'Carregando…';
+      try {
+        const [hoje, historico, config, preview] = await Promise.all([
+          fetchJson('/api/birthday/hoje'),
+          fetchJson('/api/birthday/historico'),
+          fetchJson('/api/birthday/config'),
+          fetchJson('/api/birthday/preview'),
+        ]);
+        _bdAutoEnabled = config.auto_enabled;
+        renderBdToggle(_bdAutoEnabled);
+        renderBdHoje(hoje.data || []);
+        renderBdHistorico(historico.data || []);
+        renderBdPreview(preview.data || []);
+        document.getElementById('bdUpdatedAt').textContent =
+          'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const sendAllBtn = document.getElementById('bdSendAllBtn');
+        if (sendAllBtn) sendAllBtn.style.display = (hoje.total > 0) ? '' : 'none';
+      } catch (e) {
+        console.error('birthday:', e);
+        document.getElementById('bdUpdatedAt').textContent = 'Erro ao carregar';
+      }
+    }
+
+    function renderBdToggle(enabled) {
+      const toggle = document.getElementById('bdAutoToggle');
+      const knob   = document.getElementById('bdAutoKnob');
+      const label  = document.getElementById('bdAutoLabel');
+      if (enabled) {
+        toggle.style.background = '#000';
+        knob.style.left = '22px';
+        label.style.color = '#000';
+        label.textContent = 'Envio automático ativado';
+      } else {
+        toggle.style.background = '#ccc';
+        knob.style.left = '2px';
+        label.style.color = '#888';
+        label.textContent = 'Envio automático desativado';
+      }
+    }
+
+    async function toggleBdAuto() {
+      _bdAutoEnabled = !_bdAutoEnabled;
+      renderBdToggle(_bdAutoEnabled);
+      try {
+        await fetch('/api/birthday/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ auto_enabled: _bdAutoEnabled }),
+        });
+      } catch (e) {
+        console.error('toggleBdAuto:', e);
+        _bdAutoEnabled = !_bdAutoEnabled;
+        renderBdToggle(_bdAutoEnabled);
+      }
+    }
+
+    function renderBdHoje(lista) {
+      const el = document.getElementById('bdHojeList');
+      if (!lista.length) {
+        el.innerHTML = '<div style="color:#aaa;font-size:13px;padding:24px 0;">Nenhum aniversariante ativo hoje.</div>';
+        return;
+      }
+      el.innerHTML = lista.map(c => {
+        const nome  = c.name || '—';
+        const phone = c.cellphone || c.phone || '—';
+        const bday  = c.birthdate || '—';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:600;font-size:14px;">${nome}</div>
+            <div style="font-size:12px;color:#888;">${phone} · ${bday}</div>
+          </div>
+          <button class="refresh-btn" onclick="sendOneBirthday(${c.id}, this)" style="white-space:nowrap;">
+            📤 Enviar agora
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    async function sendOneBirthday(clientId, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      try {
+        const r = await fetchJson('/api/birthday/send/' + clientId);
+        if (r.status === 'sent') {
+          btn.textContent = '✓ Enviado';
+          btn.style.color = 'green';
+        } else {
+          btn.textContent = '✗ Falhou';
+          btn.style.color = 'red';
+          alert('Erro ao enviar: ' + (r.errorMsg || 'desconhecido'));
+        }
+      } catch (e) {
+        btn.textContent = '✗ Erro';
+        btn.style.color = 'red';
+        alert('Erro: ' + e.message);
+        btn.disabled = false;
+      }
+    }
+
+    async function sendAllBirthdays() {
+      if (!confirm('Enviar mensagem de aniversário para todos os aniversariantes de hoje?')) return;
+      const btn = document.getElementById('bdSendAllBtn');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      try {
+        const r = await fetchJson('/api/birthday/send-all');
+        const ok   = (r.results || []).filter(x => x.status === 'sent').length;
+        const fail = (r.results || []).filter(x => x.status === 'failed').length;
+        alert(`Concluído: ${ok} enviados, ${fail} falhas.`);
+        _bdLoaded = false;
+        loadBirthday();
+      } catch (e) {
+        alert('Erro: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📤 Enviar todos hoje';
+      }
+    }
+
+    function renderBdHistorico(rows) {
+      const el = document.getElementById('bdHistoricoWrap');
+      if (!rows.length) {
+        el.innerHTML = '<div style="color:#aaa;font-size:13px;padding:24px 0;">Nenhum envio registrado ainda.</div>';
+        return;
+      }
+      el.innerHTML = `<table class="fin-table" style="width:100%;">
+        <thead><tr>
+          <th>Data</th><th>Cliente</th><th>Telefone</th>
+          <th>Variação</th><th>Status</th><th>Erro</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td style="white-space:nowrap;">${new Date(r.sent_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${r.client_name || '—'}</td>
+            <td>${r.client_phone || '—'}</td>
+            <td style="text-align:center;">${r.variation_used || '—'}</td>
+            <td><span style="font-weight:600;color:${r.status==='sent'?'green':'red'}">${r.status==='sent'?'✓ Enviado':'✗ Falhou'}</span></td>
+            <td style="font-size:11px;color:#c00;">${r.error_message || ''}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    }
+
+    function renderBdPreview(previews) {
+      const el = document.getElementById('bdPreviewWrap');
+      el.innerHTML = previews.map(p => `
+        <div style="border:1px solid #e0e0e0;border-radius:10px;padding:16px;background:#fafafa;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#888;margin-bottom:10px;">
+            Variação ${p.variacao}
+          </div>
+          <pre style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#222;margin:0;">${p.texto}</pre>
+        </div>
+      `).join('');
+    }
+    // ── FIM ANIVERSÁRIOS ─────────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->

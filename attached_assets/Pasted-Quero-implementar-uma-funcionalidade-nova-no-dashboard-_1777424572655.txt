@@ -1,0 +1,90 @@
+Quero implementar uma funcionalidade nova no dashboard: envio automático de mensagem de aniversário para clientes ativos, via API do ChatGuru.
+
+CONTEXTO:
+- O dashboard já tem a lista de clientes do AdvBox (atualmente 551 clientes na aba "Clientes")
+- Já tem a aba "Aniversariantes do mês" funcionando — então a data de nascimento de cada cliente já está no sistema
+- A API do ChatGuru já está integrada e funcionando no projeto Guru-Api-Hub (mesma conta, mesmo workspace Replit)
+- Endpoint correto da API do ChatGuru: https://s22.chatguru.app/api/v1
+- O número que vai enviar é o da BASE: 5581999304526, phone_id: 685583d868af7cad8a92d601
+- Account ID: 68556125935dd1f4daa66113
+- API Key: ADXKASEXXTAKDOB1DOR5A1J5OS0Q84GTIO59BAZGEX5DOV4XDQO528FLKHFY7CJJ
+
+O QUE PRECISO QUE VOCÊ FAÇA:
+
+1. Crie um cron job (job agendado) que rode TODO DIA às 09:00 (horário de Recife / America/Recife).
+
+2. O cron job deve:
+   a. Buscar todos os clientes ATIVOS do AdvBox (com processo ativo) que fazem aniversário NA DATA DE HOJE (mesmo dia e mês — ignorar o ano).
+   b. Para cada aniversariante, montar uma mensagem usando UMA das 4 variações abaixo, escolhida ALEATORIAMENTE para cada cliente (pra não parecer robô — clientes que se conheçam não recebem texto idêntico).
+   c. Substituir [Primeiro Nome] pelo primeiro nome do cliente (só o primeiro nome, não o completo).
+   d. Enviar a mensagem via API do ChatGuru, usando o número da Base (phone_id 685583d868af7cad8a92d601).
+
+3. AS 4 VARIAÇÕES DA MENSAGEM (mantenha exatamente como estão, com quebras de linha e emoji):
+
+VARIAÇÃO 1:
+[Primeiro Nome], bom dia! 🎂
+
+Só passando pra te desejar um feliz aniversário e um dia muito especial.
+
+Que Deus te abençoe e que esse novo ano seja repleto de boas notícias.
+
+Abraço!
+Eduardo
+
+VARIAÇÃO 2:
+Bom dia, [Primeiro Nome]!
+
+Passei aqui só pra te desejar um feliz aniversário. 🎉
+
+Que esse novo ciclo venha cheio de saúde, paz e boas conquistas pra você e pra sua família.
+
+Forte abraço,
+Eduardo
+
+VARIAÇÃO 3:
+Oi, [Primeiro Nome]! Tudo bem?
+
+Hoje é seu aniversário e eu não podia deixar passar sem te mandar um abraço. 🎂
+
+Que Deus te abençoe nesse novo ano e que venha cheio de coisa boa.
+
+Abraço,
+Eduardo
+
+VARIAÇÃO 4:
+[Primeiro Nome], feliz aniversário! 🎉
+
+Que esse seu novo ano seja muito especial, com saúde, paz e realizações.
+
+Um forte abraço,
+Eduardo
+
+4. Crie uma tabela no banco chamada "birthday_messages_log" para registrar TODOS os envios, com os campos:
+   - id
+   - client_id
+   - client_name
+   - client_phone
+   - variation_used (1, 2, 3 ou 4)
+   - sent_at (timestamp)
+   - status ("sent" ou "failed")
+   - error_message (se falhar)
+
+5. Adicione uma nova aba/tela no dashboard chamada "🎂 Aniversários" onde eu posso:
+   - Ver os aniversariantes do dia atual com botão "Enviar agora" ao lado de cada um (envio manual)
+   - Ver histórico de mensagens de aniversário enviadas (data, cliente, status, qual variação foi usada)
+   - Ativar/desativar o envio automático (toggle)
+   - Visualizar prévia das 4 variações
+
+6. Tratamento de erros:
+   - Se um envio falhar, registre o erro no log e CONTINUE com os próximos (não pare a fila inteira por causa de um erro).
+   - Aguarde 2 segundos entre cada envio para não sobrecarregar a API do ChatGuru.
+   - Se a API do ChatGuru retornar erro de "conta não encontrada" para algum cliente, registre no log e siga em frente (esse cliente provavelmente nunca conversou com a gente no WhatsApp).
+
+7. Antes de implementar, me confirme:
+   - Onde no banco está a data de nascimento dos clientes
+   - Como você vai identificar "cliente ativo" (qual campo do AdvBox indica isso)
+   - Se a integração com a API do ChatGuru já existe nesse projeto ou se você vai precisar criar do zero (se precisar criar, use exatamente as credenciais que passei acima)
+
+8. Depois de implementar:
+   - Rode um teste enviando para 1 cliente (eu te falo qual número usar pra teste)
+   - NÃO ative o cron job automático ainda — deixe ele só pronto pra ativar depois que eu confirmar que tudo funciona
