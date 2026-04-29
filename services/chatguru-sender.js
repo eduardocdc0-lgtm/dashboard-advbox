@@ -23,9 +23,10 @@ function cleanPhone(raw) {
 }
 
 function buildSendDate(offsetMs = 70 * 1000) {
-  const d   = new Date(Date.now() + offsetMs);
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const d = new Date(Date.now() + offsetMs);
+  // ChatGuru interpreta send_date no fuso horário de Brasília (UTC-3 / America/Recife)
+  const str = d.toLocaleString('sv-SE', { timeZone: 'America/Recife' }); // "YYYY-MM-DD HH:MM:SS"
+  return str.slice(0, 16); // "YYYY-MM-DD HH:MM"
 }
 
 async function sendWhatsApp(toPhone, message, phoneId) {
