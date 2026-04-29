@@ -1,0 +1,56 @@
+// POST /api/chatguru/send-message
+router.post("/send-message", async (req: Request, res: Response) => {
+  const { chatNumber, message, whatsappNumberId } = req.body ?? {};
+  if (!chatNumber || !message) {
+    res.status(400).json({ ok: false, error: "chatNumber e message são obrigatórios" });
+    return;
+  }
+  try {
+    // Resolve o phone_id: preferir o cadastrado no número de WhatsApp, senão usa env
+    let resolvedPhoneId = PHONE_ID; // fallback do env CHATGURU_PHONE_ID
+    if (whatsappNumberId) {
+      const [waNum] = await db.select().from(whatsappNumbersTable)
+        .where(eq(whatsappNumbersTable.id, Number(whatsappNumberId))).limit(1);
+      if (waNum?.chatguruPhoneId) {
+        resolvedPhoneId = waNum.chatguruPhoneId;
+      }
+    }
+    if (!resolvedPhoneId) {
+      res.status(400).json({ ok: false, error: "phone_id não configurado." });
+      return;
+    }
+    // Agenda 1 minuto no futuro (exigência da API ChatGuru)
+    const sendDate = new Date(Date.now() + 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const sendDateStr = `${sendDate.getFullYear()}-${pad(sendDate.getMonth() + 1)}-${pad(sendDate.getDate())} ${pad(sendDate.getHours())}:${pad(sendDate.getMinutes())}`;
+    const params = new URLSearchParams({
+      key: API_KEY,
+      account_id: ACCOUNT_ID,
+      phone_id: resolvedPhoneId,
+      action: "message_send",
+      chat_number: chatNumber,
+      text: message,
+      send_date: sendDateStr,
+    });
+    const response = await fetch(`${CHATGURU_API}?${params}`, { method: "POST" });
+    // CHATGURU_API = "https://s22.chatguru.app/api/v1"
+    
+    const raw = (await response.json()) as Record<string, unknown>;
+    const ok = raw.result === "success" || raw.code === 201 || raw.code === 200;
+    res.json({
+      ok,
+      messageId: raw.message_id ?? null,
+      status: raw.message_status ?? null,
+      error: ok ? undefined : (raw.description ?? "Erro desconhecido"),
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "Erro ao enviar mensagem" });
+  }
+});
+
+Pontos importantes que a outra aba precisa saber:
+
+Endpoint ChatGuru: https://s22.chatguru.app/api/v1 (servidor específico da conta, não o genérico app.zap.guru)
+send_date obrigatório: a API exige agendamento mínimo de 1 minuto no futuro no formato YYYY-MM-DD HH:MM
+phone_id: dois números cadastrados — Comercial (69499a1760fb30c550cd39b7) e Base (685583d868af7cad8a92d601)
+Sucesso quando raw.result === "success" OU raw.code === 201/200
