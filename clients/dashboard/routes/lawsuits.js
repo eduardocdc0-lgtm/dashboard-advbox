@@ -5,7 +5,13 @@ const router = Router();
 
 router.get('/lawsuits', async (req, res, next) => {
   try {
-    res.json(await fetchLawsuits(req.query.force === '1'));
+    const lawsuits = await fetchLawsuits(req.query.force === '1');
+    const arr = Array.isArray(lawsuits) ? lawsuits : (lawsuits.data || []);
+    res.json({
+      data:       arr,
+      total:      arr.length,
+      totalCount: arr.length,
+    });
   } catch (err) { next(err); }
 });
 

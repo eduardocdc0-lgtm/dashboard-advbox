@@ -5,7 +5,13 @@ const router = Router();
 
 router.get('/transactions', async (req, res, next) => {
   try {
-    res.json(await fetchTransactions(req.query.force === '1'));
+    const result = await fetchTransactions(req.query.force === '1');
+    const arr = Array.isArray(result) ? result : (result.data || []);
+    res.json({
+      data:       arr,
+      total:      arr.length,
+      totalCount: arr.length,
+    });
   } catch (err) { next(err); }
 });
 
