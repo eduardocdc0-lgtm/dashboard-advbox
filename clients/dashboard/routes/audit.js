@@ -77,11 +77,16 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
 const AUDR_SKIP_STAGES = ['IGNORAR ESSA ETAPA'];
 
 const AUDR_ZONES = {
-  MARILIA:          ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','PROTOCOLADO','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS','SALARIO MATERNIDADE GUIA PAGA','SALARIO MATERNIDADE 5 7 MESES','SALARIO MATERNIDADE 3 5 MESES','SALARIO MATERNIDADE 1 A 3 MESES','SALARIO MATERNIDADE','CANCELADO REQUERIMENTO','PERICIA MEDICA MARCADA'],
+  MARILIA:          ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','PROTOCOLADO','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','PERICIAS MARCADAS','EM ANALISE PERICIAS FEITAS','SALARIO MATERNIDADE GUIA PAGA','SALARIO MATERNIDADE 5 7 MESES','SALARIO MATERNIDADE 3 5 MESES','SALARIO MATERNIDADE 1 A 3 MESES','SALARIO MATERNIDADE','CANCELADO REQUERIMENTO'],
   LETICIA_OU_ALICE: ['ELABORAR PETICAO INICIAL','SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA','COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL','AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA','PROCEDENTE EM PARTE FAZER RECURSO','IMPROCEDENTE CABE RECURSO','DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO INICIADO','APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO','RECURSO JULGADO ENTRE EM CONTATO','TRANSITO EM JULGADO NAO CABE RECURSO'],
   CAU:              ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER','ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO','ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE','ARQUIVADO POR DETERMINACAO JUDICIAL','BENEFICIO CONCEDIDO AGUARDAR','ARQUIVADO ENCERRADO'],
   TAMMYRES:         ['FALTA LAUDO FAZER PREVDOC','FALTA LAUDO','PREVDOC'],
   EDUARDO:          ['TRABALHISTA'],
+};
+
+// Fases válidas para MÚLTIPLAS zonas — qualquer uma delas está correto
+const AUDR_MULTI_ZONES = {
+  'PERICIA MEDICA MARCADA': ['MARILIA', 'LETICIA_OU_ALICE'],
 };
 
 const AUDR_ZONE_LABEL = { MARILIA: 'Ana Marília', LETICIA_OU_ALICE: 'Letícia ou Alice', CAU: 'Claudiana (Cau)', TAMMYRES: 'Tammyres', EDUARDO: 'Eduardo' };
@@ -91,6 +96,10 @@ function audrNorm(s) { return (s || '').toUpperCase().normalize('NFD').replace(/
 const AUDR_STAGE_MAP = {};
 for (const [zone, stages] of Object.entries(AUDR_ZONES)) stages.forEach(s => { AUDR_STAGE_MAP[audrNorm(s)] = zone; });
 
+// Mapa normalizado de fases multi-zona
+const AUDR_MULTI_MAP = {};
+for (const [stage, zones] of Object.entries(AUDR_MULTI_ZONES)) AUDR_MULTI_MAP[audrNorm(stage)] = zones;
+
 function audrZoneForStage(stage) {
   const n = audrNorm(stage);
   if (AUDR_STAGE_MAP[n]) return AUDR_STAGE_MAP[n];
@@ -99,6 +108,16 @@ function audrZoneForStage(stage) {
     const mW4 = mapped.split(' ').slice(0, 4).join(' ');
     if (nW4 === mW4 && nW4.length > 5) return zone;
     if (n.startsWith(mapped) || mapped.startsWith(n)) return zone;
+  }
+  return null;
+}
+
+// Retorna array de zonas válidas para fases compartilhadas, ou null
+function audrMultiZonesForStage(stage) {
+  const n = audrNorm(stage);
+  if (AUDR_MULTI_MAP[n]) return AUDR_MULTI_MAP[n];
+  for (const [mapped, zones] of Object.entries(AUDR_MULTI_MAP)) {
+    if (n.startsWith(mapped) || mapped.startsWith(n)) return zones;
   }
   return null;
 }
@@ -133,12 +152,37 @@ router.get('/audit-responsible', requireAdmin, async (req, res, next) => {
         const actualZone   = audrZoneForResp(responsible);
         const clienteNome  = (Array.isArray(l.customers) && l.customers[0]?.name) || '—';
 
-        let status;
-        if (!expectedZone) { status = 'NAO_MAPEADO'; totalNaoMapeados++; }
-        else {
+        const multiZones = audrMultiZonesForStage(stage);
+        let status, expectedZoneDisplay, expectedRespLabelDisplay;
+
+        if (multiZones) {
+          // Fase válida para múltiplas zonas
+          totalAuditados++;
+          const isCorrect = actualZone && multiZones.includes(actualZone);
+          status = isCorrect ? 'CORRETO' : 'ERRADO';
+          expectedZoneDisplay    = multiZones[0]; // zona principal para exibição
+          expectedRespLabelDisplay = multiZones.map(z => AUDR_ZONE_LABEL[z]).join(' ou ');
+          if (isCorrect) { totalCorretos++; }
+          else {
+            totalErrados++;
+            const rk = responsible || '(sem responsável)';
+            if (!byPerson[rk]) byPerson[rk] = { responsible: rk, total: 0, correto: 0, errado: 0, errosPorZona: {} };
+            byPerson[rk].total++; byPerson[rk].errado++;
+            byPerson[rk].errosPorZona[expectedZoneDisplay] = (byPerson[rk].errosPorZona[expectedZoneDisplay] || 0) + 1;
+            const sk = audrNorm(stage);
+            if (!byStage[sk]) byStage[sk] = { stage, expectedZone: expectedZoneDisplay, total: 0, errado: 0, respAtualMap: {} };
+            byStage[sk].total++; byStage[sk].errado++;
+            byStage[sk].respAtualMap[responsible] = (byStage[sk].respAtualMap[responsible] || 0) + 1;
+          }
+        } else if (!expectedZone) {
+          status = 'NAO_MAPEADO'; totalNaoMapeados++;
+          expectedZoneDisplay = null; expectedRespLabelDisplay = null;
+        } else {
           totalAuditados++;
           const isCorrect = expectedZone === 'LETICIA_OU_ALICE' ? actualZone === 'LETICIA_OU_ALICE' : actualZone === expectedZone;
           status = isCorrect ? 'CORRETO' : 'ERRADO';
+          expectedZoneDisplay = expectedZone;
+          expectedRespLabelDisplay = AUDR_ZONE_LABEL[expectedZone];
           if (isCorrect) { totalCorretos++; }
           else {
             totalErrados++;
@@ -152,7 +196,7 @@ router.get('/audit-responsible', requireAdmin, async (req, res, next) => {
             byStage[sk].respAtualMap[responsible] = (byStage[sk].respAtualMap[responsible] || 0) + 1;
           }
         }
-        items.push({ id: l.id, cliente: clienteNome, numero: l.code || l.process_number || '', tipo: l.type || '', stage, responsible, expectedZone: expectedZone || null, expectedRespLabel: expectedZone ? AUDR_ZONE_LABEL[expectedZone] : null, actualZone: actualZone || null, status, link: `https://app.advbox.com.br/lawsuit/${l.id}` });
+        items.push({ id: l.id, cliente: clienteNome, numero: l.code || l.process_number || '', tipo: l.type || '', stage, responsible, expectedZone: expectedZoneDisplay, expectedRespLabel: expectedRespLabelDisplay, actualZone: actualZone || null, status, link: `https://app.advbox.com.br/lawsuit/${l.id}` });
       }
 
       const byPersonArr = Object.values(byPerson).sort((a, b) => b.errado - a.errado);
