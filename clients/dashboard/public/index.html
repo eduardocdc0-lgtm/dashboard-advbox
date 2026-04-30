@@ -1483,6 +1483,15 @@
         <div class="ar-card" style="background:#f8f8f8;border-color:#e5e5e5;"><div class="ar-card-label">Não mapeados</div><div class="ar-card-count" id="audrNaoMapN" style="color:#999;">—</div><div class="ar-card-sub">fase desconhecida</div></div>
         <div class="ar-card" style="background:#fffbea;border-color:#fde68a;"><div class="ar-card-label">Taxa de acerto</div><div class="ar-card-count" id="audrTaxaN" style="color:#92400e;">—</div><div class="ar-card-sub">conformidade</div></div>
       </div>
+      <!-- Erros por Responsável -->
+      <div style="margin-bottom:16px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:14px 16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-weight:700;font-size:13px;">⚠️ Erros por Responsável <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></div>
+          <button onclick="audrGerarCobrancaGeral()" style="font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Gerar lista de cobrança geral</button>
+        </div>
+        <div id="audrByPerson"></div>
+      </div>
+
       <!-- Resumo por Fase -->
       <details style="margin-bottom:14px;">
         <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
@@ -3250,6 +3259,9 @@
         if (sel) sel.innerHTML = '<option value="">Todos os responsáveis</option>' +
           resps.map(r => `<option>${r}</option>`).join('');
 
+        // Erros por Responsável
+        _renderAudrByPerson(data.byPerson);
+
         // Resumo por Fase
         _renderAudrByStage(data.byStage);
 
@@ -3262,6 +3274,39 @@
       } finally {
         if (loadEl) loadEl.style.display = 'none';
       }
+    }
+
+    function _renderAudrByPerson(byPerson) {
+      const el = document.getElementById('audrByPerson');
+      const title = document.getElementById('audrByPersonTitle');
+      if (!el) return;
+      const errados = byPerson.filter(p => p.errado > 0).sort((a,b) => b.errado - a.errado);
+      if (title) title.textContent = `— ${errados.length} pessoa${errados.length !== 1 ? 's' : ''} com processos errados`;
+      if (!errados.length) { el.innerHTML = '<div style="padding:8px 0;color:#aaa;font-size:13px;">Nenhum erro encontrado! ✅</div>'; return; }
+      el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="border-bottom:1px solid #e5e5e5;">
+          <th style="text-align:left;padding:6px 10px;font-weight:600;color:#555;">Responsável</th>
+          <th style="text-align:center;padding:6px 10px;font-weight:600;color:#555;">Erros</th>
+          <th style="text-align:left;padding:6px 10px;font-weight:600;color:#555;">Destinos</th>
+          <th style="text-align:right;padding:6px 10px;"></th>
+        </tr></thead>
+        <tbody>${errados.map(p => {
+          const destinos = Object.entries(p.errosPorZona || {}).sort((a,b)=>b[1]-a[1])
+            .map(([z,cnt]) => `${AUDR_ZONE_LABEL_FE[z]||z}: ${cnt}`).join(' · ');
+          const erradosItems = (_audrData?.items||[]).filter(it => it.status==='ERRADO' && it.responsible===p.responsible && !_audrResolved.has(String(it.id)));
+          return `<tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:8px 10px;font-weight:600;">${p.responsible}</td>
+            <td style="padding:8px 10px;text-align:center;color:#b02020;font-weight:700;">${p.errado}</td>
+            <td style="padding:8px 10px;font-size:11px;color:#888;">${destinos || '—'}</td>
+            <td style="padding:8px 10px;text-align:right;">
+              <button onclick="audrGerarCobranca(${JSON.stringify(p.responsible)}, ${JSON.stringify(erradosItems)})"
+                style="font-size:11px;padding:4px 10px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                📋 Lista
+              </button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
     }
 
     function _renderAudrByStage(byStage) {
@@ -3484,6 +3529,7 @@
         body: JSON.stringify({ lawsuitId: id, cliente: item.cliente, fase: item.stage, responsible: item.responsible, destinoZone: item.expectedZone, destinoLabel: item.expectedRespLabel })
       }).catch(()=>{});
       renderAuditKanban();
+      if (_audrData) _renderAudrByPerson(_audrData.byPerson);
     }
 
     function audrGerarCobranca(personName, items) {
