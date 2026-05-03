@@ -109,6 +109,20 @@ clients/
 - Distribuição carrega 2 segundos após o restante para evitar race com /api/lawsuits
 - Evitar: chamar `/history/{id}` para todos os processos (lento + rate limited)
 
+## Seção "💸 ROI por Campanha" (aba Meta Ads, admin-only)
+- Fica abaixo da tabela de campanhas existente — sem remover nada
+- Período: Este mês / Mês passado / Últimos 30 dias / Últimos 90 dias
+- Fonte Meta: endpoint `/insights` da Graph API (reusa META_TOKEN + META_AD_ACCOUNT)
+- Fonte AdvBox: `fetchLawsuits` (cache 20 min) — filtra por `created_at` no período, extrai `customers[].origin` + `fees_expec`/`fees_money`
+- Matching: normStr(campanha Meta) vs normStr(cliente.origin) — exato e parcial
+- Fallback: se 0 matches por campanha → ROAS agregado usando origens "TRAFEGO PAGO/INSTAGRAM/GOOGLE"
+- KPIs: Investido / Receita Contratada / ROAS (verde ≥3, amarelo 1-3, vermelho <1) / CPA
+- Tabela: Campanha | Gasto | Leads | Contratos | Receita | ROAS | CPL | CPA | Cruzamento badge
+- Bloco "⚠️ Campanhas sem cruzamento" com lista e instrução para preencher Origem no AdvBox
+- Dropdown colapsável com breakdown de todas as origens AdvBox do período
+- Aviso de clientes sem origem preenchida (atribuição perdida)
+- Rota: `clients/dashboard/routes/campaign-roi.js` · GET `/api/meta/campaign-roi?period=this_month|last_month|last_30d|last_90d`
+
 ## Bloco "💰 Caixa — Próximos Dias" (topo da aba Financeiro, admin-only)
 - Toggle: 7 / 15 / 30 dias
 - Fonte: reutiliza `fetchTransactions` (cache 30 min) — filtra `entry_type=income`, `date_payment=null`, `date_due <= hoje+N`

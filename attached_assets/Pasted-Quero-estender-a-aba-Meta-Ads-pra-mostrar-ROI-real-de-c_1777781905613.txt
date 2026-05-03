@@ -1,0 +1,84 @@
+Quero estender a aba "Meta Ads" pra mostrar ROI real de cada campanha — cruzando o gasto no Meta Ads com os contratos fechados que vieram daquela campanha.
+
+OBJETIVO
+Hoje a aba Meta Ads mostra: investimento, impressões, cliques, custo/WhatsApp.
+Mas NÃO mostra: quantos contratos fecharam, quanto faturaram, qual o ROAS de verdade.
+Quero uma seção nova chamada "💸 ROI por Campanha" abaixo do que já existe.
+
+ACESSO
+- Admin only.
+
+BACKEND — ROTA E DADOS
+
+1. Cria rota GET /api/meta/campaign-roi
+   - Query params: period (this_month default, last_30d, last_90d, custom range)
+   
+2. Fonte: 
+   - GASTO/leads/cliques: Meta Ads API (já usa)
+   - CONTRATOS/RECEITA: AdvBox API — busca contratos onde "origem" / "campanha" bate com nome da campanha do Meta
+   
+3. CHAVE DE CRUZAMENTO: o nome da campanha.
+   - O AdvBox tem campo "Origem do lead" ou "Campanha" preenchido na hora de cadastrar o cliente (regra interna do escritório).
+   - Tenta match exato primeiro. Se não, normaliza (lowercase, remove emojis, remove acentos) e tenta de novo.
+   - Se nem assim cruzar, mostra a campanha numa seção "⚠️ Não cruzadas" com link pra ajustar manual.
+   
+4. Resposta JSON:
+   {
+     "period": "this_month",
+     "totals": {
+       "spent": 8500.00,
+       "leads": 312,
+       "qualified": 198,
+       "contracts": 47,
+       "revenue": 84200.00,
+       "roas": 9.91,
+       "cpl": 27.24,
+       "cpa": 180.85
+     },
+     "by_campaign": [
+       {
+         "name": "Auxílio Doença - SP",
+         "spent": 2400.00,
+         "leads": 95,
+         "qualified": 64,
+         "contracts": 18,
+         "revenue": 32400,
+         "roas": 13.5,
+         "cpl": 25.26,
+         "cpa": 133.33,
+         "matched": true
+       },
+       ...
+     ],
+     "unmatched_meta_campaigns": ["Nome da campanha que não cruzou"]
+   }
+
+FRONTEND
+
+Adiciona uma seção NOVA na aba Meta Ads, abaixo da tabela atual (sem mexer na tabela atual):
+
+Título "💸 ROI por Campanha (período X)"
+
+1. KPIs do período no topo (4 cards lado a lado):
+   - Investido / Receita / ROAS / CPA
+   - Cor verde se ROAS >= 3, amarelo entre 1-3, vermelho < 1
+   
+2. Tabela "ROI por Campanha":
+   Colunas: Campanha | Gasto | Leads | Qualificados | Contratos | Receita | ROAS | CPL | CPA
+   Ordenada por ROAS desc
+   Linha verde se ROAS >= 3, vermelha se < 1
+   Footer com totais
+   
+3. Bloco "⚠️ Campanhas Meta sem cruzamento":
+   Lista as campanhas do Meta que não cruzaram com nenhum contrato no AdvBox
+   Botão por linha "Vincular manualmente" (abre modal pra mapear nome — pode ser fase 2, OK deixar TODO)
+
+4. Filtros: período (mesmo padrão das outras abas)
+
+CUIDADOS
+- Performance: se for pesado pegar TODOS os contratos do AdvBox + filtrar por origem, considere cachear.
+- Atribuição: usa "origem do lead" / "campanha" do contrato no AdvBox — NÃO tenta atribuir por data ou outros heurísticos malucos. Se não tem o campo preenchido, conta como "atribuição perdida" (mostra count separado).
+- Receita: usa o valor de honorários CONTRATADO (não recebido) — porque ROAS conta o que foi vendido, não o que já caiu na conta. Se quiser, mostra os dois.
+- Padroniza nome da campanha: trim, lowercase, remove emojis e acentos pra matching.
+
+Quando terminar, republish e me avisa.

@@ -17,5 +17,6 @@ router.use(require('./birthday'));
 router.use(require('./inss-conference'));
 router.use(require('./petitions'));
 router.use(require('./cash-flow'));
+router.use(require('./campaign-roi'));
 
 module.exports = router;

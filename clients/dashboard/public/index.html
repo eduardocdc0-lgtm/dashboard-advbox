@@ -792,6 +792,14 @@
     .audit-btn-cobrar:hover { background:#333; }
     .audit-btn-advbox { font-size:11px;color:#555;text-decoration:none;border:1px solid #ddd;padding:4px 10px;border-radius:5px; }
     .audit-btn-advbox:hover { background:#f5f5f5; }
+    /* ── ROI por Campanha ── */
+    .roi-roas-green  { color:#2d7a2d;font-weight:700; }
+    .roi-roas-yellow { color:#b07800;font-weight:700; }
+    .roi-roas-red    { color:#c0392b;font-weight:700; }
+    .roi-row-green   { background:#f5fff5; }
+    .roi-row-red     { background:#fff5f5; }
+    .roi-badge-ok    { display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#e8f5e9;color:#2d7a2d;letter-spacing:.04em; }
+    .roi-badge-no    { display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#fff3e0;color:#b07800;letter-spacing:.04em; }
     /* ── Caixa Próximos Dias ── */
     .cf-days-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
     .cf-days-btn.active { background:#111;color:#fff; }
@@ -1859,6 +1867,81 @@
       </div>
 
       <div id="metaUpdatedAt" style="font-size:11px;color:#888;margin-top:10px;text-align:right;"></div>
+
+      <!-- ── ROI por Campanha (admin-only) ── -->
+      <div class="admin-only" id="roiBlock" style="margin-top:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">💸 ROI por Campanha</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="roiPeriod" class="reg-filter" onchange="loadCampaignRoi()" style="font-size:12px;">
+              <option value="this_month" selected>Este mês</option>
+              <option value="last_month">Mês passado</option>
+              <option value="last_30d">Últimos 30 dias</option>
+              <option value="last_90d">Últimos 90 dias</option>
+            </select>
+            <button onclick="loadCampaignRoi(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
+          </div>
+        </div>
+
+        <div id="roiMetaErr" style="display:none;background:#fff5f5;border:1px solid #fcd;border-radius:8px;padding:10px 14px;font-size:12px;color:#b02020;margin-bottom:12px;"></div>
+
+        <div id="roiLoading" style="text-align:center;padding:32px;color:#aaa;font-size:13px;">Carregando ROI...</div>
+
+        <div id="roiContent" style="display:none;">
+          <!-- KPIs -->
+          <div class="metrics" style="margin-bottom:16px;">
+            <div class="metric-card">
+              <div class="metric-label">Investido</div>
+              <div class="metric-value" id="roiKpiSpent">—</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Receita Contratada</div>
+              <div class="metric-value success" id="roiKpiRevenue">—</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">ROAS</div>
+              <div class="metric-value" id="roiKpiRoas">—</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CPA (Custo/Contrato)</div>
+              <div class="metric-value" id="roiKpiCpa">—</div>
+            </div>
+          </div>
+
+          <div id="roiAttrNote" style="font-size:11px;color:#aaa;margin-bottom:12px;"></div>
+
+          <!-- Tabela ROI -->
+          <div class="card" style="padding:0;margin-bottom:14px;">
+            <table class="fin-table" id="roiTable">
+              <thead>
+                <tr>
+                  <th>Campanha</th>
+                  <th style="text-align:right;">Gasto</th>
+                  <th style="text-align:right;">Leads</th>
+                  <th style="text-align:right;">Contratos</th>
+                  <th style="text-align:right;">Receita</th>
+                  <th style="text-align:right;">ROAS</th>
+                  <th style="text-align:right;">CPL</th>
+                  <th style="text-align:right;">CPA</th>
+                  <th style="text-align:center;">Cruzamento</th>
+                </tr>
+              </thead>
+              <tbody id="roiTbody"></tbody>
+              <tfoot id="roiFoot"></tfoot>
+            </table>
+          </div>
+
+          <!-- Sem cruzamento -->
+          <div id="roiUnmatched" style="display:none;"></div>
+
+          <!-- Origens AdvBox no período -->
+          <div id="roiOrigins" style="margin-top:14px;"></div>
+
+          <div id="roiAttrLost" style="margin-top:8px;font-size:11px;color:#bbb;"></div>
+        </div>
+      </div>
+      <!-- ── FIM ROI por Campanha ── -->
+
     </div>
 
     <!-- ABA 7: CADASTROS PENDENTES -->
@@ -2260,6 +2343,7 @@
       if (name === 'inssConf')                        inssSubTab('conferencia');
       if (name === 'petitions' && !_petData)          loadPetitions();
       if (name === 'financial' && !_cfData)           loadCashFlow();
+      if (name === 'metaads'  && !_roiData)           loadCampaignRoi();
       if (name === 'aniversarios')                   loadBirthday();
     }
 
@@ -6178,6 +6262,162 @@
     }
 
     // ── FIM CAIXA PRÓXIMOS DIAS ───────────────────────────────────────────────
+
+    // ── ROI POR CAMPANHA ──────────────────────────────────────────────────────
+
+    let _roiData = null;
+
+    async function loadCampaignRoi(force = false) {
+      if (_roiData && !force) return;
+      document.getElementById('roiLoading').style.display  = '';
+      document.getElementById('roiContent').style.display  = 'none';
+      document.getElementById('roiMetaErr').style.display  = 'none';
+
+      try {
+        const period = document.getElementById('roiPeriod')?.value || 'this_month';
+        const r = await fetch(`/api/meta/campaign-roi?period=${period}${force ? '&force=1' : ''}`);
+        if (!r.ok) throw new Error(await r.text());
+        _roiData = await r.json();
+        renderCampaignRoi();
+      } catch (e) {
+        document.getElementById('roiLoading').style.display  = 'none';
+        document.getElementById('roiMetaErr').style.display  = '';
+        document.getElementById('roiMetaErr').textContent    = '❌ Erro ao carregar ROI: ' + e.message;
+      }
+    }
+
+    function renderCampaignRoi() {
+      if (!_roiData) return;
+      document.getElementById('roiLoading').style.display = 'none';
+      document.getElementById('roiContent').style.display = '';
+
+      const { totals, by_campaign, unmatched_meta_campaigns, meta_error,
+              attribution_lost, origin_breakdown, range } = _roiData;
+
+      // Aviso de erro Meta (mas continua mostrando lado AdvBox)
+      if (meta_error) {
+        document.getElementById('roiMetaErr').style.display = '';
+        document.getElementById('roiMetaErr').innerHTML =
+          `⚠️ <strong>Meta Ads API:</strong> ${meta_error}` +
+          (by_campaign.length === 0
+            ? ' — Tabela de campanhas indisponível. Dados AdvBox mostrados abaixo.'
+            : '');
+      }
+
+      const fmt  = v => formatMoney(v);
+      const fmtN = v => Number(v).toLocaleString('pt-BR');
+
+      // KPIs
+      const roasClass = totals.roas >= 3 ? 'roi-roas-green' : totals.roas >= 1 ? 'roi-roas-yellow' : 'roi-roas-red';
+      document.getElementById('roiKpiSpent').textContent   = fmt(totals.spent);
+      document.getElementById('roiKpiRevenue').textContent = fmt(totals.revenue);
+      document.getElementById('roiKpiRoas').innerHTML      = `<span class="${roasClass}">${totals.roas > 0 ? totals.roas.toFixed(2)+'x' : '—'}</span>`;
+      document.getElementById('roiKpiCpa').textContent     = totals.cpa > 0 ? fmt(totals.cpa) : '—';
+
+      // Nota de modo de atribuição
+      const attrEl = document.getElementById('roiAttrNote');
+      if (totals.attribution_mode === 'aggregate_paid') {
+        attrEl.innerHTML = `ℹ️ Sem cruzamento por campanha — ROAS calculado sobre total <strong>TRAFEGO PAGO</strong> (${fmtN(totals.paid_aggregate.count)} contratos · ${fmt(totals.paid_aggregate.revenue)}). Para ativar atribuição por campanha, preencha o nome exato da campanha no campo <em>Origem</em> do cliente no AdvBox.`;
+      } else {
+        attrEl.textContent = '';
+      }
+
+      // Tabela de campanhas
+      const period = document.getElementById('roiPeriod')?.value || 'this_month';
+      const periodLbl = { this_month: 'este mês', last_month: 'mês passado', last_30d: 'últimos 30 dias', last_90d: 'últimos 90 dias' };
+      let rows = '';
+      if (by_campaign.length > 0) {
+        rows = by_campaign.map(c => {
+          const rowCls = c.matched && c.roas >= 3 ? 'roi-row-green' : c.matched && c.roas < 1 && c.roas > 0 ? 'roi-row-red' : '';
+          const roas   = c.roas > 0 ? `<span class="${c.roas >= 3 ? 'roi-roas-green' : c.roas >= 1 ? 'roi-roas-yellow' : 'roi-roas-red'}">${c.roas.toFixed(2)}x</span>` : '—';
+          const badge  = c.matched ? '<span class="roi-badge-ok">✓ Cruzado</span>' : '<span class="roi-badge-no">Sem cruzamento</span>';
+          const nameShort = c.name.length > 42 ? `<span title="${c.name}">${c.name.slice(0, 40)}…</span>` : c.name;
+          return `<tr class="${rowCls}">
+            <td>${nameShort}</td>
+            <td style="text-align:right;">${fmt(c.spend)}</td>
+            <td style="text-align:right;">${fmtN(c.leads)}</td>
+            <td style="text-align:right;">${fmtN(c.contracts)}</td>
+            <td style="text-align:right;">${c.revenue > 0 ? fmt(c.revenue) : '—'}</td>
+            <td style="text-align:right;">${roas}</td>
+            <td style="text-align:right;">${c.cpl > 0 ? fmt(c.cpl) : '—'}</td>
+            <td style="text-align:right;">${c.cpa > 0 ? fmt(c.cpa) : '—'}</td>
+            <td style="text-align:center;">${badge}</td>
+          </tr>`;
+        }).join('');
+
+        // Footer com totais
+        const tRoas = totals.roas > 0 ? `<span class="${totals.roas >= 3 ? 'roi-roas-green' : totals.roas >= 1 ? 'roi-roas-yellow' : 'roi-roas-red'}">${totals.roas.toFixed(2)}x</span>` : '—';
+        document.getElementById('roiFoot').innerHTML = `<tr style="border-top:2px solid #e5e5e5;font-weight:700;font-size:11px;">
+          <td>TOTAL</td>
+          <td style="text-align:right;">${fmt(totals.spent)}</td>
+          <td style="text-align:right;">${fmtN(totals.leads)}</td>
+          <td style="text-align:right;">${fmtN(totals.contracts)}</td>
+          <td style="text-align:right;">${totals.revenue > 0 ? fmt(totals.revenue) : '—'}</td>
+          <td style="text-align:right;">${tRoas}</td>
+          <td></td>
+          <td style="text-align:right;">${totals.cpa > 0 ? fmt(totals.cpa) : '—'}</td>
+          <td></td>
+        </tr>`;
+      } else {
+        rows = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#aaa;font-size:12px;">
+          ${meta_error ? 'Meta Ads indisponível — sem campanhas para exibir.' : 'Nenhuma campanha no período.'}
+        </td></tr>`;
+        document.getElementById('roiFoot').innerHTML = '';
+      }
+      document.getElementById('roiTbody').innerHTML = rows;
+
+      // Bloco "Sem cruzamento"
+      const unmEl = document.getElementById('roiUnmatched');
+      if (unmatched_meta_campaigns && unmatched_meta_campaigns.length > 0) {
+        unmEl.style.display = '';
+        unmEl.innerHTML = `<div class="card" style="border-left:3px solid #e6a817;padding:14px 16px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;">⚠️ Campanhas Meta sem cruzamento (${unmatched_meta_campaigns.length})</div>
+          <div style="font-size:12px;color:#555;margin-bottom:10px;">Estas campanhas não têm nenhum cliente com <em>Origem</em> igual ao nome da campanha no AdvBox. Para vincular, cadastre novos clientes com a origem preenchida exatamente igual ao nome da campanha.</div>
+          <ul style="margin:0;padding-left:18px;font-size:12px;color:#555;line-height:1.8;">
+            ${unmatched_meta_campaigns.map(n => `<li><code style="background:#f5f5f5;padding:1px 5px;border-radius:3px;">${n}</code></li>`).join('')}
+          </ul>
+        </div>`;
+      } else {
+        unmEl.style.display = 'none';
+      }
+
+      // Origens AdvBox no período (tabela de breakdown)
+      const origEl = document.getElementById('roiOrigins');
+      if (origin_breakdown && Object.keys(origin_breakdown).length > 0) {
+        const rows2 = Object.entries(origin_breakdown)
+          .sort((a, b) => b[1].revenue - a[1].revenue)
+          .map(([, v]) => `<tr>
+            <td style="font-size:12px;padding:5px 10px 5px 0;">${v.raw}</td>
+            <td style="font-size:12px;padding:5px 10px;text-align:right;">${fmtN(v.count)}</td>
+            <td style="font-size:12px;padding:5px 10px;text-align:right;">${fmt(v.revenue)}</td>
+          </tr>`).join('');
+        origEl.innerHTML = `<details style="margin-top:4px;">
+          <summary style="font-size:12px;font-weight:600;color:#555;cursor:pointer;padding:6px 0;">📊 Origens AdvBox no período (${range?.since?.slice(0,7)||''}) — ${Object.keys(origin_breakdown).length} tipos</summary>
+          <div style="margin-top:10px;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead><tr style="border-bottom:1px solid #e5e5e5;font-size:10px;color:#888;text-transform:uppercase;">
+                <th style="padding:4px 10px 4px 0;text-align:left;">Origem</th>
+                <th style="padding:4px 10px;text-align:right;">Contratos</th>
+                <th style="padding:4px 10px;text-align:right;">Receita Contratada</th>
+              </tr></thead>
+              <tbody>${rows2}</tbody>
+            </table>
+          </div>
+        </details>`;
+      } else {
+        origEl.innerHTML = '';
+      }
+
+      // Attribution lost
+      if (attribution_lost > 0) {
+        document.getElementById('roiAttrLost').textContent =
+          `⚠️ ${attribution_lost} cliente(s) sem origem preenchida no AdvBox — receita não atribuída.`;
+      } else {
+        document.getElementById('roiAttrLost').textContent = '';
+      }
+    }
+
+    // ── FIM ROI POR CAMPANHA ──────────────────────────────────────────────────
 
     // ── PETIÇÕES ──────────────────────────────────────────────────────────────
 
