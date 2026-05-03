@@ -19,9 +19,12 @@ const USERS = {
   [process.env.TEAM_USER  || 'time']:    { password: process.env.TEAM_PASS  || '', role: 'team'  },
 };
 
+if (!process.env.SESSION_SECRET) throw new Error('SESSION_SECRET não configurado. Adicione em Secrets.');
+if (!process.env.READ_API_KEY)   console.warn('ATENÇÃO: READ_API_KEY não configurada — autenticação por API Key desativada.');
+
 app.use(cookieSession({
   name:     'advsess',
-  secret:   process.env.SESSION_SECRET || 'advbox-sess-secret-2025',
+  secret:   process.env.SESSION_SECRET,
   maxAge:   12 * 60 * 60 * 1000,
   httpOnly: true,
   sameSite: 'lax',
