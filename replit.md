@@ -109,6 +109,15 @@ clients/
 - Distribuição carrega 2 segundos após o restante para evitar race com /api/lawsuits
 - Evitar: chamar `/history/{id}` para todos os processos (lento + rate limited)
 
+## Aba Petições ("🧾 Petições") — visível a todos os perfis
+- Filtro de período: Hoje / Ontem / Esta semana / Este mês
+- Fonte: endpoint `/posts` do AdvBox, identificação por heurística de palavras-chave no campo `task`
+- Palavras-chave: PETIÇÃO, RECURSO, AJUIZAR, PROTOCOLAR, CUMPRIMENTO DE SENTENÇA, INICIAL, CONTESTAÇÃO, MANIFESTAÇÃO, IMPUGNAÇÃO
+- KPI total grande (64px), cards por pessoa (inicial + nome + contagem + badges de tipo), gráfico de barras horizontal (Chart.js), tabela detalhada colapsível
+- Filtro por responsável (admin-only visível) + clicar no card filtra a tabela
+- Exportar CSV (admin-only)
+- Rota: `clients/dashboard/routes/petitions.js` · GET `/api/petitions/by-person?period=today|yesterday|this_week|this_month`
+
 ## Conferência INSS × AdvBox (aba admin "🔍 Conf. INSS")
 - Upload de até 3 arquivos .docx (EM ANÁLISE, EM EXIGÊNCIA, CONCLUÍDOS)
 - Leitura com `mammoth`; extração de nomes via padrão CPF (linha anterior ao CPF é o nome)

@@ -1,0 +1,60 @@
+Quero adicionar uma nova aba/página no app chamada "🧾 Petições" entre "Movimentações" e "Financeiro" no menu lateral.
+
+OBJETIVO
+A página mostra quantas petições cada responsável fez (HOJE / ONTEM / ESTA SEMANA / ESTE MÊS). É a métrica de produtividade da equipe jurídica.
+
+ACESSO
+- Admin: vê TUDO (todos os responsáveis, totais consolidados, drill-down completo)
+- Team (Thiago, Tammyres, etc): vê APENAS as próprias petições (filtrar pelo usuário logado). Reusa o mesmo padrão de admin-only que já existe no projeto.
+
+BACKEND — ROTA E DADOS
+
+1. Cria a rota GET /api/petitions/by-person
+   - Query params: period (today | yesterday | this_week | this_month), responsible (opcional, nome)
+   - Default: period=today
+   
+2. Fonte de dados: AdvBox API.
+   - Use o cliente AdvBox que JÁ EXISTE no código (não crie novo). Procure no projeto por funções tipo getMovimentacoes / fetchAndamentos / similar.
+   - Filtra movimentações por TIPO = "Petição" (ou equivalente — verifica como o AdvBox tipa isso, pode ser "Andamento" com subtipo "Peça Processual").
+   - Agrupa por responsável e conta.
+   
+3. Resposta JSON (exemplo):
+   {
+     "period": "today",
+     "total": 12,
+     "by_person": [
+       { "name": "Maria Alice", "count": 4, "types": { "Inicial": 2, "Recurso": 1, "Cumprimento": 1 } },
+       { "name": "Letícia Stephany", "count": 6, "types": { "Inicial": 3, "Manifestação": 3 } },
+       { "name": "Claudiana", "count": 2, "types": { "Recurso": 2 } }
+     ]
+   }
+
+FRONTEND — PÁGINA /petitions
+
+Layout topo-pra-baixo:
+1. Header com título "🧾 Petições" + filtro de período (botões: Hoje | Ontem | Esta semana | Este mês)
+2. KPI grande: TOTAL de petições no período (número grande, fonte 48px)
+3. Cards por pessoa em grid responsivo (3 colunas desktop, 1 mobile):
+   - Foto/inicial + nome
+   - Número grande de petições no período
+   - Mini-breakdown por tipo (badges coloridos)
+4. Gráfico de barras horizontal: Pessoa × quantidade (use Chart.js, que o app já usa)
+5. Tabela detalhada (colapsível, fechada por padrão):
+   - Colunas: Cliente | Tipo de Petição | Processo | Responsável | Data/Hora
+   - Ordenada por data desc
+
+INTERAÇÃO
+- Clicar num card de pessoa → filtra a tabela só por aquela pessoa
+- Botão "📊 Exportar CSV" reusando o componente já existente
+- Botão "↺ Atualizar" forçando refetch
+- Cache: usa o mesmo padrão de cache que outras páginas (provavelmente memória + TTL)
+
+CUIDADOS
+- NÃO crie um novo cliente HTTP pro AdvBox. Reusa o que já existe.
+- NÃO crie nova classe CSS. Reusa as existentes (cards, tabelas, botões).
+- Se a API do AdvBox não tiver tipo "Petição" claro, identifica com algum filtro razoável (palavra-chave no título do andamento, etc.) e DEIXA UM COMENTÁRIO no código explicando a heurística pra eu ajustar depois.
+- Performance: se buscar petições do mês inteiro for pesado, paginar/cachear.
+- O menu lateral existente: posiciona "🧾 Petições" entre "Movimentações" e "Financeiro".
+- Verifica que admin-only não esconde a página inteira pra team — só esconde colunas/cards de OUTRAS pessoas. Team enxerga só ele mesmo.
+
+Quando terminar, faz republish e me avisa.

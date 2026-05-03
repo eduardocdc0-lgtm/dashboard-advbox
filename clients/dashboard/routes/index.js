@@ -15,5 +15,6 @@ router.use(require('./audit'));
 router.use(require('./webhook'));
 router.use(require('./birthday'));
 router.use(require('./inss-conference'));
+router.use(require('./petitions'));
 
 module.exports = router;

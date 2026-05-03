@@ -792,6 +792,16 @@
     .audit-btn-cobrar:hover { background:#333; }
     .audit-btn-advbox { font-size:11px;color:#555;text-decoration:none;border:1px solid #ddd;padding:4px 10px;border-radius:5px; }
     .audit-btn-advbox:hover { background:#f5f5f5; }
+    /* ── Petições ── */
+    .pet-period-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .pet-period-btn.active { background:#111;color:#fff; }
+    .pet-period-btn:hover:not(.active) { background:#e8e8e8; }
+    .pet-person-card { background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px 16px;cursor:pointer;transition:box-shadow .15s,border-color .15s; }
+    .pet-person-card:hover,.pet-person-card.selected { border-color:#111;box-shadow:0 4px 14px rgba(0,0,0,.09); }
+    .pet-person-initial { width:42px;height:42px;border-radius:50%;background:#111;color:#fff;font-family:'DM Serif Display',serif;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0; }
+    .pet-person-name { font-weight:700;font-size:13px;margin-bottom:4px; }
+    .pet-person-count { font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;line-height:1;color:#111; }
+    .pet-type-badge { display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;background:#f0f0f0;color:#555;margin:2px 2px 0 0;font-weight:600; }
     /* ── View toggle ── */
     .audr-view-toggle { display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#f5f5f5; }
     .audr-view-btn { border:none;background:transparent;padding:7px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
@@ -1079,6 +1089,7 @@
       <button class="tab admin-tab" onclick="showTab('auditresp', event)">🔍 Auditoria Resp.</button>
       <button class="tab admin-tab" onclick="showTab('processes', event)">Processos</button>
       <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
+      <button class="tab" onclick="showTab('petitions', event)">🧾 Petições</button>
       <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
       <button class="tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
@@ -1181,6 +1192,79 @@
         <div id="listaMovimentacoes"><div class="loading">Carregando...</div></div>
       </div>
     </div>
+
+    <!-- ABA: PETIÇÕES -->
+    <div id="petitions" class="tab-content">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🧾 Petições</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="petUpdatedAt">Produtividade jurídica por responsável</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;gap:4px;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#f5f5f5;">
+            <button class="pet-period-btn active" data-p="today"      onclick="petSetPeriod('today',this)">Hoje</button>
+            <button class="pet-period-btn"         data-p="yesterday"  onclick="petSetPeriod('yesterday',this)">Ontem</button>
+            <button class="pet-period-btn"         data-p="this_week"  onclick="petSetPeriod('this_week',this)">Esta semana</button>
+            <button class="pet-period-btn"         data-p="this_month" onclick="petSetPeriod('this_month',this)">Este mês</button>
+          </div>
+          <button class="refresh-btn" onclick="loadPetitions(true)">↺ Atualizar</button>
+          <button class="dist-export-btn admin-only" onclick="petExportCSV()">📊 Exportar CSV</button>
+        </div>
+      </div>
+
+      <!-- KPI total -->
+      <div style="text-align:center;margin-bottom:28px;">
+        <div id="petTotalNum" style="font-family:'DM Serif Display',serif;font-size:64px;font-weight:400;line-height:1;color:#111;">—</div>
+        <div style="font-size:13px;color:#888;margin-top:6px;" id="petTotalLbl">petições no período</div>
+      </div>
+
+      <div id="petLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando petições…</div>
+      <div id="petContent" style="display:none;">
+
+        <!-- Filtro de responsável (team vê apenas o próprio nome) -->
+        <div class="admin-only" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label style="font-size:12px;color:#555;font-weight:600;">Filtrar por responsável:</label>
+          <select id="petRespFilter" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:#fff;" onchange="petApplyFilter()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <!-- Cards por pessoa -->
+        <div id="petCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:28px;"></div>
+
+        <!-- Gráfico de barras horizontal -->
+        <div class="admin-only" style="background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:18px 20px;margin-bottom:28px;">
+          <div style="font-weight:600;font-size:13px;margin-bottom:14px;">Comparativo</div>
+          <div style="position:relative;max-height:260px;">
+            <canvas id="petChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Tabela detalhada -->
+        <details id="petDetailsWrap" style="margin-bottom:16px;">
+          <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:10px 14px;background:#f5f5f5;border-radius:8px;border:1px solid #e5e5e5;list-style:none;display:flex;align-items:center;gap:8px;">
+            📋 Detalhamento por petição <span id="petDetailCount" style="font-weight:400;font-size:11px;color:#888;"></span>
+          </summary>
+          <div style="overflow-x:auto;margin-top:8px;">
+            <table class="fin-table" id="petDetailTable" style="width:100%;min-width:600px;">
+              <thead><tr>
+                <th>Cliente / Processo</th>
+                <th>Tipo de Petição</th>
+                <th>Responsável</th>
+                <th style="white-space:nowrap;">Data/Hora</th>
+              </tr></thead>
+              <tbody id="petDetailTbody"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <div id="petEmpty" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">
+        Nenhuma petição encontrada no período. Verifique se os tipos de tarefa estão corretos.
+      </div>
+    </div>
+    <!-- FIM ABA PETIÇÕES -->
 
     <!-- ABA 4: FINANCEIRO -->
     <div id="financial" class="tab-content">
@@ -2110,6 +2194,7 @@
       if (name === 'admin'     && !window._adminData) loadAdmin();
       if (name === 'leads')                           loadLeads();
       if (name === 'inssConf')                        inssSubTab('conferencia');
+      if (name === 'petitions' && !_petData)          loadPetitions();
       if (name === 'aniversarios')                   loadBirthday();
     }
 
@@ -5874,6 +5959,181 @@
       }
     }
 
+    // ── FIM CONFERÊNCIA INSS ──────────────────────────────────────────────────
+
+    // ── PETIÇÕES ──────────────────────────────────────────────────────────────
+
+    let _petData     = null;
+    let _petPeriod   = 'today';
+    let _petChartInst= null;
+    let _petSelPerson= null; // nome do card selecionado
+
+    function petSetPeriod(p, btn) {
+      _petPeriod = p;
+      _petData   = null;
+      document.querySelectorAll('.pet-period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadPetitions();
+    }
+
+    async function loadPetitions(force = false) {
+      if (_petData && !force) return;
+      _petSelPerson = null;
+      document.getElementById('petLoading').style.display = '';
+      document.getElementById('petContent').style.display = 'none';
+      document.getElementById('petEmpty').style.display   = 'none';
+      document.getElementById('petTotalNum').textContent  = '—';
+
+      try {
+        const r = await fetch(`/api/petitions/by-person?period=${_petPeriod}`);
+        if (!r.ok) throw new Error(await r.text());
+        _petData = await r.json();
+        petRender();
+      } catch(e) {
+        document.getElementById('petLoading').style.display = 'none';
+        document.getElementById('petEmpty').style.display   = '';
+        document.getElementById('petEmpty').textContent     = '❌ Erro ao carregar: ' + e.message;
+      }
+    }
+
+    function petRender() {
+      if (!_petData) return;
+      document.getElementById('petLoading').style.display = 'none';
+
+      const filterVal = document.getElementById('petRespFilter')?.value || '';
+      let persons = _petData.by_person || [];
+
+      // Se team, não há filtro extra — mas o select já estará populado
+      if (filterVal) persons = persons.filter(p => p.name === filterVal);
+
+      const total = persons.reduce((s, p) => s + p.count, 0);
+      const lbl   = { today:'hoje', yesterday:'ontem', this_week:'esta semana', this_month:'este mês' };
+      document.getElementById('petTotalNum').textContent = total;
+      document.getElementById('petTotalLbl').textContent = `petições ${lbl[_petPeriod]||''}`;
+      document.getElementById('petUpdatedAt').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+
+      if (!persons.length) {
+        document.getElementById('petContent').style.display = 'none';
+        document.getElementById('petEmpty').style.display   = '';
+        return;
+      }
+
+      document.getElementById('petContent').style.display = '';
+      document.getElementById('petEmpty').style.display   = 'none';
+
+      // Popular filtro de responsáveis (admin)
+      const sel = document.getElementById('petRespFilter');
+      if (sel && sel.options.length <= 1) {
+        (_petData.by_person || []).forEach(p => {
+          const o = document.createElement('option'); o.value = p.name; o.textContent = p.name; sel.appendChild(o);
+        });
+      }
+
+      // Cards
+      const colors = ['#111','#333','#555','#777','#999'];
+      document.getElementById('petCardsGrid').innerHTML = persons.map((p, i) => {
+        const initial = p.name.trim().split(' ').map(w=>w[0]).slice(0,2).join('');
+        const types = Object.entries(p.types).sort((a,b)=>b[1]-a[1]).slice(0,3)
+          .map(([t,c]) => `<span class="pet-type-badge">${t.length>28?t.slice(0,28)+'…':t} (${c})</span>`).join('');
+        const sel = _petSelPerson === p.name ? ' selected' : '';
+        return `<div class="pet-person-card${sel}" onclick="petSelectPerson(${JSON.stringify(p.name)})">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div class="pet-person-initial" style="background:${colors[i%colors.length]||'#111'}">${initial}</div>
+            <div>
+              <div class="pet-person-name">${p.name}</div>
+              <div class="pet-person-count">${p.count}</div>
+            </div>
+          </div>
+          <div>${types}</div>
+        </div>`;
+      }).join('');
+
+      // Gráfico horizontal
+      petRenderChart(persons);
+
+      // Tabela
+      petRenderTable(persons);
+    }
+
+    function petApplyFilter() { petRender(); }
+
+    function petSelectPerson(name) {
+      _petSelPerson = _petSelPerson === name ? null : name;
+      petRender();
+    }
+
+    function petRenderChart(persons) {
+      const ctx = document.getElementById('petChart');
+      if (!ctx) return;
+      const labels = persons.map(p => p.name.split(' ')[0]);
+      const data   = persons.map(p => p.count);
+      const max    = Math.max(...data, 1);
+      if (_petChartInst) { _petChartInst.destroy(); _petChartInst = null; }
+      _petChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: '#111', borderRadius: 5, barThickness: 22 }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: {
+            label: ctx => ` ${ctx.parsed.x} petição${ctx.parsed.x !== 1 ? 'ões' : ''}`
+          }}},
+          scales: {
+            x: { beginAtZero: true, max: Math.ceil(max * 1.2), ticks: { stepSize: 1, font: { family: 'DM Sans' } }, grid: { color: '#f0f0f0' } },
+            y: { ticks: { font: { family: 'DM Sans', weight: '600' } }, grid: { display: false } }
+          }
+        }
+      });
+      ctx.parentElement.style.height = Math.max(persons.length * 38 + 20, 80) + 'px';
+    }
+
+    function petRenderTable(persons) {
+      const items = [];
+      const sel = _petSelPerson;
+      for (const p of persons) {
+        if (sel && p.name !== sel) continue;
+        for (const it of (p.items || [])) {
+          items.push({ ...it, responsible: p.name });
+        }
+      }
+      items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+      document.getElementById('petDetailCount').textContent = `— ${items.length} registro${items.length !== 1 ? 's' : ''}`;
+      document.getElementById('petDetailTbody').innerHTML = items.length ? items.map(it => {
+        const nome    = it.lawsuit_name || (it.lawsuits_id ? `Processo #${it.lawsuits_id}` : '—');
+        const link    = it.lawsuits_id ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuits_id}" target="_blank" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>` : '';
+        const dt      = it.created_at ? it.created_at.slice(0, 16).replace('T',' ') : '—';
+        const task    = it.task || '—';
+        return `<tr>
+          <td style="font-size:12px;">${nome} ${link}</td>
+          <td style="font-size:12px;">${task.length>40?`<span title="${task}">${task.slice(0,40)}…</span>`:task}</td>
+          <td style="font-size:12px;">${it.responsible}</td>
+          <td style="font-size:12px;white-space:nowrap;">${dt}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="4" style="text-align:center;color:#aaa;padding:16px;">Nenhum registro</td></tr>';
+    }
+
+    function petExportCSV() {
+      if (!_petData) return;
+      const rows = [['Responsável','Tipo de Petição','Cliente/Processo','Data/Hora']];
+      for (const p of (_petData.by_person || [])) {
+        for (const it of (p.items || [])) {
+          rows.push([p.name, it.task||'—', it.lawsuit_name||it.lawsuits_id||'—', it.created_at||'—']);
+        }
+      }
+      const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `peticoes_${_petPeriod}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+
+    // ── FIM PETIÇÕES ──────────────────────────────────────────────────────────
     // ── FIM CONFERÊNCIA INSS ──────────────────────────────────────────────────
   </script>
 
