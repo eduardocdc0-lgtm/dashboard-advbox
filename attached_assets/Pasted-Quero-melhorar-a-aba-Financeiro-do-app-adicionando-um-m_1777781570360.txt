@@ -1,0 +1,56 @@
+Quero melhorar a aba "Financeiro" do app adicionando um modo "Caixa da Semana" — uma view específica do que vai entrar nos próximos N dias.
+
+OBJETIVO
+Hoje a aba Financeiro mostra "A receber" agregado, mas não dá pra ver: "essa semana, especificamente, o que entra?". Quero responder "Quanto vai cair na conta nos próximos 7 dias?" com lista detalhada.
+
+ACESSO
+- Admin: vê tudo
+- Team: continua escondido com admin-only (financeiro inteiro já é admin-only? confirma e mantém o padrão)
+
+BACKEND — ROTA E DADOS
+
+1. Cria rota GET /api/cash-flow/upcoming
+   - Query params: days (default 7, opções 7|15|30), responsible (opcional)
+   
+2. Fonte: AdvBox API — endpoint financeiro/lançamentos a receber.
+   - Filtra: status != "pago" E vencimento entre hoje e hoje+N dias
+   - Reusa o cliente AdvBox existente
+   
+3. Resposta JSON:
+   {
+     "days": 7,
+     "total_expected": 47230.50,
+     "count": 12,
+     "by_day": [
+       { "date": "2026-05-04", "total": 5800.00, "items": [...] },
+       { "date": "2026-05-05", "total": 12450.00, "items": [...] },
+       ...
+     ],
+     "items": [
+       { "client": "João Silva", "value": 1500, "due": "2026-05-04", "type": "Honorário Adm", "responsible": "Eduardo", "process": "0012345-..." },
+       ...
+     ]
+   }
+
+FRONTEND
+
+Adiciona um BLOCO NOVO no topo da aba Financeiro (acima do que já existe), com título "💰 Caixa Próximos 7 Dias":
+
+1. Toggle de período: 7 dias (default) | 15 dias | 30 dias
+2. KPI gigante: Total esperado no período (R$ XX.XXX,XX) + count "(N lançamentos)"
+3. Mini-gráfico de barras: 1 barra por dia, altura proporcional ao valor (use Chart.js)
+4. Tabela detalhada:
+   Colunas: Vence | Cliente | Tipo | Valor | Responsável | Status | Processo (link)
+   Ordenada por data asc
+   Linhas que vencem HOJE em destaque (background amarelo)
+   Linhas que VENCERAM (data < hoje) em destaque vermelho com badge "ATRASADO"
+5. Sem encolher o que já tem na aba Financeiro — esse bloco é ADICIONAL no topo.
+6. Botão "📊 Exportar CSV" + "↺ Atualizar"
+
+CUIDADOS
+- Inclui TAMBÉM o que já venceu mas ainda não foi pago (atrasado). Isso é dinheiro que o cliente DEVE.
+- Não duplica linhas com o "Lançamentos do mês" que já existe abaixo.
+- Se um valor é parcela, mostra "Parcela 2/5" ao lado do tipo.
+- Cache TTL: 10 minutos (financeiro muda pouco intra-dia).
+
+Quando terminar, republish e me avisa.

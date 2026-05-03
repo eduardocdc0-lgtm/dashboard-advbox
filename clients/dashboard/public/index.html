@@ -792,6 +792,14 @@
     .audit-btn-cobrar:hover { background:#333; }
     .audit-btn-advbox { font-size:11px;color:#555;text-decoration:none;border:1px solid #ddd;padding:4px 10px;border-radius:5px; }
     .audit-btn-advbox:hover { background:#f5f5f5; }
+    /* ── Caixa Próximos Dias ── */
+    .cf-days-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .cf-days-btn.active { background:#111;color:#fff; }
+    .cf-days-btn:hover:not(.active) { background:#e8e8e8; }
+    .cf-row-today  { background:#fffbe6; }
+    .cf-row-overdue { background:#fff5f5; }
+    .cf-badge-overdue { display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:#c0392b;color:#fff;letter-spacing:.04em;vertical-align:middle;margin-left:4px; }
+    .cf-badge-today   { display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:#e6a817;color:#fff;letter-spacing:.04em;vertical-align:middle;margin-left:4px; }
     /* ── Petições ── */
     .pet-period-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
     .pet-period-btn.active { background:#111;color:#fff; }
@@ -1268,6 +1276,62 @@
 
     <!-- ABA 4: FINANCEIRO -->
     <div id="financial" class="tab-content">
+      <!-- ── BLOCO: Caixa Próximos Dias (admin-only) ── -->
+      <div class="admin-only card" id="cfBlock" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">💰 Caixa — Próximos Dias</div>
+            <div id="cfUpdatedAt" style="font-size:11px;color:#bbb;"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#f5f5f5;">
+              <button class="cf-days-btn active" onclick="cfSetDays(7, this)">7 dias</button>
+              <button class="cf-days-btn" onclick="cfSetDays(15, this)">15 dias</button>
+              <button class="cf-days-btn" onclick="cfSetDays(30, this)">30 dias</button>
+            </div>
+            <button onclick="cfExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;">📊 Exportar CSV</button>
+            <button onclick="loadCashFlow(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:20px;flex-wrap:wrap;">
+          <div id="cfTotalNum" style="font-family:'DM Serif Display',serif;font-size:52px;font-weight:400;line-height:1;color:#111;">—</div>
+          <div>
+            <div id="cfTotalLbl" style="font-size:13px;font-weight:600;color:#555;"></div>
+            <div id="cfCountLbl" style="font-size:12px;color:#aaa;margin-top:2px;"></div>
+          </div>
+        </div>
+
+        <!-- Mini-gráfico de barras por dia -->
+        <div id="cfChartWrap" style="position:relative;margin-bottom:24px;display:none;">
+          <canvas id="cfChart"></canvas>
+        </div>
+
+        <!-- Loading / Empty -->
+        <div id="cfLoading" style="text-align:center;padding:24px;color:#aaa;font-size:13px;">Carregando...</div>
+        <div id="cfEmpty"   style="display:none;text-align:center;padding:24px;color:#aaa;font-size:13px;">Nenhum lançamento a receber no período.</div>
+
+        <!-- Tabela detalhada -->
+        <div id="cfTableWrap" style="display:none;overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="border-bottom:2px solid #e5e5e5;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;font-weight:700;">
+                <th style="padding:7px 10px 7px 0;text-align:left;white-space:nowrap;">Vence</th>
+                <th style="padding:7px 10px;text-align:left;">Cliente</th>
+                <th style="padding:7px 10px;text-align:left;">Tipo</th>
+                <th style="padding:7px 10px;text-align:right;white-space:nowrap;">Valor</th>
+                <th style="padding:7px 10px;text-align:left;white-space:nowrap;">Responsável</th>
+                <th style="padding:7px 10px;text-align:left;">Status</th>
+                <th style="padding:7px 10px;text-align:left;">Processo</th>
+              </tr>
+            </thead>
+            <tbody id="cfTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- ── FIM BLOCO Caixa ── -->
+
       <!-- Navegação de mês -->
       <div class="fin-nav">
         <button class="fin-nav-btn" onclick="finNavMes(-1)">&#8592;</button>
@@ -2195,6 +2259,7 @@
       if (name === 'leads')                           loadLeads();
       if (name === 'inssConf')                        inssSubTab('conferencia');
       if (name === 'petitions' && !_petData)          loadPetitions();
+      if (name === 'financial' && !_cfData)           loadCashFlow();
       if (name === 'aniversarios')                   loadBirthday();
     }
 
@@ -5960,6 +6025,159 @@
     }
 
     // ── FIM CONFERÊNCIA INSS ──────────────────────────────────────────────────
+
+    // ── CAIXA PRÓXIMOS DIAS ───────────────────────────────────────────────────
+
+    let _cfData     = null;
+    let _cfDays     = 7;
+    let _cfChartInst= null;
+
+    function cfSetDays(n, btn) {
+      _cfDays = n;
+      _cfData = null;
+      document.querySelectorAll('.cf-days-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadCashFlow();
+    }
+
+    async function loadCashFlow(force = false) {
+      if (_cfData && !force) return;
+      document.getElementById('cfLoading').style.display   = '';
+      document.getElementById('cfEmpty').style.display     = 'none';
+      document.getElementById('cfTableWrap').style.display = 'none';
+      document.getElementById('cfChartWrap').style.display = 'none';
+      document.getElementById('cfTotalNum').textContent    = '—';
+      document.getElementById('cfTotalLbl').textContent    = '';
+      document.getElementById('cfCountLbl').textContent    = '';
+
+      try {
+        const r = await fetch(`/api/cash-flow/upcoming?days=${_cfDays}`);
+        if (!r.ok) throw new Error(await r.text());
+        _cfData = await r.json();
+        cfRender();
+      } catch(e) {
+        document.getElementById('cfLoading').style.display = 'none';
+        document.getElementById('cfEmpty').style.display   = '';
+        document.getElementById('cfEmpty').textContent     = '❌ Erro ao carregar: ' + e.message;
+      }
+    }
+
+    function cfRender() {
+      if (!_cfData) return;
+      document.getElementById('cfLoading').style.display = 'none';
+      document.getElementById('cfUpdatedAt').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+
+      const { total_expected, count, by_day } = _cfData;
+
+      document.getElementById('cfTotalNum').textContent = formatMoney(total_expected);
+      document.getElementById('cfTotalLbl').textContent = `a receber nos próximos ${_cfDays} dias`;
+      document.getElementById('cfCountLbl').textContent = `${count} lançamento${count !== 1 ? 's' : ''}`;
+
+      if (!count) {
+        document.getElementById('cfEmpty').style.display   = '';
+        document.getElementById('cfTableWrap').style.display = 'none';
+        document.getElementById('cfChartWrap').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('cfEmpty').style.display     = 'none';
+      document.getElementById('cfTableWrap').style.display = '';
+      document.getElementById('cfChartWrap').style.display = '';
+
+      cfRenderChart(by_day);
+      cfRenderTable(by_day);
+    }
+
+    function cfRenderChart(byDay) {
+      const ctx = document.getElementById('cfChart');
+      if (!ctx) return;
+      if (_cfChartInst) { _cfChartInst.destroy(); _cfChartInst = null; }
+
+      const labels = byDay.map(d => {
+        const [y, m, day] = d.date.split('-');
+        return `${day}/${m}`;
+      });
+      const values = byDay.map(d => d.total);
+      const today  = _cfData.today;
+      const colors = byDay.map(d => d.date < today ? '#c0392b' : d.date === today ? '#e6a817' : '#111');
+
+      _cfChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: colors, borderRadius: 4, barThickness: Math.max(12, Math.min(32, Math.floor(540 / byDay.length))) }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => ' ' + formatMoney(c.parsed.y) } }
+          },
+          scales: {
+            x: { ticks: { font: { family: 'DM Sans', size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { callback: v => 'R$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v), font: { family: 'DM Sans', size: 10 } }, grid: { color: '#f0f0f0' } }
+          }
+        }
+      });
+      ctx.parentElement.style.height = '160px';
+    }
+
+    function cfRenderTable(byDay) {
+      const today = _cfData.today;
+      const rows  = [];
+      for (const day of byDay) {
+        // Separador por dia com subtotal
+        const [y, m, d] = day.date.split('-');
+        const dtLabel = `${d}/${m}/${y}`;
+        const statusClass = day.date < today ? 'cf-row-overdue' : day.date === today ? 'cf-row-today' : '';
+        rows.push(`<tr>
+          <td colspan="7" style="padding:8px 10px 4px 0;font-weight:700;font-size:11px;color:#555;border-top:1px solid #e8e8e8;">
+            ${dtLabel}
+            <span style="font-weight:400;color:#aaa;margin-left:8px;">${formatMoney(day.total)}</span>
+            ${day.date < today ? '<span class="cf-badge-overdue">ATRASADO</span>' : day.date === today ? '<span class="cf-badge-today">HOJE</span>' : ''}
+          </td>
+        </tr>`);
+        for (const it of day.items) {
+          const typeLabel = (typeof finCatLabel === 'function') ? finCatLabel(it.type) : it.type;
+          const typeStr   = it.installment ? `${typeLabel} <span style="color:#aaa;font-size:10px;">${it.installment}</span>` : typeLabel;
+          const procLink  = it.lawsuit_id
+            ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuit_id}" target="_blank" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>`
+            : (it.process ? `<span style="font-size:11px;">${it.process}</span>` : '—');
+          const respShort = (it.responsible || '').split(' ')[0];
+          rows.push(`<tr class="${statusClass}">
+            <td style="padding:5px 10px 5px 0;color:#888;white-space:nowrap;"></td>
+            <td style="padding:5px 10px;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${it.client}">${it.client}</td>
+            <td style="padding:5px 10px;color:#555;">${typeStr}</td>
+            <td style="padding:5px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;">${formatMoney(it.value)}</td>
+            <td style="padding:5px 10px;color:#555;white-space:nowrap;">${respShort}</td>
+            <td style="padding:5px 10px;"></td>
+            <td style="padding:5px 10px;">${procLink}</td>
+          </tr>`);
+        }
+      }
+      document.getElementById('cfTbody').innerHTML = rows.join('');
+    }
+
+    function cfExportCSV() {
+      if (!_cfData) return;
+      const today = _cfData.today;
+      const rows  = [['Vence','Cliente','Tipo','Parcela','Valor (R$)','Responsável','Status','Processo']];
+      for (const day of (_cfData.by_day || [])) {
+        for (const it of day.items) {
+          const status = it.due < today ? 'ATRASADO' : it.due === today ? 'HOJE' : 'PENDENTE';
+          rows.push([it.due, it.client, it.type, it.installment||'', it.value, it.responsible, status, it.process||it.lawsuit_id||'']);
+        }
+      }
+      const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `caixa_${_cfDays}dias_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+
+    // ── FIM CAIXA PRÓXIMOS DIAS ───────────────────────────────────────────────
 
     // ── PETIÇÕES ──────────────────────────────────────────────────────────────
 

@@ -109,6 +109,16 @@ clients/
 - Distribuição carrega 2 segundos após o restante para evitar race com /api/lawsuits
 - Evitar: chamar `/history/{id}` para todos os processos (lento + rate limited)
 
+## Bloco "💰 Caixa — Próximos Dias" (topo da aba Financeiro, admin-only)
+- Toggle: 7 / 15 / 30 dias
+- Fonte: reutiliza `fetchTransactions` (cache 30 min) — filtra `entry_type=income`, `date_payment=null`, `date_due <= hoje+N`
+- Inclui inadimplentes (date_due < hoje mas não pagos)
+- KPI total (52px DM Serif), gráfico de barras por dia (Chart.js — vermelho=atrasado, amarelo=hoje, preto=futuro)
+- Tabela: Vence | Cliente | Tipo (+parcela) | Valor | Responsável | Status | Processo ↗
+- Linhas hoje → fundo amarelo + badge HOJE; atrasado → fundo vermelho + badge ATRASADO
+- Exportar CSV + ↺ Atualizar
+- Rota: `clients/dashboard/routes/cash-flow.js` · GET `/api/cash-flow/upcoming?days=7|15|30`
+
 ## Aba Petições ("🧾 Petições") — visível a todos os perfis
 - Filtro de período: Hoje / Ontem / Esta semana / Este mês
 - Fonte: endpoint `/posts` do AdvBox, identificação por heurística de palavras-chave no campo `task`
