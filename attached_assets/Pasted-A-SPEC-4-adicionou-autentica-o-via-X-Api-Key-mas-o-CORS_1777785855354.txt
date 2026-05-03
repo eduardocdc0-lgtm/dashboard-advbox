@@ -1,0 +1,73 @@
+A SPEC 4 adicionou autenticação via X-Api-Key, mas o CORS não está permitindo chamadas cross-origin do navegador. Quando um cliente externo (em outra origem) tenta fazer fetch com header X-Api-Key, o navegador dispara um preflight OPTIONS que está sendo bloqueado.
+
+OBJETIVO
+Garantir que QUALQUER cliente que tenha a READ_API_KEY consiga consumir as rotas /api/* GET via navegador, de qualquer origem.
+
+IMPLEMENTAÇÃO
+
+1. Onde já existe o middleware CORS (ou app.use(cors())), substitui pelas configurações abaixo. Se usa o pacote 'cors' do npm:
+
+   const cors = require('cors');
+   app.use(cors({
+     origin: '*',                              // libera qualquer origem (rotas são protegidas por X-Api-Key)
+     methods: ['GET', 'POST', 'OPTIONS'],
+     allowedHeaders: ['Content-Type', 'X-Api-Key', 'Authorization'],
+     exposedHeaders: ['Content-Type'],
+     credentials: false,                        // não usar cookies — auth é via header
+     maxAge: 86400                              // cache do preflight por 24h
+   }));
+
+2. Garante que OPTIONS é tratado ANTES do middleware de auth (X-Api-Key). Senão preflight bate em 401:
+
+   // CORS deve vir PRIMEIRO
+   app.use(cors({...}));
+   // depois o middleware de X-Api-Key
+   app.use('/api', apiKeyMiddleware);
+
+3. Resposta correta de preflight tem que ter (testa com curl):
+   curl -i -X OPTIONS \
+     -H "Origin: https://example.com" \
+     -H "Access-Control-Request-Method: GET" \
+     -H "Access-Control-Request-Headers: x-api-key" \
+     https://APP.replit.app/api/petitions/by-person
+
+   Headers esperados na resposta:
+   HTTP/1.1 204 No Content (ou 200)
+   Access-Control-Allow-Origin: *
+   Access-Control-Allow-Methods: GET, POST, OPTIONS
+   Access-Control-Allow-Headers: Content-Type, X-Api-Key, Authorization
+   Access-Control-Max-Age: 86400
+
+4. Se o app usa Express e NÃO usa o pacote 'cors', adiciona manualmente um middleware antes das rotas:
+
+   app.use((req, res, next) => {
+     res.setHeader('Access-Control-Allow-Origin', '*');
+     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, Authorization');
+     res.setHeader('Access-Control-Max-Age', '86400');
+     if (req.method === 'OPTIONS') return res.status(204).end();
+     next();
+   });
+
+CUIDADOS
+- credentials: false é proposital. Não usar cookies pra auth cross-origin. Quem chama de fora usa X-Api-Key.
+- Origin '*' é seguro AQUI porque a auth é via header (não cookies). Não está expondo dados — só rotas que já estão protegidas pela chave.
+- Se algum endpoint /api/* aceita POST/PUT/DELETE com X-Api-Key, garante que esses métodos estão na lista de allowedMethods.
+
+VALIDAÇÃO
+Depois do deploy, faz tu mesmo (agent) este teste e me mostra a saída:
+
+curl -i -X OPTIONS \
+  -H "Origin: https://example.com" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: x-api-key" \
+  https://APP.replit.app/api/petitions/by-person
+
+E também:
+
+curl -i -H "Origin: https://example.com" -H "X-Api-Key: VALOR" \
+  https://APP.replit.app/api/petitions/by-person?period=today
+
+A segunda chamada tem que devolver 200 + JSON + header "Access-Control-Allow-Origin: *".
+
+Quando terminar e validar, republish e me avisa.
