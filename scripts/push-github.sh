@@ -25,6 +25,7 @@ AUTHENTICATED_URL="https://x-access-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 echo "Fazendo push para o GitHub em $TIMESTAMP..."
 
-git push "$AUTHENTICATED_URL" HEAD:main 2>&1 | sed "s/${GITHUB_PERSONAL_ACCESS_TOKEN}/***TOKEN***/g"
+git push --force "$AUTHENTICATED_URL" HEAD:main 2>&1 | sed "s/${GITHUB_PERSONAL_ACCESS_TOKEN}/***TOKEN***/g"
 
-echo "Push concluído com sucesso!"
+echo ""
+echo "Push concluído: $GITHUB_REPO_URL"
