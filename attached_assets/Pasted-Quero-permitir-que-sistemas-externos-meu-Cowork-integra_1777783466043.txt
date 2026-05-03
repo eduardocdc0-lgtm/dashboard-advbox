@@ -1,0 +1,39 @@
+Quero permitir que sistemas externos (meu Cowork, integrações futuras) consumam as rotas /api/* do app sem precisar fazer login. Pra isso, preciso de um middleware de API key estática.
+
+OBJETIVO
+Adicionar autenticação alternativa por API key em header. Mantém o login normal funcionando pra todos os usuários — mas se a requisição chegar com header X-Api-Key igual ao valor secreto, considera autenticada (como admin) e libera passar.
+
+IMPLEMENTAÇÃO
+
+1. Cria env var em Secrets do Replit:
+   READ_API_KEY = (gera uma string aleatória de 48 caracteres com alfanum + alguns símbolos seguros como -_)
+   
+   Exemplo de geração: tu pode usar `openssl rand -base64 36` ou similar. Garante que é forte.
+
+2. No middleware de autenticação que já existe no app:
+   - Antes de checar a sessão de login normal, checa se tem header X-Api-Key
+   - Se tem E o valor bate com process.env.READ_API_KEY → considera o request como autenticado (role admin, pode ver tudo)
+   - Se não tem ou tá errado → segue o fluxo normal (verifica sessão de login)
+   - Se nem header nem sessão → 401 como hoje
+
+3. Aplica esse middleware APENAS em rotas GET de /api/* (não em rotas que modificam dados).
+   - Rotas de leitura: /api/petitions/by-person, /api/cash-flow/upcoming, /api/meta/campaign-roi, /api/process/*, /api/clients/*, etc.
+   - NÃO aplicar em: rotas de POST/PUT/DELETE, rotas de admin que modificam configuração, /api/auth/*
+
+4. Adiciona log: toda vez que o request entrar via X-Api-Key, registra em console (e/ou tabela de log) com timestamp + IP + rota chamada. Isso é pra auditoria.
+
+5. CORS: garante que o header X-Api-Key esteja na lista Access-Control-Allow-Headers. Sem isso, browsers bloqueiam.
+
+CUIDADOS
+- READ_API_KEY tem que ficar EXCLUSIVAMENTE em Secrets do Replit. Nunca commitar no código.
+- Se o middleware atual usa cookie de sessão, NÃO substitui — adiciona como alternativa.
+- Resposta 401: continua igual quando nem cookie nem chave estão presentes.
+- Documenta no README como usar a chave.
+
+TESTES PÓS-DEPLOY (faz tu mesmo, agent):
+- curl https://APP.replit.app/api/petitions/by-person?period=today  →  401 (sem chave)
+- curl -H "X-Api-Key: VALOR" https://APP.replit.app/api/petitions/by-person?period=today  →  200 com JSON
+
+Quando terminar, republish e me avisa.
+
+IMPORTANTE: ME RETORNA O VALOR DA READ_API_KEY GERADA depois que tu colocou em Secrets — eu vou precisar configurar no outro sistema. (Se preferir não exibir, me avisa e eu pego em Secrets manualmente.)

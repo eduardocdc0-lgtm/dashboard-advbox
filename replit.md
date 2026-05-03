@@ -109,6 +109,15 @@ clients/
 - Distribuição carrega 2 segundos após o restante para evitar race com /api/lawsuits
 - Evitar: chamar `/history/{id}` para todos os processos (lento + rate limited)
 
+## Autenticação por API Key (X-Api-Key)
+- Header: `X-Api-Key: <READ_API_KEY>`
+- Só funciona em requisições GET — nunca em POST/PUT/DELETE
+- Autentica como role `admin` sem precisar de sessão/cookie
+- Log em console a cada uso: `[API Key] timestamp | IP | rota`
+- CORS configurado: `Access-Control-Allow-Headers` inclui `X-Api-Key`
+- Chave armazenada na env var `READ_API_KEY` (shared, nunca no código)
+- Implementação em `clients/dashboard/index.js` — middleware `/api`
+
 ## Seção "💸 ROI por Campanha" (aba Meta Ads, admin-only)
 - Fica abaixo da tabela de campanhas existente — sem remover nada
 - Período: Este mês / Mês passado / Últimos 30 dias / Últimos 90 dias
