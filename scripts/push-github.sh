@@ -1,8 +1,7 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
-GITHUB_REPO="https://github.com/eduardocdc0-lgtm/dashboard-advbox.git"
-REMOTE_NAME="github"
+GITHUB_REPO_URL="https://github.com/eduardocdc0-lgtm/dashboard-advbox.git"
 
 if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
   echo "Erro: variável GITHUB_PERSONAL_ACCESS_TOKEN não configurada."
@@ -12,23 +11,20 @@ fi
 git config user.email "replit-push@advbox.local" 2>/dev/null || true
 git config user.name "Replit AdvBox" 2>/dev/null || true
 
-cleanup() {
-  if git remote get-url "$REMOTE_NAME" 2>/dev/null | grep -q "x-access-token"; then
-    git remote set-url "$REMOTE_NAME" "$GITHUB_REPO"
-  fi
-}
-trap cleanup EXIT
+if ! git diff --quiet || ! git diff --staged --quiet; then
+  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+  git add -A
+  git commit -m "chore: sync automático do Replit em $TIMESTAMP"
+  echo "Alterações locais commitadas."
+else
+  echo "Nenhuma alteração local pendente."
+fi
 
 AUTHENTICATED_URL="https://x-access-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/eduardocdc0-lgtm/dashboard-advbox.git"
 
-if git remote get-url "$REMOTE_NAME" 2>/dev/null; then
-  git remote set-url "$REMOTE_NAME" "$AUTHENTICATED_URL"
-else
-  git remote add "$REMOTE_NAME" "$AUTHENTICATED_URL"
-fi
-
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 echo "Fazendo push para o GitHub em $TIMESTAMP..."
-git push "$REMOTE_NAME" main 2>&1 | sed "s/${GITHUB_PERSONAL_ACCESS_TOKEN}/***TOKEN***/g"
+
+git push "$AUTHENTICATED_URL" HEAD:main 2>&1 | sed "s/${GITHUB_PERSONAL_ACCESS_TOKEN}/***TOKEN***/g"
 
 echo "Push concluído com sucesso!"
