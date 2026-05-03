@@ -1,0 +1,23 @@
+{
+  "env": {
+    "browser": false,
+    "commonjs": true,
+    "es2022": true,
+    "node": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": ["error", "smart"],
+    "curly": ["error", "multi-line"],
+    "no-multi-spaces": "off",
+    "no-empty": ["error", { "allowEmptyCatch": true }]
+  },
+  "ignorePatterns": ["node_modules/", "clients/dashboard/public/"]
+}
