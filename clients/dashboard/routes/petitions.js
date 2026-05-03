@@ -7,14 +7,41 @@ const router = Router();
 cache.define('petitions_month', 10 * 60 * 1000);
 
 // ── Identificação de Petições ─────────────────────────────────────────────────
-// HEURÍSTICA: considera "petição" qualquer tarefa cujo campo `task` contenha
+// HEURÍSTICA: considera "petição" qualquer tarefa cujo campo `task` COMECE com
 // uma das palavras-chave abaixo (sem acento, maiúsculas).
-// Ajuste a lista conforme os tipos reais do escritório.
-const PETITION_KEYWORDS = [
-  'PETIÇÃO', 'PETICAO', 'RECURSO', 'AJUIZAR', 'PROTOCOLAR',
-  'CUMPRIMENTO DE SENTENÇA', 'CUMPRIMENTO DE SENTENCA',
-  'INICIAL', 'CONTESTAÇÃO', 'CONTESTACAO', 'MANIFESTAÇÃO', 'MANIFESTACAO',
-  'IMPUGNAÇÃO', 'IMPUGNACAO',
+//
+// INCLUÍDAS (prefixo obrigatório):
+//   AJUIZAR, PETICIONAR, ELABORAR PETICAO, ELABORAR RECURSO, RECURSO DE,
+//   CONTESTACAO, MANIFESTACAO, CUMPRIMENTO DE SENTENCA, IMPUGNACAO, EMBARGOS
+//
+// EXCLUÍDAS (mesmo que contenham alguma palavra acima):
+//   PROTOCOLAR ADM  → requerimento administrativo, não petição judicial
+//   COMENTARIO      → anotação interna
+//   ANALISAR        → análise interna
+//   LIGAR           → telefone/comunicação
+//   ENVIAR          → comunicação
+//
+// Ajuste as listas conforme os tipos reais do escritório.
+
+const PETITION_PREFIXES = [
+  'AJUIZAR',
+  'PETICIONAR',
+  'ELABORAR PETICAO',
+  'ELABORAR RECURSO',
+  'RECURSO DE',
+  'CONTESTACAO',
+  'MANIFESTACAO',
+  'CUMPRIMENTO DE SENTENCA',
+  'IMPUGNACAO',
+  'EMBARGOS',
+];
+
+const EXCLUDED_PREFIXES = [
+  'PROTOCOLAR ADM',
+  'COMENTARIO',
+  'ANALISAR',
+  'LIGAR',
+  'ENVIAR',
 ];
 
 function normStr(s) {
@@ -23,7 +50,8 @@ function normStr(s) {
 
 function isPetition(task) {
   const t = normStr(task);
-  return PETITION_KEYWORDS.some(kw => t.includes(kw));
+  if (EXCLUDED_PREFIXES.some(ex => t.startsWith(ex))) return false;
+  return PETITION_PREFIXES.some(kw => t.startsWith(kw));
 }
 
 // ── Fuso America/Recife (UTC-3) ───────────────────────────────────────────────
