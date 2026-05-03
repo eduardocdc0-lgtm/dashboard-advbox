@@ -4,7 +4,8 @@
   "description": "Dashboard personalizado para AdvBox",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "push-github": "bash scripts/push-github.sh"
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.0",
