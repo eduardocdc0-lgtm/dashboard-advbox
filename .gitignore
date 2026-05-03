@@ -1,9 +1,45 @@
+# Dependências
 node_modules/
+
+# Variáveis de ambiente
 .env
 .env.local
 .env*.local
+
+# Logs
 *.log
 npm-debug.log*
+yarn-error.log*
+
+# Replit
 .replit.local
 attached_assets/
 .local/
+
+# Cache local
+cache/data/
+*.cache
+
+# Arquivos compactados
+*.zip
+*.tar.gz
+*.7z
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Build / coverage
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Python (resíduo do template Replit — após remover main.py/pyproject.toml)
+__pycache__/
+*.pyc
+.venv/
+venv/
