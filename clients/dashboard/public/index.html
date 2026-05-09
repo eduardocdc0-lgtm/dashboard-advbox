@@ -1254,13 +1254,19 @@
     .es-card-row.success strong { color: var(--success); }
     .es-card-row.warning strong { color: var(--warning); }
 
-    .es-card-progress {
-      height: 4px; background: var(--hover); border-radius: 2px;
-      margin: 6px 0; overflow: hidden;
+    /* Valor em destaque no card */
+    .es-card-main {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 6px 8px; margin: 6px 0;
+      background: var(--bg-card); border-radius: 4px;
     }
-    .es-card-progress-fill {
-      height: 100%; background: var(--success); border-radius: 2px;
-      transition: width 0.2s;
+    .es-main-label {
+      font-size: 10px; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .es-main-value {
+      font-size: 16px; font-weight: 500;
+      font-family: 'DM Serif Display', serif; color: var(--text);
     }
 
     .es-card-foot {
@@ -7143,7 +7149,7 @@
         const filtered = respFilter ? col.items.filter(it => it.responsible === respFilter) : col.items;
         const colTotal = filtered.reduce((s, it) => s + (it.contracted || 0), 0);
         const cardsHtml = filtered.length
-          ? filtered.map(esteiraCardHtml).join('')
+          ? filtered.map(it => esteiraCardHtml(it, col.rule)).join('')
           : '<div class="es-empty">Sem processos</div>';
         return `
           <div class="es-col">
@@ -7159,7 +7165,7 @@
       }).join('');
     }
 
-    function esteiraCardHtml(it) {
+    function esteiraCardHtml(it, rule) {
       const fmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
       const fmtDate = s => {
         if (!s) return '—';
@@ -7171,43 +7177,65 @@
         return s;
       };
 
-      const pct = it.contracted ? Math.min(100, Math.round((it.lancado / it.contracted) * 100)) : 0;
       const client = it.client || '(sem cliente)';
-      const type = it.type || '';
+      const type   = it.type || '';
+      const mode   = rule?.mode || (it.expectedParcelaValor ? 'parcela_fixa' : 'em_aberto');
+      const isParcelado = ['parcelas_iguais','parcela_fixa'].includes(mode);
+      const isUnico     = mode === 'lancamento_unico';
+      const isImplant   = mode === 'em_aberto';
 
-      let mainRow = '';
-      if (it.status === 'sem-data') {
-        mainRow = `<div class="es-card-row"><span>Próx parcela</span><strong style="color:var(--text-2)">Ainda sem data</strong></div>`;
-      } else if (it.status === 'agendado') {
-        mainRow = `<div class="es-card-row success"><span>Próx vencimento</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
-      } else if (it.contracted > 0) {
-        const gapTxt = it.gap > 0
-          ? `<div class="es-card-row danger"><span>Falta lançar</span><strong>${fmt(it.gap)}</strong></div>`
-          : `<div class="es-card-row success"><span>Tudo lançado</span><strong>✓</strong></div>`;
-        const parcelas = it.expectedParcelas
-          ? `<div class="es-card-row"><span>Parcelas</span><strong>${it.existingParcelas}/${it.expectedParcelas}</strong></div>`
-          : '';
-        const nextRow = it.nextDue
-          ? `<div class="es-card-row"><span>Próx venc</span><strong>${fmtDate(it.nextDue)} · ${fmt(it.nextValue)}</strong></div>`
-          : '';
-        mainRow = parcelas + gapTxt + nextRow;
+      let body = '';
+
+      if (isParcelado) {
+        // Mostra: valor da parcela, X/Y parcelas, falta lançar, próx venc
+        const parcVal = it.expectedParcelaValor;
+        body += `<div class="es-card-main"><span class="es-main-label">Parcela</span><span class="es-main-value">${fmt(parcVal)}</span></div>`;
+        if (it.expectedParcelas) {
+          body += `<div class="es-card-row"><span>Lançadas</span><strong>${it.existingParcelas} de ${it.expectedParcelas}</strong></div>`;
+        }
+        if (it.gap > 0) {
+          body += `<div class="es-card-row danger"><span>Falta lançar</span><strong>${fmt(it.gap)}</strong></div>`;
+        }
+        if (it.nextDue) {
+          body += `<div class="es-card-row"><span>Próx venc</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
+        }
+      } else if (isUnico) {
+        body += `<div class="es-card-main"><span class="es-main-label">Valor</span><span class="es-main-value">${fmt(it.expectedParcelaValor || it.contracted)}</span></div>`;
+        if (it.lancado > 0) {
+          body += `<div class="es-card-row success"><span>Lançado</span><strong>${fmt(it.lancado)}</strong></div>`;
+        } else if (it.contracted > 0) {
+          body += `<div class="es-card-row danger"><span>Sem lançamento</span><strong>—</strong></div>`;
+        }
+      } else if (isImplant) {
+        body += `<div class="es-card-main"><span class="es-main-label">Valor total</span><span class="es-main-value">${fmt(it.contracted)}</span></div>`;
+        if (it.nextDue) {
+          body += `<div class="es-card-row success"><span>Data prevista</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
+        } else {
+          body += `<div class="es-card-row"><span>Data</span><strong style="color:var(--text-2)">Ainda sem data</strong></div>`;
+        }
+      } else {
+        // Default fallback (RPV próximo mês: sem_calculo)
+        if (it.contracted > 0) {
+          body += `<div class="es-card-main"><span class="es-main-label">Valor</span><span class="es-main-value">${fmt(it.contracted)}</span></div>`;
+        }
       }
 
       return `
-        <div class="es-card es-status-${it.status}" onclick="window.open('${it.advboxUrl}','_blank')">
+        <div class="es-card es-status-${it.status}" onclick="openLancamentoModal(${it.id})">
           <div class="es-card-client" title="${client}">${client}</div>
           <div class="es-card-type">${type}</div>
-          ${it.contracted > 0 ? `
-            <div class="es-card-row"><span>Contratado</span><strong>${fmt(it.contracted)}</strong></div>
-            <div class="es-card-row"><span>Lançado</span><strong>${fmt(it.lancado)}</strong></div>
-            <div class="es-card-progress"><div class="es-card-progress-fill" style="width:${pct}%"></div></div>
-          ` : ''}
-          ${mainRow}
+          ${body}
           <div class="es-card-foot">
             <span>${it.responsible || ''}</span>
             <a href="${it.advboxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">AdvBox ↗</a>
           </div>
         </div>`;
+    }
+
+    function openLancamentoModal(lawsuitId) {
+      // Stub — modal de lançamento ainda em desenvolvimento
+      // Por enquanto só abre AdvBox (mesmo comportamento do botão "AdvBox ↗")
+      window.open(`https://app.advbox.com.br/lawsuits/${lawsuitId}`, '_blank');
     }
     // ── FIM ESTEIRA ──────────────────────────────────────────────────────────
   </script>
