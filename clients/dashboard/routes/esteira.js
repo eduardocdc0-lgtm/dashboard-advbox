@@ -26,20 +26,23 @@ const ESTEIRA_RULES = {
   'ADM IMPLANTADO A RECEBER':      { mode: 'em_aberto' },
 };
 
-// Detecta cliente "junk" (INSS, parceria, CNPJ, etc)
-function isJunkCustomer(c) {
+// Detecta entidade "institucional" (INSS / Justiça / órgão, etc.)
+// Heurística: nome contém marcadores OU identification é CNPJ.
+// NÃO usa origin (tanto INSS quanto cliente real podem ter origin=PARCERIA).
+function isInstitucional(c) {
   const n = (c.name || '').toUpperCase();
   if (!n) return true;
   if (n.includes('INSS')) return true;
   if (n.includes('INSTITUTO NACIONAL')) return true;
   if (n.includes('SEGURO SOCIAL')) return true;
   if (n === 'PARCELADO' || n === 'PARCERIA') return true;
-  if (c.origin === 'PARCERIA') return true;
   if ((c.identification || '').match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)) return true; // CNPJ
   return false;
 }
 
-// Extrai nome do cliente do campo notes — padrão: "Titulo: NOME X INSS - ..."
+const CPF_RE = /\d{3}\.\d{3}\.\d{3}-\d{2}/;
+
+// Extrai nome do cliente do campo notes (fallback raríssimo)
 function extractFromNotes(notes) {
   if (!notes) return null;
   const m = notes.match(/T[íi]tulo:\s*([^\r\nX]+?)\s+X\s+/i);
@@ -47,22 +50,22 @@ function extractFromNotes(notes) {
   return null;
 }
 
-// Cliente real (não o INSS / parceria / CNPJ)
+// Escolhe o nome do cliente real
+// Ordem: 1) customer com CPF válido  2) customer não-institucional  3) notes  4) qualquer
 function pickClientName(lawsuit) {
-  const customers = lawsuit.customers;
-  if (Array.isArray(customers) && customers.length) {
-    const real = customers.find(c => !isJunkCustomer(c));
-    if (real && real.name) return real.name;
-  }
-  // Fallback: parsear do notes
+  const customers = Array.isArray(lawsuit.customers) ? lawsuit.customers : [];
+  // 1) Cliente com CPF (pessoa física, prioridade alta)
+  const withCpf = customers.find(c => c.identification && CPF_RE.test(c.identification));
+  if (withCpf && withCpf.name) return withCpf.name;
+  // 2) Não-institucional
+  const real = customers.find(c => !isInstitucional(c));
+  if (real && real.name) return real.name;
+  // 3) Notes
   const fromNotes = extractFromNotes(lawsuit.notes);
   if (fromNotes) return fromNotes;
-  // Último recurso: pega o que tiver (mesmo INSS) pra não ficar vazio
-  if (Array.isArray(customers) && customers.length) {
-    const any = customers.find(c => c.name);
-    if (any) return any.name;
-  }
-  return null;
+  // 4) Qualquer
+  const any = customers.find(c => c.name);
+  return any ? any.name : null;
 }
 
 // Parse DD/MM/YYYY ou YYYY-MM-DD pra Date

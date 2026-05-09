@@ -7436,12 +7436,24 @@
         const cardsHtml = filtered.length
           ? filtered.map(it => esteiraCardHtml(it, col.rule)).join('')
           : '<div class="es-empty">Sem processos</div>';
+        // Total da coluna: prefere "parcela × cards" se houver regra; senão soma fees_expec
+        const r = col.rule || {};
+        let totalLabel = '';
+        if (r.mode === 'parcela_fixa' || r.mode === 'lancamento_unico') {
+          const v = r.valor * filtered.length;
+          totalLabel = `Soma parcelas: ${fmt(v)}`;
+        } else if (r.mode === 'parcelas_iguais') {
+          const v = filtered.reduce((s, it) => s + (Number(it.expectedParcelaValor) || 0), 0);
+          totalLabel = `Soma parcelas: ${fmt(v)}`;
+        } else {
+          totalLabel = `Total: ${fmt(colTotal)}`;
+        }
         return `
           <div class="es-col">
             <div class="es-col-hdr">
               <div>
                 <div class="es-col-name">${col.stage}</div>
-                <div class="es-col-total">${fmt(colTotal)}</div>
+                <div class="es-col-total">${totalLabel}</div>
               </div>
               <div class="es-col-count">${filtered.length}</div>
             </div>
@@ -7472,24 +7484,16 @@
       let body = '';
 
       if (isParcelado) {
-        // Mostra: valor da parcela, X/Y parcelas, falta lançar, próx venc
+        // Simplificado: só valor da parcela + próximo vencimento
         const parcVal = it.expectedParcelaValor;
         body += `<div class="es-card-main"><span class="es-main-label">Parcela</span><span class="es-main-value">${fmt(parcVal)}</span></div>`;
-        if (it.expectedParcelas) {
-          body += `<div class="es-card-row"><span>Lançadas</span><strong>${it.existingParcelas} de ${it.expectedParcelas}</strong></div>`;
-        }
-        if (it.gap > 0) {
-          body += `<div class="es-card-row danger"><span>Falta lançar</span><strong>${fmt(it.gap)}</strong></div>`;
-        }
         if (it.nextDue) {
           body += `<div class="es-card-row"><span>Próx venc</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
         }
       } else if (isUnico) {
         body += `<div class="es-card-main"><span class="es-main-label">Valor</span><span class="es-main-value">${fmt(it.expectedParcelaValor || it.contracted)}</span></div>`;
-        if (it.lancado > 0) {
-          body += `<div class="es-card-row success"><span>Lançado</span><strong>${fmt(it.lancado)}</strong></div>`;
-        } else if (it.contracted > 0) {
-          body += `<div class="es-card-row danger"><span>Sem lançamento</span><strong>—</strong></div>`;
+        if (it.nextDue) {
+          body += `<div class="es-card-row"><span>Próx venc</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
         }
       } else if (isImplant) {
         body += `<div class="es-card-main"><span class="es-main-label">Valor total</span><span class="es-main-value">${fmt(it.contracted)}</span></div>`;
