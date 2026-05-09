@@ -1064,6 +1064,117 @@
     #metaads .fin-table td:first-child { white-space:normal; max-width:220px; min-width:140px; }
     .meta-zero { color:#ccc; }
     .meta-top   { background:#f7fff7; }
+
+    /* ── SIDEBAR (NEW NAV) ───────────────────────────────────────────── */
+    :root { --sidebar-width: 240px; --sidebar-bg: #FAFAF8; }
+
+    body { padding-left: var(--sidebar-width); transition: padding-left 0.2s ease; }
+    body.sidebar-collapsed { padding-left: 56px; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden;
+      z-index: 100;
+      transition: width 0.2s ease;
+      font-family: 'DM Sans', sans-serif;
+    }
+    body.sidebar-collapsed .sidebar { width: 56px; }
+
+    .sidebar-brand {
+      padding: 22px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; min-height: 76px; flex-shrink: 0;
+    }
+    .sidebar-brand-text { line-height: 1.1; overflow: hidden; }
+    .sidebar-brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px; color: var(--text); white-space: nowrap;
+    }
+    .sidebar-brand-sub {
+      font-size: 9px; font-weight: 500; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--text-2);
+      margin-top: 2px; white-space: nowrap;
+    }
+    body.sidebar-collapsed .sidebar-brand { padding: 18px 0; justify-content: center; }
+    body.sidebar-collapsed .sidebar-brand-text { display: none; }
+
+    .sidebar-toggle {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; width: 28px; height: 28px;
+      cursor: pointer; color: var(--text-2);
+      font-size: 13px; line-height: 1; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .sidebar-toggle:hover { color: var(--text); border-color: var(--text); }
+
+    .sidebar-nav {
+      padding: 12px 8px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .nav-group { display: flex; flex-direction: column; }
+    .nav-group-header {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; background: transparent; border: none;
+      padding: 9px 12px; border-radius: 8px; cursor: pointer;
+      color: var(--text-2); font-family: inherit;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      text-align: left; transition: background 0.15s, color 0.15s;
+    }
+    .nav-group-header:hover { background: var(--hover); color: var(--text); }
+    .nav-group-icon { font-size: 14px; flex-shrink: 0; line-height: 1; }
+    .nav-group-label { flex: 1; white-space: nowrap; overflow: hidden; }
+    .nav-group-chevron {
+      font-size: 10px; color: var(--text-2);
+      transition: transform 0.15s; flex-shrink: 0;
+    }
+    .nav-group.open .nav-group-chevron { transform: rotate(180deg); }
+
+    .nav-group-items {
+      display: none; flex-direction: column; gap: 1px;
+      padding: 2px 0 6px 0;
+    }
+    .nav-group.open .nav-group-items { display: flex; }
+
+    .nav-item {
+      display: block; width: 100%;
+      background: transparent; border: none;
+      padding: 7px 12px 7px 36px;
+      border-radius: 6px; cursor: pointer;
+      color: var(--text-2); font-family: inherit;
+      font-size: 13px; font-weight: 400;
+      text-align: left; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: var(--hover); color: var(--text); }
+    .nav-item.active {
+      background: var(--text); color: #fff; font-weight: 500;
+    }
+    .nav-item.active:hover { background: var(--text); color: #fff; }
+
+    /* Collapsed mode: only show group icons */
+    body.sidebar-collapsed .nav-group-label,
+    body.sidebar-collapsed .nav-group-chevron,
+    body.sidebar-collapsed .nav-group-items { display: none !important; }
+    body.sidebar-collapsed .nav-group-header { justify-content: center; padding: 12px 0; }
+    body.sidebar-collapsed .nav-group-icon { font-size: 18px; }
+
+    /* Hide original top tabs — replaced by sidebar */
+    .tabs { display: none !important; }
+
+    /* Mobile: auto-collapse */
+    @media (max-width: 900px) {
+      body { padding-left: 56px; }
+      body:not(.sidebar-collapsed) .sidebar {
+        box-shadow: 4px 0 16px rgba(0,0,0,0.08);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1083,6 +1194,116 @@
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
+
+  <!-- ── SIDEBAR ────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">Eduardo Rodrigues</div>
+        <div class="sidebar-brand-sub">Advocacia</div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Recolher menu">⮜</button>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <!-- Início -->
+      <div class="nav-group" data-group="inicio">
+        <button class="nav-group-header" onclick="toggleGroup('inicio')">
+          <span class="nav-group-icon">🏠</span>
+          <span class="nav-group-label">Início</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab admin-tab active" onclick="showTab('overview', event)">Visão geral</button>
+        </div>
+      </div>
+
+      <!-- Operação Jurídica -->
+      <div class="nav-group" data-group="operacao">
+        <button class="nav-group-header" onclick="toggleGroup('operacao')">
+          <span class="nav-group-icon">⚖️</span>
+          <span class="nav-group-label">Operação Jurídica</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab admin-tab" onclick="showTab('processes', event)">Processos</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
+          <button class="nav-item tab" onclick="showTab('petitions', event)">🧾 Petições</button>
+          <button class="nav-item tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
+          <button class="nav-item tab" onclick="showTab('distribuicao', event)">Distribuição</button>
+        </div>
+      </div>
+
+      <!-- Clientes -->
+      <div class="nav-group" data-group="clientes">
+        <button class="nav-group-header" onclick="toggleGroup('clientes')">
+          <span class="nav-group-icon">👥</span>
+          <span class="nav-group-label">Clientes</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab" onclick="showTab('clients', event)">Lista de clientes</button>
+          <button class="nav-item tab" onclick="showTab('registrations', event)">Cadastros pendentes</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('aniversarios', event)">🎂 Aniversários</button>
+          <button class="nav-item tab" onclick="showTab('canais', event)">Canais</button>
+        </div>
+      </div>
+
+      <!-- Marketing -->
+      <div class="nav-group" data-group="marketing">
+        <button class="nav-group-header" onclick="toggleGroup('marketing')">
+          <span class="nav-group-icon">📈</span>
+          <span class="nav-group-label">Marketing</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('leads', event)">Leads</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
+        </div>
+      </div>
+
+      <!-- Financeiro -->
+      <div class="nav-group" data-group="financeiro">
+        <button class="nav-group-header" onclick="toggleGroup('financeiro')">
+          <span class="nav-group-icon">💰</span>
+          <span class="nav-group-label">Financeiro</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
+        </div>
+      </div>
+
+      <!-- Auditoria -->
+      <div class="nav-group" data-group="auditoria">
+        <button class="nav-group-header" onclick="toggleGroup('auditoria')">
+          <span class="nav-group-icon">🔍</span>
+          <span class="nav-group-label">Auditoria</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria geral</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('auditresp', event)">Por responsável</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('inssConf', event)">Conferência INSS</button>
+        </div>
+      </div>
+
+      <!-- Sistema -->
+      <div class="nav-group" data-group="sistema">
+        <button class="nav-group-header" onclick="toggleGroup('sistema')">
+          <span class="nav-group-icon">⚙️</span>
+          <span class="nav-group-label">Sistema</span>
+          <span class="nav-group-chevron">▾</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item tab admin-tab" onclick="showTab('admin', event)">Admin</button>
+        </div>
+      </div>
+
+    </nav>
+  </aside>
 
   <div class="container">
     <header>
@@ -1107,7 +1328,7 @@
       <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
       <button class="tab" onclick="showTab('petitions', event)">🧾 Petições</button>
       <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
-      <button class="tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
+      <button class="tab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
@@ -2333,7 +2554,20 @@
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(name).classList.add('active');
-      if (evt) evt.target.classList.add('active');
+      // Marca como ativo o item da sidebar correspondente (independente do evt)
+      document.querySelectorAll('.nav-item').forEach(b => {
+        const oc = b.getAttribute('onclick') || '';
+        if (oc.includes(`'${name}'`)) {
+          b.classList.add('active');
+          // Garante que o grupo pai esteja aberto
+          const grp = b.closest('.nav-group');
+          if (grp && !grp.classList.contains('open')) {
+            grp.classList.add('open');
+            saveGroupStates();
+          }
+        }
+      });
+      if (evt && evt.target) evt.target.classList.add('active');
       if (name === 'metaads'   && !metaRawData)       loadMetaAds();
       if (name === 'evolucao'  && !window._evoData)   loadEvolucao();
       if (name === 'auditoria' && !auditData)         loadAudit();
@@ -2345,6 +2579,70 @@
       if (name === 'financial' && !_cfData)           loadCashFlow();
       if (name === 'metaads'  && !_roiData)           loadCampaignRoi();
       if (name === 'aniversarios')                   loadBirthday();
+    }
+
+    // ── Sidebar: toggle, grupos, persistência ─────────────────────────
+    const SIDEBAR_KEY = 'sidebarCollapsed';
+    const GROUPS_KEY  = 'sidebarGroups';
+
+    function toggleSidebar() {
+      const collapsed = document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
+      const btn = document.getElementById('sidebarToggle');
+      if (btn) btn.textContent = collapsed ? '⮞' : '⮜';
+    }
+
+    function toggleGroup(id) {
+      const grp = document.querySelector(`.nav-group[data-group="${id}"]`);
+      if (!grp) return;
+      // Se sidebar tá colapsada, clicar no grupo expande a sidebar e abre o grupo
+      if (document.body.classList.contains('sidebar-collapsed')) {
+        document.body.classList.remove('sidebar-collapsed');
+        localStorage.setItem(SIDEBAR_KEY, '0');
+        const btn = document.getElementById('sidebarToggle');
+        if (btn) btn.textContent = '⮜';
+        grp.classList.add('open');
+      } else {
+        grp.classList.toggle('open');
+      }
+      saveGroupStates();
+    }
+
+    function saveGroupStates() {
+      const state = {};
+      document.querySelectorAll('.nav-group').forEach(g => {
+        state[g.dataset.group] = g.classList.contains('open');
+      });
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(state));
+    }
+
+    function restoreSidebarState() {
+      // Sidebar collapsed
+      if (localStorage.getItem(SIDEBAR_KEY) === '1') {
+        document.body.classList.add('sidebar-collapsed');
+        const btn = document.getElementById('sidebarToggle');
+        if (btn) btn.textContent = '⮞';
+      }
+      // Grupos: por padrão, abre todos no primeiro acesso
+      const raw = localStorage.getItem(GROUPS_KEY);
+      if (!raw) {
+        document.querySelectorAll('.nav-group').forEach(g => g.classList.add('open'));
+      } else {
+        try {
+          const state = JSON.parse(raw);
+          document.querySelectorAll('.nav-group').forEach(g => {
+            if (state[g.dataset.group]) g.classList.add('open');
+            else g.classList.remove('open');
+          });
+        } catch { /* ignora json inválido */ }
+      }
+    }
+
+    // Restaura assim que o DOM tá pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', restoreSidebarState);
+    } else {
+      restoreSidebarState();
     }
 
     function showError(msg) {
