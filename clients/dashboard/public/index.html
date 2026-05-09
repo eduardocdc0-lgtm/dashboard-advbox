@@ -1304,6 +1304,33 @@
     .fc-stat-value.success { color: var(--success); }
 
     .fc-actions { display: flex; gap: 8px; }
+
+    .fc-navbar {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; padding: 8px 12px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .fc-nav-arrow {
+      background: transparent; border: 1px solid var(--border);
+      width: 28px; height: 28px; border-radius: 6px;
+      cursor: pointer; font-size: 16px; color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .fc-nav-arrow:hover { background: var(--hover); border-color: var(--text); }
+    .fc-nav-label {
+      font-family: 'DM Serif Display', serif; font-size: 16px;
+      color: var(--text); padding: 0 8px; min-width: 180px; text-align: center;
+    }
+    .fc-nav-spacer { flex: 1; }
+    .fc-nav-pill {
+      background: transparent; border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 14px; font-family: inherit;
+      font-size: 11px; cursor: pointer; color: var(--text-2);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .fc-nav-pill:hover { background: var(--hover); border-color: var(--text); color: var(--text); }
     .btn-primary {
       background: var(--text); color: #fff; border: none;
       padding: 8px 14px; border-radius: 6px; font-family: inherit;
@@ -2824,15 +2851,24 @@
     <div id="finCalendar" class="tab-content">
       <div class="fc-toolbar">
         <div class="fc-summary">
-          <div class="fc-stat"><div class="fc-stat-label">Período</div><div class="fc-stat-value" id="fcPeriodLabel">—</div></div>
           <div class="fc-stat"><div class="fc-stat-label">A receber</div><div class="fc-stat-value" id="fcTotalPending">—</div></div>
           <div class="fc-stat"><div class="fc-stat-label">Recebido</div><div class="fc-stat-value success" id="fcTotalPaid">—</div></div>
           <div class="fc-stat"><div class="fc-stat-label">Total</div><div class="fc-stat-value" id="fcTotalAll">—</div></div>
+          <div class="fc-stat"><div class="fc-stat-label">Parcelas</div><div class="fc-stat-value" id="fcTotalCount">—</div></div>
         </div>
         <div class="fc-actions">
           <button class="btn-link" onclick="loadFinCalendar()">↻ Atualizar</button>
           <button class="btn-primary" onclick="openNovoLancamento()">+ Novo lançamento</button>
         </div>
+      </div>
+
+      <div class="fc-navbar">
+        <button class="fc-nav-arrow" onclick="fcShiftPeriod(-1)" title="Mês anterior">‹</button>
+        <div class="fc-nav-label" id="fcPeriodLabel">—</div>
+        <button class="fc-nav-arrow" onclick="fcShiftPeriod(1)" title="Próximo mês">›</button>
+        <div class="fc-nav-spacer"></div>
+        <button class="fc-nav-pill" onclick="fcSetPeriod('current')">Atual</button>
+        <button class="fc-nav-pill" onclick="fcSetPeriod('year')">Ano todo</button>
       </div>
 
       <div class="fc-months" id="fcMonths"><div class="loading">Carregando calendário...</div></div>
@@ -7497,6 +7533,8 @@
     // ── CALENDÁRIO FINANCEIRO ──────────────────────────────────────────────
     let _fcData = null;
     let _fcKind = 'parcelado';
+    let _fcFrom = null; // YYYY-MM-DD
+    let _fcTo   = null;
 
     const FC_CAT_LABEL = {
       'SALARIO_MATERNIDADE':'Salário Maternidade',
@@ -7513,11 +7551,50 @@
     const fcFmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const fcFmtFull = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    function fcDefaultPeriod() {
+      // Mês atual até dezembro do mesmo ano (ou +8 meses se for nov/dez)
+      const now = new Date();
+      const y = now.getFullYear(), m = now.getMonth() + 1;
+      _fcFrom = `${y}-${String(m).padStart(2,'0')}-01`;
+      const endY = y, endM = 12;
+      const last = new Date(endY, endM, 0);
+      _fcTo = `${endY}-${String(endM).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
+    }
+
+    function fcShiftPeriod(deltaMonths) {
+      if (!_fcFrom || !_fcTo) fcDefaultPeriod();
+      const shift = (dateStr, n) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const nm = m + n;
+        const ny = y + Math.floor((nm - 1) / 12);
+        const newM = ((nm - 1) % 12 + 12) % 12 + 1;
+        // Mantém o dia (ou ajusta se for fim do mês)
+        const last = new Date(ny, newM, 0).getDate();
+        const newD = Math.min(d, last);
+        return `${ny}-${String(newM).padStart(2,'0')}-${String(newD).padStart(2,'0')}`;
+      };
+      _fcFrom = shift(_fcFrom, deltaMonths);
+      _fcTo   = shift(_fcTo,   deltaMonths);
+      loadFinCalendar();
+    }
+
+    function fcSetPeriod(preset) {
+      if (preset === 'current') {
+        fcDefaultPeriod();
+      } else if (preset === 'year') {
+        const y = new Date().getFullYear();
+        _fcFrom = `${y}-01-01`;
+        _fcTo   = `${y}-12-31`;
+      }
+      loadFinCalendar();
+    }
+
     async function loadFinCalendar() {
+      if (!_fcFrom || !_fcTo) fcDefaultPeriod();
       const el = document.getElementById('fcMonths');
       el.innerHTML = '<div class="loading">Carregando calendário...</div>';
       try {
-        const r = await fetch('/api/finance/calendar');
+        const r = await fetch(`/api/finance/calendar?from=${_fcFrom}&to=${_fcTo}`);
         if (!r.ok) throw new Error(await r.text());
         _fcData = await r.json();
         renderFinCalendar();
@@ -7529,18 +7606,28 @@
     function renderFinCalendar() {
       if (!_fcData) return;
       const today = new Date().toISOString().slice(0,10);
-      let totalAll = 0, totalPaid = 0, totalPending = 0;
+      let totalAll = 0, totalPaid = 0, totalPending = 0, totalCount = 0;
       _fcData.months.forEach(m => {
         m.parcelas.forEach(p => {
           totalAll += Number(p.value || 0);
+          totalCount++;
           if (p.status === 'paga') totalPaid += Number(p.paid_value || p.value);
           if (p.status === 'pendente') totalPending += Number(p.value);
         });
       });
-      document.getElementById('fcPeriodLabel').textContent = `${_fcData.from} → ${_fcData.to}`;
+      // Label amigável: "Mai 2026 → Dez 2026" ou "Mai 2026" (1 mês só)
+      const labelFmt = ymd => {
+        const [y, m] = ymd.split('-').map(Number);
+        return `${FC_MES_NOMES[m-1]} ${y}`;
+      };
+      const fromL = labelFmt(_fcData.from);
+      const toL   = labelFmt(_fcData.to);
+      document.getElementById('fcPeriodLabel').textContent = fromL === toL ? fromL : `${fromL} → ${toL}`;
       document.getElementById('fcTotalAll').textContent     = fcFmt(totalAll);
       document.getElementById('fcTotalPaid').textContent    = fcFmt(totalPaid);
       document.getElementById('fcTotalPending').textContent = fcFmt(totalPending);
+      const countEl = document.getElementById('fcTotalCount');
+      if (countEl) countEl.textContent = totalCount;
 
       // Garante que TODOS os meses do range apareçam (mesmo vazios)
       const [fy, fm] = _fcData.from.split('-').map(Number);
