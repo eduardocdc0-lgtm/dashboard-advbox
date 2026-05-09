@@ -2023,8 +2023,11 @@
 
       <!-- Alertas Críticos -->
       <div class="card" id="auditSecCriticos">
-        <div class="card-title" style="color:#b02020;">🔴 Alertas Críticos
-          <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div class="card-title" style="color:#b02020;margin-bottom:0;">🔴 Alertas Críticos
+            <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
+          </div>
+          <button id="auditCobrarTodosBtn" class="audit-btn-cobrar" onclick="auditCobrarTodos(this)" style="font-size:12px;padding:8px 14px;display:none;">📋 Cobrar Cau (todos)</button>
         </div>
         <div id="auditCritList"><div class="loading">Carregando...</div></div>
       </div>
@@ -4882,6 +4885,9 @@
       // Resumo
       document.getElementById('auditCritCount').textContent = filtCrit.length;
       document.getElementById('auditCritVal').textContent   = filtCrit.length ? formatMoney(filtCrit.reduce((s,c)=>s+(c.ultimoValor||0),0)) : '';
+      // Botão "Cobrar Cau (todos)" só aparece quando há críticos
+      const cobrarBtn = document.getElementById('auditCobrarTodosBtn');
+      if (cobrarBtn) cobrarBtn.style.display = filtCrit.length > 0 ? '' : 'none';
       document.getElementById('auditMonCount').textContent  = filtMon.length;
       document.getElementById('auditMonVal').textContent    = filtMon.length ? formatMoney(filtMon.reduce((s,c)=>s+(c.valorFees||0),0)) : '';
       document.getElementById('auditOkCount').textContent   = filtOk.length;
@@ -4996,6 +5002,31 @@
           </tr>`).join('')}</tbody>
         </table>`;
       }
+    }
+
+    // Monta UMA mensagem com TODOS os críticos atuais (respeitando filtros)
+    function auditCobrarTodos(btn) {
+      if (!auditData) return;
+      const respFilter = document.getElementById('auditRespFilter')?.value || '';
+      const filterResp = c => !respFilter || (c.responsavel || '').toLowerCase().includes(respFilter.toLowerCase());
+      const criticos = (auditData.criticos || []).filter(filterResp);
+      if (!criticos.length) { alert('Sem críticos para cobrar.'); return; }
+
+      // Agrupa por fase pra mensagem ficar mais legível
+      const byFase = {};
+      criticos.forEach(c => { (byFase[c.fase] = byFase[c.fase] || []).push(c); });
+
+      let msg = `Oi Cau!\n\n${criticos.length} processo${criticos.length > 1 ? 's' : ''} no seu CRM mas sem lançamento em ${auditMesAtual}.\nPode dar uma olhada?\n`;
+      Object.entries(byFase).forEach(([fase, lista]) => {
+        msg += `\n*${fase}* (${lista.length})\n`;
+        lista.forEach((c, i) => {
+          const ult = c.ultimoLancamento ? ` (último: ${formatDate(c.ultimoLancamento)}${c.ultimoValor ? ' — ' + formatMoney(c.ultimoValor) : ''})` : ' (sem lançamentos anteriores)';
+          msg += `${i + 1}. ${c.cliente}${ult}\n`;
+        });
+      });
+      msg += `\nLink: ${window.location.origin}/#auditoria`;
+
+      auditCopiarMsg(btn, msg);
     }
 
     function auditCopiarMsg(btn, msg) {
