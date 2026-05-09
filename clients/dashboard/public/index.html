@@ -1578,10 +1578,7 @@
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
-          <button class="nav-item tab admin-tab" onclick="showTab('processes', event)">Processos</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
           <button class="nav-item tab" onclick="showTab('petitions', event)">🧾 Petições</button>
-          <button class="nav-item tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
           <button class="nav-item tab" onclick="showTab('distribuicao', event)">Distribuição</button>
         </div>
       </div>
@@ -1797,6 +1794,7 @@
             <button class="pet-period-btn"         data-p="yesterday"  onclick="petSetPeriod('yesterday',this)">Ontem</button>
             <button class="pet-period-btn"         data-p="this_week"  onclick="petSetPeriod('this_week',this)">Esta semana</button>
             <button class="pet-period-btn"         data-p="this_month" onclick="petSetPeriod('this_month',this)">Este mês</button>
+            <button class="pet-period-btn"         data-p="last_month" onclick="petSetPeriod('last_month',this)">Mês passado</button>
           </div>
           <button class="refresh-btn" onclick="loadPetitions(true)">↺ Atualizar</button>
           <button class="dist-export-btn admin-only" onclick="petExportCSV()">📊 Exportar CSV</button>
@@ -7310,7 +7308,7 @@
       if (filterVal) persons = persons.filter(p => p.name === filterVal);
 
       const total = persons.reduce((s, p) => s + p.count, 0);
-      const lbl   = { today:'hoje', yesterday:'ontem', this_week:'esta semana', this_month:'este mês' };
+      const lbl   = { today:'hoje', yesterday:'ontem', this_week:'esta semana', this_month:'este mês', last_month:'mês passado' };
       document.getElementById('petTotalNum').textContent = total;
       document.getElementById('petTotalLbl').textContent = `petições ${lbl[_petPeriod]||''}`;
       document.getElementById('petUpdatedAt').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');

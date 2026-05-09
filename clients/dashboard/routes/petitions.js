@@ -77,6 +77,17 @@ function getPeriodRange(period) {
   if (period === 'this_month') {
     return { start: today.slice(0, 7) + '-01 00:00:00', end: today + ' 23:59:59' };
   }
+  if (period === 'last_month') {
+    const [y, m] = today.split('-').map(Number);
+    const lmY = m === 1 ? y - 1 : y;
+    const lmM = m === 1 ? 12 : m - 1;
+    const lastDay = new Date(Date.UTC(lmY, lmM, 0)).getUTCDate();
+    const mm = String(lmM).padStart(2, '0');
+    return {
+      start: `${lmY}-${mm}-01 00:00:00`,
+      end:   `${lmY}-${mm}-${String(lastDay).padStart(2,'0')} 23:59:59`,
+    };
+  }
   return { start: today + ' 00:00:00', end: today + ' 23:59:59' };
 }
 
