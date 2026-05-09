@@ -1847,6 +1847,51 @@
         </div>
       </div>
 
+      <!-- Atividade de Hoje -->
+      <div class="hoje-section">
+        <div class="hoje-title">
+          Atividade da equipe
+          <span id="hojeData" style="font-weight:400;color:#aaa;font-size:11px;margin-left:8px;"></span>
+          <span style="font-weight:400;color:#bbb;font-size:10px;margin-left:6px;">· últimos 7 dias</span>
+        </div>
+        <div id="hojeGrid" class="hoje-grid"><div class="loading">Aguardando dados...</div></div>
+      </div>
+
+      <!-- Evolução -->
+      <div class="evo-section">
+        <div class="evo-card">
+          <div class="evo-card-title">Honorários contratados</div>
+          <div class="evo-periods">
+            <div>
+              <div class="evo-period-label">Últimos 3 meses vs 3 anteriores</div>
+              <div class="evo-pct-num" id="evoPct3C">—</div>
+              <div class="evo-compare" id="evoCmp3C">—</div>
+            </div>
+            <div>
+              <div class="evo-period-label">Últimos 6 meses vs 6 anteriores</div>
+              <div class="evo-pct-num" id="evoPct6C">—</div>
+              <div class="evo-compare" id="evoCmp6C">—</div>
+            </div>
+          </div>
+          <div class="evo-chart-wrap"><canvas id="chartEvoC"></canvas></div>
+        </div>
+        <div class="evo-card">
+          <div class="evo-card-title">Faturamento recebido</div>
+          <div class="evo-periods">
+            <div>
+              <div class="evo-period-label">Últimos 3 meses vs 3 anteriores</div>
+              <div class="evo-pct-num" id="evoPct3F">—</div>
+              <div class="evo-compare" id="evoCmp3F">—</div>
+            </div>
+            <div>
+              <div class="evo-period-label">Últimos 6 meses vs 6 anteriores</div>
+              <div class="evo-pct-num" id="evoPct6F">—</div>
+              <div class="evo-compare" id="evoCmp6F">—</div>
+            </div>
+          </div>
+          <div class="evo-chart-wrap"><canvas id="chartEvoF"></canvas></div>
+        </div>
+      </div>
     </div>
 
     <!-- ABA 2: PROCESSOS -->
@@ -3307,7 +3352,7 @@
       return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mm - 1];
     }
 
-    function renderEvolucao() {
+    function renderEvoOverview() {
       const currentMes = evoMesKey(new Date());
 
       // Honorários contratados por mês (fees_money ou fees_expec, agrupados por created_at)
@@ -5190,7 +5235,7 @@
           loadPosts(),
           loadRegistrations(force)
         ]);
-        renderEvolucao();
+        renderEvoOverview();
         // Distribuição e Fluxo usam o mesmo endpoint de lawsuits — executa após as outras
         // para evitar rate limit simultâneo
         setTimeout(() => loadDistribuicao(), 2000);
