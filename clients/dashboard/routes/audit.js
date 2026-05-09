@@ -25,7 +25,23 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
   try {
     const data = await cache.getOrFetch(key, async () => {
       const [lawsuits, transactions] = await Promise.all([fetchLawsuits(), fetchTransactions()]);
-      const txDoMes = transactions.filter(t => t.entry_type === 'income' && t.competence === mes);
+
+      // Regime de caixa: considera "do mês" se houver date_payment OU date_due no mês.
+      // (Antes filtrava por t.competence === mes, gerando falsos críticos quando
+      // a parcela tinha competência de outro mês mas foi paga/vence no mês alvo.)
+      const [mm, yyyy] = mes.split('/').map(Number);
+      const matchesMes = (dateStr) => {
+        if (!dateStr) return false;
+        const s = String(dateStr);
+        let m, y;
+        if (/^\d{4}-\d{2}-\d{2}/.test(s))      { y = +s.slice(0,4); m = +s.slice(5,7); }
+        else if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) { const p = s.split('/'); m = +p[1]; y = +p[2]; }
+        else return false;
+        return m === mm && y === yyyy;
+      };
+      const txDoMes = transactions.filter(t =>
+        t.entry_type === 'income' && (matchesMes(t.date_payment) || matchesMes(t.date_due))
+      );
       const txByLaw = {}, lastTx = {};
 
       txDoMes.forEach(t => { const lid = String(t.lawsuits_id || t.lawsuit_id || ''); if (!lid) return; if (!txByLaw[lid]) txByLaw[lid] = []; txByLaw[lid].push(t); });
