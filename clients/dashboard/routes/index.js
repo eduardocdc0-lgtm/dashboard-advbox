@@ -20,5 +20,6 @@ router.use(require('./cash-flow'));
 router.use(require('./campaign-roi'));
 router.use(require('./esteira'));
 router.use(require('./finance'));
+router.use(require('./overview'));
 
 module.exports = router;

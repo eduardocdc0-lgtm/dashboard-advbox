@@ -1337,6 +1337,108 @@
     /* Sem-data vira vermelho (igual crítico — sem lançamento) */
     .es-card.es-status-sem-data { border-left-color: var(--danger); }
 
+    /* ── VISÃO GERAL — Kanban por setor ──────────────────────────────── */
+    .ov-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .ov-month {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 6px;
+    }
+    .ov-arrow {
+      background: transparent; border: none;
+      width: 28px; height: 28px; border-radius: 6px;
+      cursor: pointer; font-size: 18px; color: var(--text);
+    }
+    .ov-arrow:hover { background: var(--hover); }
+    .ov-month-label {
+      font-family: 'DM Serif Display', serif; font-size: 16px;
+      color: var(--text); padding: 0 14px; min-width: 130px; text-align: center;
+      text-transform: capitalize;
+    }
+    .ov-today {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 12px; padding: 3px 10px; font-size: 10px;
+      font-family: inherit; font-weight: 500; color: var(--text-2);
+      cursor: pointer; margin-left: 4px; text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .ov-today:hover { color: var(--text); border-color: var(--text); }
+
+    .ov-board {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .ov-col {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .ov-col-hdr {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ov-col-icon { font-size: 18px; }
+    .ov-col-name {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text); flex: 1;
+    }
+
+    .ov-section {
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    .ov-section:last-of-type { border-bottom: none; }
+    .ov-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 8px; cursor: pointer; padding: 6px 4px; border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .ov-row:hover { background: var(--hover); }
+    .ov-row-label { font-size: 11px; color: var(--text-2); flex: 1; line-height: 1.3; }
+    .ov-row-value {
+      font-size: 22px; font-family: 'DM Serif Display', serif;
+      font-weight: 400; color: var(--text); white-space: nowrap;
+    }
+    .ov-row-value.danger { color: var(--danger); }
+    .ov-row-value.success { color: var(--success); }
+    .ov-row-money {
+      font-size: 16px; font-family: 'DM Serif Display', serif;
+      font-weight: 400; color: var(--text); white-space: nowrap;
+    }
+    .ov-row-money.danger { color: var(--danger); }
+    .ov-row-money.success { color: var(--success); }
+    .ov-row-arrow { font-size: 11px; color: var(--text-2); margin-left: 4px; }
+
+    .ov-row-list {
+      display: none; max-height: 260px; overflow-y: auto;
+      padding: 4px 6px 8px; border-top: 1px dashed var(--border);
+      margin-top: 6px;
+    }
+    .ov-row.expanded + .ov-row-list { display: block; }
+    .ov-row-item {
+      font-size: 11px; padding: 4px 6px; border-radius: 3px;
+      color: var(--text); display: flex; justify-content: space-between;
+      gap: 6px;
+    }
+    .ov-row-item:hover { background: var(--bg); }
+    .ov-row-item a { color: var(--text-2); text-decoration: none; }
+    .ov-row-item a:hover { color: var(--text); }
+
+    .ov-col-foot {
+      padding: 8px 10px; border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .ov-notify-btn {
+      width: 100%; background: var(--text); color: #fff; border: none;
+      padding: 7px 10px; border-radius: 6px; font-family: inherit;
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .ov-notify-btn:hover { opacity: 0.85; }
+    .ov-notify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* ── CALENDÁRIO FINANCEIRO (lançamentos próprios) ────────────────── */
     .fc-toolbar {
       display: flex; justify-content: space-between; align-items: flex-end;
@@ -1694,7 +1796,23 @@
 
     <!-- ABA 1: VISÃO GERAL -->
     <div id="overview" class="tab-content active">
-      <div class="metrics">
+      <!-- ── KANBAN POR SETOR (mês de referência) ── -->
+      <div class="ov-toolbar">
+        <div class="ov-month">
+          <button class="ov-arrow" onclick="ovShiftMonth(-1)" title="Mês anterior">‹</button>
+          <span class="ov-month-label" id="ovMonthLabel">—</span>
+          <button class="ov-arrow" onclick="ovShiftMonth(1)" title="Próximo mês">›</button>
+          <button class="ov-today" onclick="ovGoToday()">hoje</button>
+        </div>
+        <button class="btn-link" onclick="loadOverview(true)">↻ Atualizar</button>
+      </div>
+
+      <div class="ov-board" id="ovBoard">
+        <div class="loading">Carregando visão geral...</div>
+      </div>
+
+      <!-- ── Conteúdo legado (mantido) ── -->
+      <div class="metrics" style="margin-top: 28px;">
         <div class="metric-card">
           <div class="metric-label">Total de processos</div>
           <div class="metric-value" id="totalProcessos">-</div>
@@ -3089,6 +3207,7 @@
       if (name === 'aniversarios')                   loadBirthday();
       if (name === 'esteira'   && !_esteiraData)      loadEsteira();
       if (name === 'finCalendar' && !_fcData)         loadFinCalendar();
+      if (name === 'overview'   && !_ovData)          loadOverview();
     }
 
     // ── Sidebar: toggle, grupos, persistência ─────────────────────────
@@ -5090,6 +5209,8 @@
       clearError();
 
       try {
+        // Carrega Visão Geral nova em paralelo (não bloqueante — ignora erro)
+        loadOverview().catch(() => {});
         await Promise.all([
           loadSettings(),
           loadLawsuits(),
@@ -8022,6 +8143,191 @@
       }
     });
     // ── FIM CALENDÁRIO ──────────────────────────────────────────────────────
+
+    // ── VISÃO GERAL (Kanban por setor) ──────────────────────────────────────
+    let _ovData  = null;
+    let _ovMonth = null; // {year, month}
+    const OV_MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function ovInitMonth() {
+      if (_ovMonth) return;
+      const now = new Date();
+      _ovMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+    }
+    function ovUpdateMonthLabel() {
+      const el = document.getElementById('ovMonthLabel');
+      if (el && _ovMonth) el.textContent = `${OV_MES_NOMES[_ovMonth.month - 1]} ${_ovMonth.year}`;
+    }
+    function ovShiftMonth(delta) {
+      ovInitMonth();
+      let m = _ovMonth.month + delta, y = _ovMonth.year;
+      while (m > 12) { y += 1; m -= 12; }
+      while (m < 1)  { y -= 1; m += 12; }
+      _ovMonth = { year: y, month: m };
+      ovUpdateMonthLabel();
+      loadOverview();
+    }
+    function ovGoToday() {
+      const now = new Date();
+      _ovMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+      ovUpdateMonthLabel();
+      loadOverview();
+    }
+    function ovMesStr() {
+      ovInitMonth();
+      return `${String(_ovMonth.month).padStart(2,'0')}/${_ovMonth.year}`;
+    }
+
+    async function loadOverview(force = false) {
+      ovInitMonth();
+      ovUpdateMonthLabel();
+      const board = document.getElementById('ovBoard');
+      if (!board) return;
+      board.innerHTML = '<div class="loading">Carregando visão geral...</div>';
+      try {
+        const r = await fetch(`/api/overview?mes=${encodeURIComponent(ovMesStr())}` + (force ? '&force=1' : ''));
+        if (!r.ok) throw new Error(await r.text());
+        _ovData = await r.json();
+        renderOverview();
+      } catch (e) {
+        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro: ${e.message}</div>`;
+      }
+    }
+
+    function ovFmt(v)    { return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+    function ovFmtBRL(v) { return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    function ovItemsHtml(items) {
+      if (!items || !items.length) return '<div class="ov-row-item" style="color:var(--text-2);font-style:italic;">Nenhum no mês</div>';
+      return items.map(it => `
+        <div class="ov-row-item">
+          <span title="${it.cliente}">${it.cliente}</span>
+          <a href="${it.advboxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>
+        </div>`).join('');
+    }
+
+    function ovToggleRow(el) {
+      el.classList.toggle('expanded');
+    }
+
+    function renderOverview() {
+      if (!_ovData) return;
+      const d = _ovData;
+      const html = `
+        <!-- Processos ADM -->
+        <div class="ov-col">
+          <div class="ov-col-hdr"><span class="ov-col-icon">📋</span><span class="ov-col-name">Processos ADM</span></div>
+          <div class="ov-section">
+            <div class="ov-row" onclick="ovToggleRow(this)">
+              <span class="ov-row-label">${d.adm.aguardandoConclusao.label}</span>
+              <span class="ov-row-value">${d.adm.aguardandoConclusao.count}<span class="ov-row-arrow">▾</span></span>
+            </div>
+            <div class="ov-row-list">${ovItemsHtml(d.adm.aguardandoConclusao.items)}</div>
+          </div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Avisar grupo</button></div>
+        </div>
+
+        <!-- Judicial -->
+        <div class="ov-col">
+          <div class="ov-col-hdr"><span class="ov-col-icon">⚖️</span><span class="ov-col-name">Judicial</span></div>
+          <div class="ov-section">
+            <div class="ov-row" onclick="ovToggleRow(this)">
+              <span class="ov-row-label">${d.judicial.peticionados.label}</span>
+              <span class="ov-row-value success">${d.judicial.peticionados.count}<span class="ov-row-arrow">▾</span></span>
+            </div>
+            <div class="ov-row-list">${ovItemsHtml(d.judicial.peticionados.items)}</div>
+          </div>
+          <div class="ov-section">
+            <div class="ov-row" onclick="ovToggleRow(this)">
+              <span class="ov-row-label">${d.judicial.elaborarPeticao.label}</span>
+              <span class="ov-row-value">${d.judicial.elaborarPeticao.count}<span class="ov-row-arrow">▾</span></span>
+            </div>
+            <div class="ov-row-list">${ovItemsHtml(d.judicial.elaborarPeticao.items)}</div>
+          </div>
+          <div class="ov-section">
+            <div class="ov-row" onclick="ovToggleRow(this)">
+              <span class="ov-row-label">${d.judicial.sentencaProcedente.label}</span>
+              <span class="ov-row-value">${d.judicial.sentencaProcedente.count}<span class="ov-row-arrow">▾</span></span>
+            </div>
+            <div class="ov-row-list">${ovItemsHtml(d.judicial.sentencaProcedente.items)}</div>
+          </div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Avisar grupo</button></div>
+        </div>
+
+        <!-- Financeiro (Críticos) -->
+        <div class="ov-col">
+          <div class="ov-col-hdr"><span class="ov-col-icon">🚨</span><span class="ov-col-name">Financeiro</span></div>
+          <div class="ov-section">
+            <div class="ov-row" onclick="ovToggleRow(this)">
+              <span class="ov-row-label">${d.financeiro.criticos.label}</span>
+              <span class="ov-row-value danger">${d.financeiro.criticos.count}<span class="ov-row-arrow">▾</span></span>
+            </div>
+            <div class="ov-row-list">${ovItemsHtml(d.financeiro.criticos.items)}</div>
+          </div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Avisar grupo</button></div>
+        </div>
+
+        <!-- Receitas -->
+        <div class="ov-col">
+          <div class="ov-col-hdr"><span class="ov-col-icon">💰</span><span class="ov-col-name">Receitas</span></div>
+          <div class="ov-section">
+            <div class="ov-row">
+              <span class="ov-row-label">Recebido em caixa</span>
+              <span class="ov-row-money success">${ovFmt(d.receitas.pagas)}</span>
+            </div>
+            <div class="ov-row">
+              <span class="ov-row-label">Previsto (não pago)</span>
+              <span class="ov-row-money">${ovFmt(d.receitas.previstas)}</span>
+            </div>
+            <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
+              <span class="ov-row-label" style="font-weight:500;">Faturado total</span>
+              <span class="ov-row-money">${ovFmt(d.receitas.total)}</span>
+            </div>
+          </div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar grupo</button></div>
+        </div>
+
+        <!-- Despesas -->
+        <div class="ov-col">
+          <div class="ov-col-hdr"><span class="ov-col-icon">💸</span><span class="ov-col-name">Despesas</span></div>
+          <div class="ov-section">
+            <div class="ov-row">
+              <span class="ov-row-label">${d.despesas.label}</span>
+              <span class="ov-row-money danger">${ovFmt(d.despesas.pagas)}</span>
+            </div>
+            <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
+              <span class="ov-row-label" style="font-weight:500;">Resultado do mês</span>
+              <span class="ov-row-money ${(d.receitas.pagas - d.despesas.pagas) >= 0 ? 'success' : 'danger'}">${ovFmt(d.receitas.pagas - d.despesas.pagas)}</span>
+            </div>
+          </div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar grupo</button></div>
+        </div>
+      `;
+      document.getElementById('ovBoard').innerHTML = html;
+    }
+
+    async function ovNotify(btn, setor) {
+      if (!confirm(`Avisar o grupo do escritório agora com o resumo do setor "${setor}" de ${ovMesStr()}?`)) return;
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Enviando...';
+      try {
+        const r = await fetch(`/api/overview/notify-group?setor=${setor}&mes=${encodeURIComponent(ovMesStr())}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error + (data.hint ? '\n\n' + data.hint : ''));
+        btn.textContent = '✓ Enviado';
+        btn.style.background = '#166534';
+        setTimeout(() => { btn.disabled = false; btn.textContent = orig; btn.style.background = ''; }, 3000);
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = orig;
+        alert('Erro ao enviar: ' + e.message);
+      }
+    }
+    // ── FIM VISÃO GERAL ──────────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->
