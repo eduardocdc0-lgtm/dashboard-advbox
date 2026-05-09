@@ -15,8 +15,9 @@ const ESTEIRA_STAGES = [
 ];
 
 // Regras por stage (default da parcela / formato esperado)
+// 30% SM (1 SM = R$ 1.621) = R$ 486,30
 const ESTEIRA_RULES = {
-  'SALARIO MATERNIDADE PARCELADO': { mode: 'parcelas_iguais', count: 4 },
+  'SALARIO MATERNIDADE PARCELADO': { mode: 'parcela_fixa', valor: 486.30 },
   'JUDICIAL PARCELADO':            { mode: 'parcela_fixa', valor: 486.30 },
   'ADM PARCELADO':                 { mode: 'parcela_fixa', valor: 500 },
   'RPV DO MÊS':                    { mode: 'lancamento_unico', valor: 6000 },
@@ -25,11 +26,26 @@ const ESTEIRA_RULES = {
   'ADM IMPLANTADO A RECEBER':      { mode: 'em_aberto' },
 };
 
-// Cliente real (não o INSS / parceria)
+// Cliente real (não o INSS / parceria / CNPJ)
 function pickClientName(customers) {
   if (!Array.isArray(customers) || !customers.length) return null;
-  const real = customers.find(c => c.origin !== 'PARCERIA');
-  return (real || customers[customers.length - 1]).name || null;
+  // Filtros: nome contém INSS/INSTITUTO/SEGURO/PARCELADO; identification é CNPJ (00.000.000/0000-00)
+  const isJunk = c => {
+    const n = (c.name || '').toUpperCase();
+    if (!n) return true;
+    if (n.includes('INSS')) return true;
+    if (n.includes('INSTITUTO NACIONAL')) return true;
+    if (n.includes('SEGURO SOCIAL')) return true;
+    if (n === 'PARCELADO' || n === 'PARCERIA') return true;
+    if (c.origin === 'PARCERIA') return true;
+    if ((c.identification || '').match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)) return true; // CNPJ
+    return false;
+  };
+  const real = customers.find(c => !isJunk(c));
+  if (real) return real.name;
+  // fallback: último que não seja vazio
+  const last = customers.filter(c => c.name).slice(-1)[0];
+  return last ? last.name : null;
 }
 
 // Parse DD/MM/YYYY ou YYYY-MM-DD pra Date
