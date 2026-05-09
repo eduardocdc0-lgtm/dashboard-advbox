@@ -8238,7 +8238,7 @@
             </div>
             <div class="ov-row-list">${ovItemsHtml(d.adm.aguardandoConclusao.items)}</div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Avisar grupo</button></div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Avisar Cau</button></div>
         </div>
 
         <!-- Judicial -->
@@ -8265,7 +8265,7 @@
             </div>
             <div class="ov-row-list">${ovItemsHtml(d.judicial.sentencaProcedente.items)}</div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Avisar grupo</button></div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Avisar Cau</button></div>
         </div>
 
         <!-- Financeiro (Críticos) -->
@@ -8278,7 +8278,7 @@
             </div>
             <div class="ov-row-list">${ovItemsHtml(d.financeiro.criticos.items)}</div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Avisar grupo</button></div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Avisar Cau</button></div>
         </div>
 
         <!-- Receitas -->
@@ -8298,7 +8298,7 @@
               <span class="ov-row-money">${ovFmt(d.receitas.total)}</span>
             </div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar grupo</button></div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar Cau</button></div>
         </div>
 
         <!-- Despesas -->
@@ -8314,14 +8314,14 @@
               <span class="ov-row-money ${(d.receitas.pagas - d.despesas.pagas) >= 0 ? 'success' : 'danger'}">${ovFmt(d.receitas.pagas - d.despesas.pagas)}</span>
             </div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar grupo</button></div>
+          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar Cau</button></div>
         </div>
       `;
       document.getElementById('ovBoard').innerHTML = html;
     }
 
     async function ovNotify(btn, setor) {
-      if (!confirm(`Avisar o grupo do escritório agora com o resumo do setor "${setor}" de ${ovMesStr()}?`)) return;
+      if (!confirm(`Enviar pra Cau o resumo do setor "${setor}" de ${ovMesStr()}?`)) return;
       const orig = btn.textContent;
       btn.disabled = true;
       btn.textContent = '⏳ Enviando...';

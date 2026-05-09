@@ -165,14 +165,14 @@ router.get('/overview', requireAdmin, async (req, res, next) => {
 });
 
 // ── POST /api/overview/notify-group?setor=adm|jud|fin ────────────────────────
-// Envia resumo do setor pro grupo via OFFICE_GROUP_PHONE
+// Envia resumo do setor pro celular da Cau via CAU_PHONE
 router.post('/overview/notify-group', requireAdmin, async (req, res, next) => {
   try {
-    const phone = process.env.OFFICE_GROUP_PHONE || '';
+    const phone = process.env.CAU_PHONE || '';
     if (!phone) {
       return res.status(400).json({
-        error: 'OFFICE_GROUP_PHONE não configurado',
-        hint:  'Adicione OFFICE_GROUP_PHONE nos Secrets do Replit (formato 5581999999999). Pra grupo, use o ID exposto pelo ChatGuru.',
+        error: 'CAU_PHONE não configurado',
+        hint:  'Adicione CAU_PHONE nos Secrets do Replit (formato 5581999999999, com 55+DDD+número, só dígitos)',
       });
     }
 
@@ -200,10 +200,10 @@ router.post('/overview/notify-group', requireAdmin, async (req, res, next) => {
     let msg = '';
     if (setor === 'adm') {
       const adm = data.adm.aguardandoConclusao;
-      msg = `*Equipe — Processos ADM (${mes})*\n${adm.label}: ${adm.count}\n\n${blockItems(adm.items)}`;
+      msg = `*Cau — Processos ADM (${mes})*\n${adm.label}: ${adm.count}\n\n${blockItems(adm.items)}`;
     } else if (setor === 'jud') {
       const j = data.judicial;
-      msg = `*Equipe — Judicial (${mes})*\n` +
+      msg = `*Cau — Judicial (${mes})*\n` +
             `• Peticionados: ${j.peticionados.count}\n` +
             `• Elaborar petição inicial: ${j.elaborarPeticao.count}\n` +
             `• Sentença procedente — verificar: ${j.sentencaProcedente.count}\n\n` +
@@ -211,10 +211,10 @@ router.post('/overview/notify-group', requireAdmin, async (req, res, next) => {
             (j.sentencaProcedente.count ? `*Sentença procedente:*\n${blockItems(j.sentencaProcedente.items, 20)}` : '');
     } else if (setor === 'fin') {
       const c = data.financeiro.criticos;
-      msg = `*Equipe — Financeiro (${mes})*\n${c.count} processo${c.count > 1 ? 's' : ''} no CRM mas sem lançamento.\n\n${blockItems(c.items, 30)}`;
+      msg = `*Cau — Financeiro (${mes})*\n${c.count} processo${c.count > 1 ? 's' : ''} no CRM mas sem lançamento.\n\n${blockItems(c.items, 30)}`;
     } else if (setor === 'receitas') {
       const r = data.receitas, d = data.despesas;
-      msg = `*Equipe — Caixa (${mes})*\n` +
+      msg = `*Cau — Caixa (${mes})*\n` +
             `Recebido: ${fmtBRL(r.pagas)}\n` +
             `Previsto (não pago): ${fmtBRL(r.previstas)}\n` +
             `Despesas pagas: ${fmtBRL(d.pagas)}\n` +
