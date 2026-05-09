@@ -4723,13 +4723,37 @@
       const [mm, yyyy] = finMesAtual.split('/').map(Number);
       document.getElementById('finMesLabel').textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
 
-      const doMes   = transData.filter(t => t.competence === finMesAtual);
-      const income  = doMes.filter(t => t.entry_type === 'income');
-      const expense = doMes.filter(t => t.entry_type === 'expense');
+      // Helper: parse DD/MM/YYYY ou YYYY-MM-DD
+      const _toDate = str => {
+        if (!str) return null;
+        let d;
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) d = new Date(str.substring(0,10) + 'T00:00:00');
+        else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) {
+          const [day, mon, yr] = str.split('/');
+          d = new Date(`${yr}-${mon}-${day}T00:00:00`);
+        } else d = new Date(str);
+        return isNaN(d) ? null : d;
+      };
+      const paidInMonth = t => {
+        const d = _toDate(t.date_payment);
+        return d && d.getMonth() + 1 === mm && d.getFullYear() === yyyy;
+      };
+      const competenceIsMonth = t => t.competence === finMesAtual;
 
-      const recebido = income.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
-      const previsto = income.filter(t => !t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
-      const pago     = expense.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      // Regime de CAIXA:
+      // Receitas do mes = pagas em <mes> (entrou) OU competencia=<mes> e nao paga (a receber)
+      // Despesas do mes = pagas em <mes> (saiu)
+      const income = transData.filter(t =>
+        t.entry_type === 'income' && (paidInMonth(t) || (competenceIsMonth(t) && !t.date_payment))
+      );
+      const expense = transData.filter(t =>
+        t.entry_type === 'expense' && paidInMonth(t)
+      );
+      const doMes = [...income, ...expense];
+
+      const recebido  = income.filter(t =>  t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const previsto  = income.filter(t => !t.date_payment).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const pago      = expense.reduce((s, t) => s + Number(t.amount || 0), 0);
       const resultado = recebido - pago;
 
       document.getElementById('recebidoMes').textContent  = formatMoney(recebido);
