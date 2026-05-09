@@ -5004,29 +5004,33 @@
       }
     }
 
-    // Monta UMA mensagem com TODOS os críticos atuais (respeitando filtros)
-    function auditCobrarTodos(btn) {
+    // Envia mensagem agrupada com TODOS os críticos pra Cau via WhatsApp (ChatGuru)
+    async function auditCobrarTodos(btn) {
       if (!auditData) return;
-      const respFilter = document.getElementById('auditRespFilter')?.value || '';
-      const filterResp = c => !respFilter || (c.responsavel || '').toLowerCase().includes(respFilter.toLowerCase());
-      const criticos = (auditData.criticos || []).filter(filterResp);
-      if (!criticos.length) { alert('Sem críticos para cobrar.'); return; }
-
-      // Agrupa por fase pra mensagem ficar mais legível
-      const byFase = {};
-      criticos.forEach(c => { (byFase[c.fase] = byFase[c.fase] || []).push(c); });
-
-      let msg = `Oi Cau!\n\n${criticos.length} processo${criticos.length > 1 ? 's' : ''} no seu CRM mas sem lançamento em ${auditMesAtual}.\nPode dar uma olhada?\n`;
-      Object.entries(byFase).forEach(([fase, lista]) => {
-        msg += `\n*${fase}* (${lista.length})\n`;
-        lista.forEach((c, i) => {
-          const ult = c.ultimoLancamento ? ` (último: ${formatDate(c.ultimoLancamento)}${c.ultimoValor ? ' — ' + formatMoney(c.ultimoValor) : ''})` : ' (sem lançamentos anteriores)';
-          msg += `${i + 1}. ${c.cliente}${ult}\n`;
+      if (!confirm(`Enviar WhatsApp pra Cau agora com a lista de processos críticos de ${auditMesAtual}?`)) return;
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Enviando...';
+      try {
+        const r = await fetch(`/api/audit/cobrar-cau-whatsapp?mes=${encodeURIComponent(auditMesAtual)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         });
-      });
-      msg += `\nLink: ${window.location.origin}/#auditoria`;
-
-      auditCopiarMsg(btn, msg);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error + (data.hint ? '\n\n' + data.hint : ''));
+        if (!data.sent) {
+          btn.textContent = data.reason || 'Sem críticos';
+          setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2200);
+          return;
+        }
+        btn.textContent = `✓ Enviado! ${data.count} processo${data.count > 1 ? 's' : ''}`;
+        btn.style.background = '#166534';
+        setTimeout(() => { btn.disabled = false; btn.textContent = orig; btn.style.background = ''; }, 3500);
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = orig;
+        alert('Erro ao enviar: ' + e.message);
+      }
     }
 
     function auditCopiarMsg(btn, msg) {

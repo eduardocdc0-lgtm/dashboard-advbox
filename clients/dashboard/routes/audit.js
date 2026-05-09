@@ -3,6 +3,7 @@ const { requireAdmin } = require('../../../middleware/auth');
 const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
+const { sendWhatsApp } = require('../../../services/chatguru-sender');
 
 const router = Router();
 
@@ -86,6 +87,107 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
 
     res.json(data);
   } catch (err) { next(err); }
+});
+
+// ── Cobrar Cau via WhatsApp (ChatGuru) ───────────────────────────────────────
+// POST /api/audit/cobrar-cau-whatsapp?mes=MM/YYYY
+// Pega críticos do mês, monta mensagem e envia via ChatGuru pra CAU_PHONE
+router.post('/audit/cobrar-cau-whatsapp', requireAdmin, async (req, res, next) => {
+  try {
+    const cauPhone = process.env.CAU_PHONE || '';
+    if (!cauPhone) {
+      return res.status(400).json({
+        error: 'CAU_PHONE não configurado',
+        hint:  'Adicione CAU_PHONE nos Secrets do Replit (formato: 5581999999999 ou 81999999999)',
+      });
+    }
+
+    const today  = new Date();
+    const defMes = String(today.getMonth() + 1).padStart(2, '0') + '/' + today.getFullYear();
+    const mes    = req.query.mes || req.body?.mes || defMes;
+
+    // Reusa a lógica do kanban-financeiro (cache 30 min) pra obter os críticos
+    const cacheKey = `kanban:${mes}`;
+    cache.define(cacheKey, 30 * 60 * 1000);
+
+    const data = await cache.getOrFetch(cacheKey, async () => {
+      const [lawsuits, transactions] = await Promise.all([fetchLawsuits(), fetchTransactions()]);
+      const [mm, yyyy] = mes.split('/').map(Number);
+      const matchesMes = (s) => {
+        if (!s) return false;
+        const str = String(s);
+        let m, y;
+        if (/^\d{4}-\d{2}-\d{2}/.test(str))      { y = +str.slice(0,4); m = +str.slice(5,7); }
+        else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); m = +p[1]; y = +p[2]; }
+        else return false;
+        return m === mm && y === yyyy;
+      };
+      const txDoMes = transactions.filter(t =>
+        t.entry_type === 'income' && (matchesMes(t.date_payment) || matchesMes(t.date_due))
+      );
+      const txByLaw = {}, lastTx = {};
+      txDoMes.forEach(t => { const lid = String(t.lawsuits_id || t.lawsuit_id || ''); if (!lid) return; if (!txByLaw[lid]) txByLaw[lid] = []; txByLaw[lid].push(t); });
+      transactions.filter(t => t.entry_type === 'income').forEach(t => {
+        const lid = String(t.lawsuits_id || t.lawsuit_id || ''); if (!lid) return;
+        const ex = lastTx[lid]; const dt = t.date_payment || t.date_due || '';
+        if (!ex || dt > (ex.date_payment || ex.date_due || '')) lastTx[lid] = t;
+      });
+      const criticos = [];
+      for (const l of lawsuits) {
+        const stage = l.stage || l.step || '';
+        if (!matchFase(stage, FASES_COBRANCA)) continue;
+        const lawId = String(l.id || l.lawsuits_id || '');
+        const txMes = txByLaw[lawId] || [];
+        if (txMes.length) continue;
+        const clientsArr = Array.isArray(l.customers) ? l.customers : [];
+        const personal = clientsArr.find(c => c.name && !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i.test((c.name || '').toUpperCase()));
+        const cliente = (personal || clientsArr[0] || {}).name || `#${l.id}`;
+        const lTx = lastTx[lawId];
+        criticos.push({
+          fase: stage,
+          cliente,
+          ultimoLancamento: lTx ? (lTx.date_payment || lTx.date_due || null) : null,
+          ultimoValor: lTx ? Number(lTx.amount || 0) : null,
+        });
+      }
+      return { criticos };
+    }, false);
+
+    const criticos = data.criticos || [];
+    if (!criticos.length) return res.json({ ok: true, sent: false, reason: 'Sem críticos para cobrar' });
+
+    // Monta mensagem agrupada por fase
+    const byFase = {};
+    criticos.forEach(c => { (byFase[c.fase] = byFase[c.fase] || []).push(c); });
+
+    const fmtBR = (s) => {
+      if (!s) return null;
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const [y, m, d] = s.slice(0, 10).split('-');
+        return `${d}/${m}/${y}`;
+      }
+      return s;
+    };
+    const fmtBRL = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    let msg = `Oi Cau!\n\n${criticos.length} processo${criticos.length > 1 ? 's' : ''} no seu CRM mas sem lançamento em ${mes}.\nPode dar uma olhada?\n`;
+    Object.entries(byFase).forEach(([fase, lista]) => {
+      msg += `\n*${fase}* (${lista.length})\n`;
+      lista.forEach((c, i) => {
+        const ult = c.ultimoLancamento
+          ? ` (último: ${fmtBR(c.ultimoLancamento)}${c.ultimoValor ? ' — ' + fmtBRL(c.ultimoValor) : ''})`
+          : ' (sem lançamentos anteriores)';
+        msg += `${i + 1}. ${c.cliente}${ult}\n`;
+      });
+    });
+
+    const result = await sendWhatsApp(cauPhone, msg);
+    res.json({ ok: true, sent: true, count: criticos.length, mes, messageId: result.messageId });
+  } catch (err) {
+    console.error('[cobrar-cau-whatsapp] erro:', err.message);
+    res.status(500).json({ error: err.message, body: err.body });
+  }
 });
 
 // ── Auditoria de Responsável ─────────────────────────────────────────────────
