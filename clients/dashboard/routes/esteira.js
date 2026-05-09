@@ -26,26 +26,43 @@ const ESTEIRA_RULES = {
   'ADM IMPLANTADO A RECEBER':      { mode: 'em_aberto' },
 };
 
+// Detecta cliente "junk" (INSS, parceria, CNPJ, etc)
+function isJunkCustomer(c) {
+  const n = (c.name || '').toUpperCase();
+  if (!n) return true;
+  if (n.includes('INSS')) return true;
+  if (n.includes('INSTITUTO NACIONAL')) return true;
+  if (n.includes('SEGURO SOCIAL')) return true;
+  if (n === 'PARCELADO' || n === 'PARCERIA') return true;
+  if (c.origin === 'PARCERIA') return true;
+  if ((c.identification || '').match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)) return true; // CNPJ
+  return false;
+}
+
+// Extrai nome do cliente do campo notes — padrão: "Titulo: NOME X INSS - ..."
+function extractFromNotes(notes) {
+  if (!notes) return null;
+  const m = notes.match(/T[íi]tulo:\s*([^\r\nX]+?)\s+X\s+/i);
+  if (m) return m[1].trim();
+  return null;
+}
+
 // Cliente real (não o INSS / parceria / CNPJ)
-function pickClientName(customers) {
-  if (!Array.isArray(customers) || !customers.length) return null;
-  // Filtros: nome contém INSS/INSTITUTO/SEGURO/PARCELADO; identification é CNPJ (00.000.000/0000-00)
-  const isJunk = c => {
-    const n = (c.name || '').toUpperCase();
-    if (!n) return true;
-    if (n.includes('INSS')) return true;
-    if (n.includes('INSTITUTO NACIONAL')) return true;
-    if (n.includes('SEGURO SOCIAL')) return true;
-    if (n === 'PARCELADO' || n === 'PARCERIA') return true;
-    if (c.origin === 'PARCERIA') return true;
-    if ((c.identification || '').match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)) return true; // CNPJ
-    return false;
-  };
-  const real = customers.find(c => !isJunk(c));
-  if (real) return real.name;
-  // fallback: último que não seja vazio
-  const last = customers.filter(c => c.name).slice(-1)[0];
-  return last ? last.name : null;
+function pickClientName(lawsuit) {
+  const customers = lawsuit.customers;
+  if (Array.isArray(customers) && customers.length) {
+    const real = customers.find(c => !isJunkCustomer(c));
+    if (real && real.name) return real.name;
+  }
+  // Fallback: parsear do notes
+  const fromNotes = extractFromNotes(lawsuit.notes);
+  if (fromNotes) return fromNotes;
+  // Último recurso: pega o que tiver (mesmo INSS) pra não ficar vazio
+  if (Array.isArray(customers) && customers.length) {
+    const any = customers.find(c => c.name);
+    if (any) return any.name;
+  }
+  return null;
 }
 
 // Parse DD/MM/YYYY ou YYYY-MM-DD pra Date
@@ -159,7 +176,7 @@ router.get('/esteira', async (req, res, next) => {
         id: l.id,
         process_number: l.process_number || l.protocol_number || null,
         folder: l.folder,
-        client: pickClientName(l.customers),
+        client: pickClientName(l),
         type: l.type || null,
         group: l.group || null,
         responsible: l.responsible || null,
