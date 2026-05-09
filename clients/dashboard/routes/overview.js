@@ -136,25 +136,25 @@ router.get('/overview', requireAdmin, async (req, res, next) => {
       return {
         mes,
         adm: {
-          aguardandoConclusao: { count: admAguardando.length, items: admAguardando, label: 'Aguardando conclusão (Em análise — perícias feitas)' },
+          aguardandoConclusao: { count: admAguardando.length, items: admAguardando, label: 'Aguardando conclusão' },
         },
         judicial: {
-          peticionados:     { count: peticionadosCount, items: peticionadosItems, label: `Peticionados em ${mes}` },
-          elaborarPeticao:  { count: judElaborar.length, items: judElaborar, label: 'Elaborar petição inicial' },
-          sentencaProcedente:{ count: judSentenca.length, items: judSentenca, label: 'Sentença procedente — verificar implantação' },
+          peticionados:     { count: peticionadosCount, items: peticionadosItems, label: 'Peticionados' },
+          elaborarPeticao:  { count: judElaborar.length, items: judElaborar, label: 'Elaborar petição' },
+          sentencaProcedente:{ count: judSentenca.length, items: judSentenca, label: 'Sentença — verificar' },
         },
         financeiro: {
-          criticos: { count: finCriticos.length, items: finCriticos, label: `Críticos (sem lançamento em ${mes})` },
+          criticos: { count: finCriticos.length, items: finCriticos, label: 'Sem lançamento' },
         },
         receitas: {
           pagas: recPagas,
           previstas: recPrevistas,
           total: recPagas + recPrevistas,
-          label: `Faturado em caixa (${mes})`,
+          label: 'Faturado em caixa',
         },
         despesas: {
           pagas: despPagas,
-          label: `Despesas pagas em ${mes}`,
+          label: 'Despesas pagas',
         },
         generated_at: new Date().toISOString(),
       };
