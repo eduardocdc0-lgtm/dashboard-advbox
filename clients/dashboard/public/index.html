@@ -1286,11 +1286,39 @@
       font-size: 11px; font-style: italic;
     }
 
-    /* Filterbar: pills + date range (estilo AdvBox) */
+    /* Filterbar: month nav + pills */
     .esteira-filterbar {
       display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
       margin-bottom: 14px;
     }
+    .es-month-nav {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 6px;
+    }
+    .es-mn-arrow {
+      background: transparent; border: none;
+      width: 28px; height: 28px; border-radius: 6px;
+      cursor: pointer; font-size: 18px; color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .es-mn-arrow:hover { background: var(--hover); }
+    .es-mn-label {
+      font-family: 'DM Serif Display', serif; font-size: 16px;
+      color: var(--text); padding: 0 14px; min-width: 130px; text-align: center;
+      text-transform: capitalize;
+    }
+    .es-mn-today {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 12px; padding: 3px 10px;
+      font-size: 10px; font-family: inherit; font-weight: 500;
+      color: var(--text-2); cursor: pointer; margin-left: 4px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .es-mn-today:hover { color: var(--text); border-color: var(--text); }
+
     .es-pills {
       display: flex; gap: 4px; padding: 3px;
       background: var(--bg-card); border: 1px solid var(--border);
@@ -1306,24 +1334,8 @@
     .es-pill:hover { color: var(--text); }
     .es-pill.active { background: var(--text); color: #fff; }
 
-    .es-daterange {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 4px 8px;
-    }
-    .es-dr-icon { font-size: 12px; }
-    .es-daterange input[type=date] {
-      border: none; background: transparent;
-      font-size: 11px; font-family: inherit;
-      color: var(--text); outline: none; width: 110px;
-    }
-    .es-dr-sep { font-size: 11px; color: var(--text-2); }
-    .es-dr-clear {
-      background: transparent; border: none;
-      font-size: 14px; color: var(--text-2);
-      cursor: pointer; padding: 0 4px;
-    }
-    .es-dr-clear:hover { color: var(--text); }
+    /* Sem-data vira vermelho (igual crítico — sem lançamento) */
+    .es-card.es-status-sem-data { border-left-color: var(--danger); }
 
     /* ── CALENDÁRIO FINANCEIRO (lançamentos próprios) ────────────────── */
     .fc-toolbar {
@@ -3016,22 +3028,20 @@
         </div>
       </div>
 
-      <!-- Filtros tipo AdvBox: pills de status + range de data -->
+      <!-- Mês de referência + filtros -->
       <div class="esteira-filterbar">
+        <div class="es-month-nav">
+          <button class="es-mn-arrow" onclick="esShiftMonth(-1)" title="Mês anterior">‹</button>
+          <span class="es-mn-label" id="esMonthLabel">—</span>
+          <button class="es-mn-arrow" onclick="esShiftMonth(1)" title="Próximo mês">›</button>
+          <button class="es-mn-today" onclick="esGoToday()" title="Mês atual">hoje</button>
+        </div>
         <div class="es-pills">
           <button class="es-pill active" data-fil="todos" onclick="esSetPillFilter('todos')">Todos</button>
           <button class="es-pill" data-fil="critico" onclick="esSetPillFilter('critico')">🔴 Sem lançamento</button>
           <button class="es-pill" data-fil="atrasado" onclick="esSetPillFilter('atrasado')">⚠️ Atrasados</button>
           <button class="es-pill" data-fil="parcial" onclick="esSetPillFilter('parcial')">🟡 Parciais</button>
           <button class="es-pill" data-fil="completo" onclick="esSetPillFilter('completo')">✓ OK</button>
-          <button class="es-pill" data-fil="sem-data" onclick="esSetPillFilter('sem-data')">— Sem data</button>
-        </div>
-        <div class="es-daterange">
-          <span class="es-dr-icon">📅</span>
-          <input type="date" id="esDateFrom" oninput="renderEsteira()">
-          <span class="es-dr-sep">à</span>
-          <input type="date" id="esDateTo" oninput="renderEsteira()">
-          <button class="es-dr-clear" onclick="esClearDateRange()" title="Limpar">×</button>
         </div>
       </div>
 
@@ -7433,6 +7443,8 @@
     let _esteiraData = null;
 
     async function loadEsteira(force = false) {
+      esInitMonth();
+      esUpdateMonthLabel();
       const board = document.getElementById('esteiraBoard');
       board.innerHTML = '<div class="loading">Carregando esteira...</div>';
       try {
@@ -7458,6 +7470,34 @@
     }
 
     let _esStatusFilter = 'todos';
+    let _esMonth = null; // { year, month: 1-12 }
+    const ES_MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function esInitMonth() {
+      if (_esMonth) return;
+      const now = new Date();
+      _esMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+    }
+    function esUpdateMonthLabel() {
+      const el = document.getElementById('esMonthLabel');
+      if (el && _esMonth) el.textContent = `${ES_MES_NOMES[_esMonth.month - 1]} ${_esMonth.year}`;
+    }
+    function esShiftMonth(delta) {
+      esInitMonth();
+      let m = _esMonth.month + delta;
+      let y = _esMonth.year;
+      while (m > 12) { y += 1; m -= 12; }
+      while (m < 1)  { y -= 1; m += 12; }
+      _esMonth = { year: y, month: m };
+      esUpdateMonthLabel();
+      renderEsteira();
+    }
+    function esGoToday() {
+      const now = new Date();
+      _esMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+      esUpdateMonthLabel();
+      renderEsteira();
+    }
 
     function esSetPillFilter(f) {
       _esStatusFilter = f;
@@ -7465,24 +7505,16 @@
       renderEsteira();
     }
 
-    function esClearDateRange() {
-      document.getElementById('esDateFrom').value = '';
-      document.getElementById('esDateTo').value   = '';
-      renderEsteira();
-    }
-
     function esCardMatchesFilter(it) {
-      // Status pill
+      // 1) Status pill
       if (_esStatusFilter !== 'todos' && it.status !== _esStatusFilter) return false;
-      // Date range
-      const from = document.getElementById('esDateFrom')?.value || '';
-      const to   = document.getElementById('esDateTo')?.value   || '';
-      if (!from && !to) return true;
+      // 2) Mês de referência: card aparece se nextDue estiver no mês selecionado,
+      //    OU se não tiver nextDue (sempre aparece — vermelho como "sem lançamento")
+      if (!_esMonth) return true;
       const due = it.nextDue ? String(it.nextDue).slice(0, 10) : null;
-      if (!due) return false; // se range definido, exclui sem data
-      if (from && due < from) return false;
-      if (to   && due > to)   return false;
-      return true;
+      if (!due) return true; // sem data → sempre aparece (em vermelho)
+      const [y, m] = due.split('-').map(Number);
+      return y === _esMonth.year && m === _esMonth.month;
     }
 
     function renderEsteira() {
