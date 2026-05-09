@@ -1286,6 +1286,45 @@
       font-size: 11px; font-style: italic;
     }
 
+    /* Filterbar: pills + date range (estilo AdvBox) */
+    .esteira-filterbar {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .es-pills {
+      display: flex; gap: 4px; padding: 3px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); flex-wrap: wrap;
+    }
+    .es-pill {
+      background: transparent; border: none;
+      padding: 5px 11px; border-radius: 6px;
+      font-family: inherit; font-size: 11px; font-weight: 500;
+      color: var(--text-2); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .es-pill:hover { color: var(--text); }
+    .es-pill.active { background: var(--text); color: #fff; }
+
+    .es-daterange {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 8px;
+    }
+    .es-dr-icon { font-size: 12px; }
+    .es-daterange input[type=date] {
+      border: none; background: transparent;
+      font-size: 11px; font-family: inherit;
+      color: var(--text); outline: none; width: 110px;
+    }
+    .es-dr-sep { font-size: 11px; color: var(--text-2); }
+    .es-dr-clear {
+      background: transparent; border: none;
+      font-size: 14px; color: var(--text-2);
+      cursor: pointer; padding: 0 4px;
+    }
+    .es-dr-clear:hover { color: var(--text); }
+
     /* ── CALENDÁRIO FINANCEIRO (lançamentos próprios) ────────────────── */
     .fc-toolbar {
       display: flex; justify-content: space-between; align-items: flex-end;
@@ -2977,12 +3016,23 @@
         </div>
       </div>
 
-      <div class="esteira-legend">
-        <span class="es-badge es-badge-critico">🔴 Sem lançamento</span>
-        <span class="es-badge es-badge-atrasado">⚠️ Atrasado</span>
-        <span class="es-badge es-badge-parcial">🟡 Parcial</span>
-        <span class="es-badge es-badge-completo">✓ OK</span>
-        <span class="es-badge es-badge-sem-data">— Sem data</span>
+      <!-- Filtros tipo AdvBox: pills de status + range de data -->
+      <div class="esteira-filterbar">
+        <div class="es-pills">
+          <button class="es-pill active" data-fil="todos" onclick="esSetPillFilter('todos')">Todos</button>
+          <button class="es-pill" data-fil="critico" onclick="esSetPillFilter('critico')">🔴 Sem lançamento</button>
+          <button class="es-pill" data-fil="atrasado" onclick="esSetPillFilter('atrasado')">⚠️ Atrasados</button>
+          <button class="es-pill" data-fil="parcial" onclick="esSetPillFilter('parcial')">🟡 Parciais</button>
+          <button class="es-pill" data-fil="completo" onclick="esSetPillFilter('completo')">✓ OK</button>
+          <button class="es-pill" data-fil="sem-data" onclick="esSetPillFilter('sem-data')">— Sem data</button>
+        </div>
+        <div class="es-daterange">
+          <span class="es-dr-icon">📅</span>
+          <input type="date" id="esDateFrom" oninput="renderEsteira()">
+          <span class="es-dr-sep">à</span>
+          <input type="date" id="esDateTo" oninput="renderEsteira()">
+          <button class="es-dr-clear" onclick="esClearDateRange()" title="Limpar">×</button>
+        </div>
       </div>
 
       <div class="esteira-board" id="esteiraBoard">
@@ -7407,16 +7457,45 @@
       sel.onchange = renderEsteira;
     }
 
+    let _esStatusFilter = 'todos';
+
+    function esSetPillFilter(f) {
+      _esStatusFilter = f;
+      document.querySelectorAll('.es-pill').forEach(p => p.classList.toggle('active', p.dataset.fil === f));
+      renderEsteira();
+    }
+
+    function esClearDateRange() {
+      document.getElementById('esDateFrom').value = '';
+      document.getElementById('esDateTo').value   = '';
+      renderEsteira();
+    }
+
+    function esCardMatchesFilter(it) {
+      // Status pill
+      if (_esStatusFilter !== 'todos' && it.status !== _esStatusFilter) return false;
+      // Date range
+      const from = document.getElementById('esDateFrom')?.value || '';
+      const to   = document.getElementById('esDateTo')?.value   || '';
+      if (!from && !to) return true;
+      const due = it.nextDue ? String(it.nextDue).slice(0, 10) : null;
+      if (!due) return false; // se range definido, exclui sem data
+      if (from && due < from) return false;
+      if (to   && due > to)   return false;
+      return true;
+    }
+
     function renderEsteira() {
       if (!_esteiraData) return;
       const respFilter = document.getElementById('esRespFilter').value;
       const fmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-      // Recalcula summary com filtro
+      // Recalcula summary com filtros (responsável + status + data)
       let totalC = 0, totalL = 0, totalG = 0, criticos = 0;
       _esteiraData.stages.forEach(col => {
         col.items.forEach(it => {
           if (respFilter && it.responsible !== respFilter) return;
+          if (!esCardMatchesFilter(it)) return;
           totalC += it.contracted || 0;
           totalL += it.lancado    || 0;
           totalG += it.gap        || 0;
@@ -7431,7 +7510,10 @@
       // Render columns
       const board = document.getElementById('esteiraBoard');
       board.innerHTML = _esteiraData.stages.map(col => {
-        const filtered = respFilter ? col.items.filter(it => it.responsible === respFilter) : col.items;
+        const filtered = col.items.filter(it => {
+          if (respFilter && it.responsible !== respFilter) return false;
+          return esCardMatchesFilter(it);
+        });
         const colTotal = filtered.reduce((s, it) => s + (it.contracted || 0), 0);
         const cardsHtml = filtered.length
           ? filtered.map(it => esteiraCardHtml(it, col.rule)).join('')

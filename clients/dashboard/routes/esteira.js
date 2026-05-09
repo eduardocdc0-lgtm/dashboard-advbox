@@ -3,13 +3,11 @@ const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
 
 const router = Router();
 
-// Stages financeiros (vir AdvBox CRM Financeiro)
+// Stages financeiros (vir AdvBox CRM Financeiro) — RPVs removidos
 const ESTEIRA_STAGES = [
   'SALARIO MATERNIDADE PARCELADO',
   'JUDICIAL PARCELADO',
   'ADM PARCELADO',
-  'RPV DO MÊS',
-  'RPV DO PROXIMO MÊS',
   'JUDICIAL IMPLANTADO A RECEBER',
   'ADM IMPLANTADO A RECEBER',
 ];
@@ -20,8 +18,6 @@ const ESTEIRA_RULES = {
   'SALARIO MATERNIDADE PARCELADO': { mode: 'parcela_fixa', valor: 486.30 },
   'JUDICIAL PARCELADO':            { mode: 'parcela_fixa', valor: 486.30 },
   'ADM PARCELADO':                 { mode: 'parcela_fixa', valor: 500 },
-  'RPV DO MÊS':                    { mode: 'lancamento_unico', valor: 6000 },
-  'RPV DO PROXIMO MÊS':            { mode: 'sem_calculo' },
   'JUDICIAL IMPLANTADO A RECEBER': { mode: 'em_aberto' },
   'ADM IMPLANTADO A RECEBER':      { mode: 'em_aberto' },
 };
@@ -219,14 +215,15 @@ router.get('/esteira', async (req, res, next) => {
       if (status === 'sem-data') summary.cardsSemData   += 1;
     }
 
-    // Ordena cards de cada stage: critico/atrasado primeiro, depois maior contracted
-    const STATUS_PRIORITY = { critico: 0, atrasado: 1, parcial: 2, completo: 3, agendado: 4, 'sem-data': 5, info: 6, 'sem-contrato': 7 };
+    // Ordena cards: por vencimento (mais próximo primeiro). Sem data por último.
     Object.values(stages).forEach(col => {
       col.items.sort((a, b) => {
-        const pa = STATUS_PRIORITY[a.status] ?? 99;
-        const pb = STATUS_PRIORITY[b.status] ?? 99;
-        if (pa !== pb) return pa - pb;
-        return b.contracted - a.contracted;
+        const da = toDate(a.nextDue);
+        const db = toDate(b.nextDue);
+        if (!da && !db) return 0;
+        if (!da) return 1;   // a sem data → final
+        if (!db) return -1;  // b sem data → final
+        return da - db;       // mais próximo primeiro
       });
       col.count = col.items.length;
     });
