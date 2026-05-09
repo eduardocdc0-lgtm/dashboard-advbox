@@ -2559,9 +2559,10 @@
         const oc = b.getAttribute('onclick') || '';
         if (oc.includes(`'${name}'`)) {
           b.classList.add('active');
-          // Garante que o grupo pai esteja aberto
+          // Acordeão: fecha todos, abre só o grupo do item ativo
           const grp = b.closest('.nav-group');
           if (grp && !grp.classList.contains('open')) {
+            document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
             grp.classList.add('open');
             saveGroupStates();
           }
@@ -2595,16 +2596,17 @@
     function toggleGroup(id) {
       const grp = document.querySelector(`.nav-group[data-group="${id}"]`);
       if (!grp) return;
-      // Se sidebar tá colapsada, clicar no grupo expande a sidebar e abre o grupo
+      const wasOpen = grp.classList.contains('open');
+      // Se sidebar tá colapsada, expande primeiro
       if (document.body.classList.contains('sidebar-collapsed')) {
         document.body.classList.remove('sidebar-collapsed');
         localStorage.setItem(SIDEBAR_KEY, '0');
         const btn = document.getElementById('sidebarToggle');
         if (btn) btn.textContent = '⮜';
-        grp.classList.add('open');
-      } else {
-        grp.classList.toggle('open');
       }
+      // Acordeão: fecha todos os outros, abre só o clicado (toggle se já estava aberto)
+      document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+      if (!wasOpen) grp.classList.add('open');
       saveGroupStates();
     }
 
@@ -2623,18 +2625,31 @@
         const btn = document.getElementById('sidebarToggle');
         if (btn) btn.textContent = '⮞';
       }
-      // Grupos: por padrão, abre todos no primeiro acesso
+      // Acordeão: abre só o grupo que contém o item ativo (.nav-item.active)
       const raw = localStorage.getItem(GROUPS_KEY);
+      const openOnlyActive = () => {
+        document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+        const activeItem = document.querySelector('.nav-item.active');
+        const grp = activeItem ? activeItem.closest('.nav-group') : null;
+        if (grp) grp.classList.add('open');
+      };
       if (!raw) {
-        document.querySelectorAll('.nav-group').forEach(g => g.classList.add('open'));
+        openOnlyActive();
       } else {
         try {
           const state = JSON.parse(raw);
+          // Garante no máximo 1 grupo aberto (acordeão), priorizando o do item ativo
+          const activeGrp = document.querySelector('.nav-item.active')?.closest('.nav-group');
+          const activeKey = activeGrp ? activeGrp.dataset.group : null;
+          let openedKey = activeKey && state[activeKey] !== false ? activeKey : null;
+          if (!openedKey) {
+            openedKey = Object.keys(state).find(k => state[k]) || activeKey;
+          }
           document.querySelectorAll('.nav-group').forEach(g => {
-            if (state[g.dataset.group]) g.classList.add('open');
+            if (g.dataset.group === openedKey) g.classList.add('open');
             else g.classList.remove('open');
           });
-        } catch { /* ignora json inválido */ }
+        } catch { openOnlyActive(); }
       }
     }
 
