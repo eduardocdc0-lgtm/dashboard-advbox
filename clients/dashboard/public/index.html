@@ -1168,6 +1168,118 @@
     /* Hide original top tabs — replaced by sidebar */
     .tabs { display: none !important; }
 
+    /* ── ESTEIRA FINANCEIRA ─────────────────────────────────────────── */
+    .esteira-toolbar {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: 16px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .esteira-summary {
+      display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 12px; flex: 1; min-width: 320px;
+    }
+    .es-stat {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+    }
+    .es-stat-label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .es-stat-value { font-size: 20px; font-weight: 500; font-family: 'DM Serif Display', serif; color: var(--text); }
+    .es-stat-value.success { color: var(--success); }
+    .es-stat-value.danger  { color: var(--danger); }
+
+    .esteira-actions { display: flex; gap: 8px; align-items: center; }
+    .es-filter {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 13px;
+    }
+
+    .esteira-legend {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+      font-size: 11px; color: var(--text-2);
+    }
+    .es-badge { padding: 3px 8px; border-radius: 4px; background: var(--bg-card); border: 1px solid var(--border); }
+
+    /* Board: Kanban horizontal scrollável */
+    .esteira-board {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 280px;
+      gap: 12px; overflow-x: auto; padding-bottom: 12px;
+      scrollbar-width: thin;
+    }
+    .esteira-board::-webkit-scrollbar { height: 8px; }
+    .esteira-board::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .es-col {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); display: flex; flex-direction: column;
+      min-height: 200px; max-height: calc(100vh - 280px);
+    }
+    .es-col-hdr {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+      position: sticky; top: 0; background: var(--bg-card); z-index: 1;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .es-col-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); flex: 1; line-height: 1.3; }
+    .es-col-count { font-size: 11px; color: var(--text-2); white-space: nowrap; }
+    .es-col-total { font-size: 10px; color: var(--text-2); margin-top: 2px; }
+
+    .es-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+
+    .es-card {
+      background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--border);
+      border-radius: 6px; padding: 10px 11px; cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      font-size: 12px; line-height: 1.4;
+    }
+    .es-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-color: var(--text); }
+
+    .es-card.es-status-critico  { border-left-color: var(--danger); }
+    .es-card.es-status-atrasado { border-left-color: var(--warning); }
+    .es-card.es-status-parcial  { border-left-color: var(--warning); }
+    .es-card.es-status-completo { border-left-color: var(--success); }
+    .es-card.es-status-sem-data { border-left-color: var(--text-2); }
+    .es-card.es-status-agendado { border-left-color: var(--success); }
+
+    .es-card-client {
+      font-weight: 500; color: var(--text); margin-bottom: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .es-card-type { font-size: 11px; color: var(--text-2); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .es-card-row {
+      display: flex; justify-content: space-between; gap: 6px;
+      font-size: 11px; color: var(--text-2);
+    }
+    .es-card-row strong { color: var(--text); font-weight: 500; }
+    .es-card-row.danger strong { color: var(--danger); }
+    .es-card-row.success strong { color: var(--success); }
+    .es-card-row.warning strong { color: var(--warning); }
+
+    .es-card-progress {
+      height: 4px; background: var(--hover); border-radius: 2px;
+      margin: 6px 0; overflow: hidden;
+    }
+    .es-card-progress-fill {
+      height: 100%; background: var(--success); border-radius: 2px;
+      transition: width 0.2s;
+    }
+
+    .es-card-foot {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);
+      font-size: 10px; color: var(--text-2);
+    }
+    .es-card-foot a {
+      color: var(--text-2); text-decoration: none; padding: 2px 6px;
+      border: 1px solid var(--border); border-radius: 4px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .es-card-foot a:hover { color: var(--text); border-color: var(--text); }
+
+    .es-empty {
+      text-align: center; padding: 20px 12px; color: var(--text-2);
+      font-size: 11px; font-style: italic;
+    }
+
     /* Mobile: auto-collapse */
     @media (max-width: 900px) {
       body { padding-left: 56px; }
@@ -1273,6 +1385,7 @@
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('esteira', event)">Esteira financeira</button>
         </div>
       </div>
 
@@ -2545,6 +2658,49 @@
     </div>
     <!-- FIM ABA CONFERÊNCIA INSS -->
 
+    <!-- ABA: ESTEIRA FINANCEIRA -->
+    <div id="esteira" class="tab-content">
+      <div class="esteira-toolbar">
+        <div class="esteira-summary">
+          <div class="es-stat">
+            <div class="es-stat-label">A receber</div>
+            <div class="es-stat-value" id="esTotalContracted">—</div>
+          </div>
+          <div class="es-stat">
+            <div class="es-stat-label">Já lançado</div>
+            <div class="es-stat-value success" id="esTotalLancado">—</div>
+          </div>
+          <div class="es-stat">
+            <div class="es-stat-label">Falta lançar</div>
+            <div class="es-stat-value danger" id="esTotalGap">—</div>
+          </div>
+          <div class="es-stat">
+            <div class="es-stat-label">Cards sem lançamento</div>
+            <div class="es-stat-value danger" id="esCardsCriticos">—</div>
+          </div>
+        </div>
+        <div class="esteira-actions">
+          <select id="esRespFilter" class="es-filter">
+            <option value="">Todos responsáveis</option>
+          </select>
+          <button class="btn-link" onclick="loadEsteira(true)">↻ Atualizar</button>
+        </div>
+      </div>
+
+      <div class="esteira-legend">
+        <span class="es-badge es-badge-critico">🔴 Sem lançamento</span>
+        <span class="es-badge es-badge-atrasado">⚠️ Atrasado</span>
+        <span class="es-badge es-badge-parcial">🟡 Parcial</span>
+        <span class="es-badge es-badge-completo">✓ OK</span>
+        <span class="es-badge es-badge-sem-data">— Sem data</span>
+      </div>
+
+      <div class="esteira-board" id="esteiraBoard">
+        <div class="loading">Carregando esteira...</div>
+      </div>
+    </div>
+    <!-- FIM ABA ESTEIRA -->
+
   </div>
 
   <script>
@@ -2580,6 +2736,7 @@
       if (name === 'financial' && !_cfData)           loadCashFlow();
       if (name === 'metaads'  && !_roiData)           loadCampaignRoi();
       if (name === 'aniversarios')                   loadBirthday();
+      if (name === 'esteira'   && !_esteiraData)      loadEsteira();
     }
 
     // ── Sidebar: toggle, grupos, persistência ─────────────────────────
@@ -6930,6 +7087,129 @@
 
     // ── FIM PETIÇÕES ──────────────────────────────────────────────────────────
     // ── FIM CONFERÊNCIA INSS ──────────────────────────────────────────────────
+
+    // ── ESTEIRA FINANCEIRA ──────────────────────────────────────────────────
+    let _esteiraData = null;
+
+    async function loadEsteira(force = false) {
+      const board = document.getElementById('esteiraBoard');
+      board.innerHTML = '<div class="loading">Carregando esteira...</div>';
+      try {
+        const r = await fetch('/api/esteira' + (force ? '?force=1' : ''));
+        if (!r.ok) throw new Error(await r.text());
+        _esteiraData = await r.json();
+        populateEsteiraResp();
+        renderEsteira();
+      } catch (e) {
+        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro ao carregar esteira: ${e.message}</div>`;
+      }
+    }
+
+    function populateEsteiraResp() {
+      if (!_esteiraData) return;
+      const sel = document.getElementById('esRespFilter');
+      const cur = sel.value;
+      const resps = new Set();
+      _esteiraData.stages.forEach(c => c.items.forEach(it => { if (it.responsible) resps.add(it.responsible); }));
+      sel.innerHTML = '<option value="">Todos responsáveis</option>' +
+        [...resps].sort().map(r => `<option value="${r}"${r===cur?' selected':''}>${r}</option>`).join('');
+      sel.onchange = renderEsteira;
+    }
+
+    function renderEsteira() {
+      if (!_esteiraData) return;
+      const respFilter = document.getElementById('esRespFilter').value;
+      const fmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+      // Recalcula summary com filtro
+      let totalC = 0, totalL = 0, totalG = 0, criticos = 0;
+      _esteiraData.stages.forEach(col => {
+        col.items.forEach(it => {
+          if (respFilter && it.responsible !== respFilter) return;
+          totalC += it.contracted || 0;
+          totalL += it.lancado    || 0;
+          totalG += it.gap        || 0;
+          if (it.status === 'critico') criticos++;
+        });
+      });
+      document.getElementById('esTotalContracted').textContent = fmt(totalC);
+      document.getElementById('esTotalLancado').textContent    = fmt(totalL);
+      document.getElementById('esTotalGap').textContent        = fmt(totalG);
+      document.getElementById('esCardsCriticos').textContent   = criticos;
+
+      // Render columns
+      const board = document.getElementById('esteiraBoard');
+      board.innerHTML = _esteiraData.stages.map(col => {
+        const filtered = respFilter ? col.items.filter(it => it.responsible === respFilter) : col.items;
+        const colTotal = filtered.reduce((s, it) => s + (it.contracted || 0), 0);
+        const cardsHtml = filtered.length
+          ? filtered.map(esteiraCardHtml).join('')
+          : '<div class="es-empty">Sem processos</div>';
+        return `
+          <div class="es-col">
+            <div class="es-col-hdr">
+              <div>
+                <div class="es-col-name">${col.stage}</div>
+                <div class="es-col-total">${fmt(colTotal)}</div>
+              </div>
+              <div class="es-col-count">${filtered.length}</div>
+            </div>
+            <div class="es-cards">${cardsHtml}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function esteiraCardHtml(it) {
+      const fmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const fmtDate = s => {
+        if (!s) return '—';
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+          const [y,m,d] = s.substring(0,10).split('-');
+          return `${d}/${m}/${y}`;
+        }
+        return s;
+      };
+
+      const pct = it.contracted ? Math.min(100, Math.round((it.lancado / it.contracted) * 100)) : 0;
+      const client = it.client || '(sem cliente)';
+      const type = it.type || '';
+
+      let mainRow = '';
+      if (it.status === 'sem-data') {
+        mainRow = `<div class="es-card-row"><span>Próx parcela</span><strong style="color:var(--text-2)">Ainda sem data</strong></div>`;
+      } else if (it.status === 'agendado') {
+        mainRow = `<div class="es-card-row success"><span>Próx vencimento</span><strong>${fmtDate(it.nextDue)}</strong></div>`;
+      } else if (it.contracted > 0) {
+        const gapTxt = it.gap > 0
+          ? `<div class="es-card-row danger"><span>Falta lançar</span><strong>${fmt(it.gap)}</strong></div>`
+          : `<div class="es-card-row success"><span>Tudo lançado</span><strong>✓</strong></div>`;
+        const parcelas = it.expectedParcelas
+          ? `<div class="es-card-row"><span>Parcelas</span><strong>${it.existingParcelas}/${it.expectedParcelas}</strong></div>`
+          : '';
+        const nextRow = it.nextDue
+          ? `<div class="es-card-row"><span>Próx venc</span><strong>${fmtDate(it.nextDue)} · ${fmt(it.nextValue)}</strong></div>`
+          : '';
+        mainRow = parcelas + gapTxt + nextRow;
+      }
+
+      return `
+        <div class="es-card es-status-${it.status}" onclick="window.open('${it.advboxUrl}','_blank')">
+          <div class="es-card-client" title="${client}">${client}</div>
+          <div class="es-card-type">${type}</div>
+          ${it.contracted > 0 ? `
+            <div class="es-card-row"><span>Contratado</span><strong>${fmt(it.contracted)}</strong></div>
+            <div class="es-card-row"><span>Lançado</span><strong>${fmt(it.lancado)}</strong></div>
+            <div class="es-card-progress"><div class="es-card-progress-fill" style="width:${pct}%"></div></div>
+          ` : ''}
+          ${mainRow}
+          <div class="es-card-foot">
+            <span>${it.responsible || ''}</span>
+            <a href="${it.advboxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">AdvBox ↗</a>
+          </div>
+        </div>`;
+    }
+    // ── FIM ESTEIRA ──────────────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->

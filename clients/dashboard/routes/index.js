@@ -18,5 +18,6 @@ router.use(require('./inss-conference'));
 router.use(require('./petitions'));
 router.use(require('./cash-flow'));
 router.use(require('./campaign-roi'));
+router.use(require('./esteira'));
 
 module.exports = router;
