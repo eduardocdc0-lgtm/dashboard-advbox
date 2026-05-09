@@ -19,5 +19,6 @@ router.use(require('./petitions'));
 router.use(require('./cash-flow'));
 router.use(require('./campaign-roi'));
 router.use(require('./esteira'));
+router.use(require('./finance'));
 
 module.exports = router;

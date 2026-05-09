@@ -120,6 +120,37 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_icl_at ON inss_conference_log(conferido_em DESC);
     `);
 
+    // ── Financeiro próprio do dashboard ──
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS financial_parcelas (
+        id              SERIAL PRIMARY KEY,
+        group_id        UUID NOT NULL,
+        lawsuit_id      BIGINT,
+        client_name     VARCHAR(500) NOT NULL,
+        category        VARCHAR(100),
+        kind            VARCHAR(20) NOT NULL DEFAULT 'parcelado',
+        parcela_num     INTEGER NOT NULL DEFAULT 1,
+        total_parcelas  INTEGER NOT NULL DEFAULT 1,
+        due_date        DATE NOT NULL,
+        value           NUMERIC(12,2) NOT NULL,
+        status          VARCHAR(20) NOT NULL DEFAULT 'pendente',
+        paid_date       DATE,
+        paid_value      NUMERIC(12,2),
+        notes           TEXT,
+        created_at      TIMESTAMP DEFAULT NOW(),
+        updated_at      TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_fp_due     ON financial_parcelas(due_date);
+      CREATE INDEX IF NOT EXISTS idx_fp_status  ON financial_parcelas(status);
+      CREATE INDEX IF NOT EXISTS idx_fp_group   ON financial_parcelas(group_id);
+      CREATE INDEX IF NOT EXISTS idx_fp_lawsuit ON financial_parcelas(lawsuit_id);
+
+      DROP TRIGGER IF EXISTS fp_updated_at ON financial_parcelas;
+      CREATE TRIGGER fp_updated_at
+        BEFORE UPDATE ON financial_parcelas
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);
