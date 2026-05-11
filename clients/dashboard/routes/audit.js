@@ -60,8 +60,8 @@ router.get('/audit/usage', requireAuth, async (req, res, next) => {
 
 // ── Kanban Financeiro ────────────────────────────────────────────────────────
 
-const FASES_COBRANCA = ['Salario Maternidade Parcelado', 'Judicial Parcelado', 'Adm Parcelado', 'Rpv do Mês'];
-const FASES_MONITOR  = ['Rpv do Proximo Mês', 'Judicial Implantado a Receber', 'Adm Implantado a Receber', 'Salario Maternidade Concedido'];
+const FASES_COBRANCA = ['Salario Maternidade Parcelado', 'Judicial Parcelado', 'Adm Parcelado'];
+const FASES_MONITOR  = ['Rpv do Mes', 'Judicial Implantado a Receber', 'Adm Implantado a Receber', 'Salario Maternidade Concedido'];
 
 function normFase(s) { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 function matchFase(stage, list) { const st = normFase(stage); return list.some(f => { const fn = normFase(f); return st === fn || st.includes(fn) || fn.includes(st); }); }
