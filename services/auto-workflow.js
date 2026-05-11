@@ -121,7 +121,12 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true 
     const prevStage = await getPreviousStage(lawId);
     const mudou = prevStage !== newStage;
 
-    if (mudou && TEMPLATES[newStage]) {
+    // SAFETY: na primeira vez que vemos um processo (prevStage === null),
+    // só populamos o snapshot — NÃO disparamos workflow. Senão a primeira
+    // rodada após deploy criaria workflow pra todos os ~500 processos ativos.
+    const ehPrimeiraVez = prevStage === null;
+
+    if (mudou && !ehPrimeiraVez && TEMPLATES[newStage]) {
       const tpl = TEMPLATES[newStage];
       if (!(await alreadyDispatched(lawId, tpl.name))) {
         novos++;
