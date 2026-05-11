@@ -2114,22 +2114,6 @@
         </article>
       </section>
 
-      <!-- Atividade da equipe -->
-      <section class="hoje-section" aria-labelledby="hojeHeadTitle">
-        <header class="ov-section-head">
-          <div class="ov-section-head__left">
-            <span class="ov-section-head__eyebrow">Equipe</span>
-            <h2 class="ov-section-head__title" id="hojeHeadTitle">Atividade da equipe</h2>
-            <span class="ov-section-head__sub">
-              <span id="hojeData"></span>
-              <span class="ov-section-head__sub-divider" aria-hidden="true"> · </span>
-              últimos 7 dias
-            </span>
-          </div>
-        </header>
-        <div id="hojeGrid" class="hoje-grid"><div class="loading">Aguardando dados...</div></div>
-      </section>
-
       <!-- Evolução -->
       <section class="evo-wrap" aria-labelledby="evoHeadTitle">
         <header class="ov-section-head">
@@ -3854,8 +3838,10 @@
         renderHoje(data.posts || []);
       } catch(e) {
         console.error('fluxo:', e);
+        const grid = document.getElementById('hojeGrid');
+        if (!grid) return; // bloco "Atividade da equipe" foi removido
         const msg = (e && e.message) ? e.message : 'falha desconhecida';
-        document.getElementById('hojeGrid').innerHTML = `<div class="hoje-empty">
+        grid.innerHTML = `<div class="hoje-empty">
           <div style="margin-bottom:10px;">Erro ao carregar atividade.</div>
           <div style="font-size:11px;color:#bbb;font-family:monospace;">${msg.slice(0,160)}</div>
           <button onclick="loadFluxo()" style="margin-top:14px;padding:6px 14px;font-size:12px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;">↻ Tentar de novo</button>
@@ -3865,11 +3851,12 @@
 
     // ── ATIVIDADE DE HOJE ──────────────────────────────────────────────────────
     function renderHoje(posts) {
+      const grid    = document.getElementById('hojeGrid');
+      if (!grid) return; // bloco "Atividade da equipe" foi removido
       const now     = new Date();
       const hoje    = now.toISOString().slice(0, 10);
       const ontem   = new Date(now - 86400000).toISOString().slice(0, 10);
       const semana  = new Date(now - 6 * 86400000).toISOString().slice(0, 10);
-      const grid    = document.getElementById('hojeGrid');
       const dataEl  = document.getElementById('hojeData');
       if (dataEl) dataEl.textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
