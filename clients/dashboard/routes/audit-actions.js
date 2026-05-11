@@ -152,4 +152,20 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   });
 });
 
+// ── Admin: roda 1 ciclo do auto-workflow manualmente ─────────────────────────
+// GET /api/audit/auto-workflow/run?dryRun=1
+router.get('/auto-workflow/run', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Só admin pode rodar auto-workflow manualmente.' });
+  }
+  const { runCycle } = require('../../../services/auto-workflow');
+  const dryRun = req.query.dryRun === '1';
+  try {
+    const result = await runCycle({ dryRun, forceRefresh: true });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
