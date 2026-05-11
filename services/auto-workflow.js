@@ -78,21 +78,79 @@ async function markDispatched(lawsuitId, workflowName, stage, postsCreated, erro
   `, [lawsuitId, workflowName, stage, JSON.stringify(postsCreated || []), errorMessage || null]);
 }
 
+// ── Resolve tasks_id a partir do nome (texto livre nos templates) ───────────
+// AdvBox exige ID numérico de settings.tasks no POST /posts. Cacheia 1h.
+
+const TASK_LOOKUP_TTL_MS = 60 * 60 * 1000;
+const TASK_FALLBACK_ID = 8894482; // ACOMPANHAR ANDAMENTO PROCESSUAL
+let _taskMap = null;
+let _taskMapAt = 0;
+
+function norm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+async function getTaskMap() {
+  if (_taskMap && (Date.now() - _taskMapAt) < TASK_LOOKUP_TTL_MS) return _taskMap;
+  const settings = await client.request('/settings');
+  const tasks = (settings && settings.tasks) || [];
+  _taskMap = tasks.map(t => ({ id: t.id, normTask: norm(t.task), original: t.task }));
+  _taskMapAt = Date.now();
+  return _taskMap;
+}
+
+async function resolveTaskId(taskName) {
+  const map = await getTaskMap();
+  const n = norm(taskName);
+  if (!n) return TASK_FALLBACK_ID;
+  let hit = map.find(t => t.normTask === n);
+  if (hit) return hit.id;
+  hit = map.find(t => t.normTask.startsWith(n) || n.startsWith(t.normTask));
+  if (hit) return hit.id;
+  hit = map.find(t => t.normTask.includes(n) || n.includes(t.normTask));
+  if (hit) return hit.id;
+  return TASK_FALLBACK_ID;
+}
+
 // ── Cria tarefa no AdvBox ───────────────────────────────────────────────────
+// Schema real do POST /posts validado em produção (11/05/2026):
+//   tasks_id, notes, start_date, date_deadline, from, lawsuits_id, guests[]
+
+const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
+const ADVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const fetchNF = require('node-fetch');
+const FROM_USER_ID = 198347; // Eduardo (admin/dono do token)
 
 async function createPost({ lawsuitId, task, userId, deadline }) {
+  const tasksId = await resolveTaskId(task);
+  const hoje = new Date().toISOString().slice(0, 10);
   const payload = {
-    task,
-    notes: `[Auto-workflow] Criado pelo dashboard quando processo mudou de fase.`,
+    tasks_id: tasksId,
+    notes: `[Auto-workflow] ${task} — disparado quando processo mudou de fase.`,
+    start_date: hoje,
     date_deadline: deadline,
+    from: FROM_USER_ID,
     lawsuits_id: lawsuitId,
-    users: [{ user_id: userId }],
+    guests: [userId],
   };
-  const resp = await client.request('/posts', {
+  const resp = await fetchNF(`${ADVBOX_BASE}/posts`, {
     method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.ADVBOX_TOKEN}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': ADVBOX_UA,
+    },
     body: JSON.stringify(payload),
   });
-  return resp;
+  const raw = await resp.text();
+  let body; try { body = JSON.parse(raw); } catch { body = { raw }; }
+  if (!resp.ok) {
+    const detail = body.errors || body.message || body.error || body.raw;
+    throw new Error(`AdvBox ${resp.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+  }
+  return body;
 }
 
 // ── Loop principal ──────────────────────────────────────────────────────────
