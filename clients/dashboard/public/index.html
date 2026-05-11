@@ -3854,7 +3854,12 @@
         renderHoje(data.posts || []);
       } catch(e) {
         console.error('fluxo:', e);
-        document.getElementById('hojeGrid').innerHTML = '<div class="hoje-empty">Erro ao carregar atividade de hoje.</div>';
+        const msg = (e && e.message) ? e.message : 'falha desconhecida';
+        document.getElementById('hojeGrid').innerHTML = `<div class="hoje-empty">
+          <div style="margin-bottom:10px;">Erro ao carregar atividade.</div>
+          <div style="font-size:11px;color:#bbb;font-family:monospace;">${msg.slice(0,160)}</div>
+          <button onclick="loadFluxo()" style="margin-top:14px;padding:6px 14px;font-size:12px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;">↻ Tentar de novo</button>
+        </div>`;
       }
     }
 

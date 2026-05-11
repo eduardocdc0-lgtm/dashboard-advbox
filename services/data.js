@@ -36,8 +36,13 @@ async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 600) {
     try {
       data = await client.request(`/posts?limit=${limitPerPage}&offset=${offset}`);
     } catch (e) {
+      // Falha resiliente: loga e segue. Se a 1ª página falhar, retornamos
+      // array vazio em vez de quebrar a rota toda (que faz "Atividade da
+      // equipe" sumir com mensagem genérica de erro).
+      console.error(`[Posts] p${page + 1} falhou: ${e.message}`);
       if (e.message === 'RATE_LIMIT' && page > 0) break;
-      throw e;
+      if (page === 0) return all; // nada conseguimos
+      break;
     }
     const items = Array.isArray(data) ? data : (data.data || []);
     all.push(...items);
