@@ -57,17 +57,14 @@ const SLA_POR_FASE = {
   'PARA DAR ENTRADA':                         5,
   // 'PROTOCOLADO ADM' — REMOVIDO: espera INSS responder
   // 'PROTOCOLADO' — REMOVIDO: espera INSS responder
-  'EM ANALISE PERICIAS FEITAS':              30,
-  'AUXILIO INCAPACIDADE':                    30,
+  // 'EM ANALISE PERICIAS FEITAS' — REMOVIDO: lógico (espera resultado)
+  // 'AUXILIO INCAPACIDADE' — REMOVIDO: lógico (Eduardo confirmou)
   'PROCESSOS SEM LAUDOS':                    14,
   'PROCESSO COM GUARDA BPC':                 30,
   // 'PERICIA MARCADA SEM DATA DE AUDIENCIA' — REMOVIDO: espera passiva
   'CANCELADO REQUERIMENTO':                  10,
-  'SALARIO MATERNIDADE GUIA PAGA':           15,
-  'SALARIO MATERNIDADE 5 7 MESES':           30,
-  'SALARIO MATERNIDADE 3 5 MESES':           30,
-  'SALARIO MATERNIDADE 1 A 3 MESES':         30,
-  'SALARIO MATERNIDADE':                     30,
+  // SALARIO MATERNIDADE (todas as fases) — REMOVIDO: Eduardo confirmou que é tudo certo
+  // 'SALARIO MATERNIDADE GUIA PAGA' / '5 7 MESES' / '3 5 MESES' / '1 A 3 MESES' / 'SALARIO MATERNIDADE'
 
   // Judicial (Letícia / Alice)
   'ELABORAR PETICAO INICIAL':                10,
@@ -93,7 +90,7 @@ const SLA_POR_FASE = {
 
   // Financeiro (Cau)
   'BENEFICIO CONCEDIDO AGUARDAR':            30,
-  'SALARIO MATERNIDADE CONCEDIDO':           30,
+  // 'SALARIO MATERNIDADE CONCEDIDO' — REMOVIDO: salário maternidade é tudo certo
   'IMPLANTADO A RECEBER':                    30,
   'JUDICIAL IMPLANTADO A RECEBER':           30,
   'ADM IMPLANTADO A RECEBER':                30,
