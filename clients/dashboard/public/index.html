@@ -172,7 +172,7 @@
     /* ── METRICS GRID ── */
     .metrics {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 14px;
       margin-bottom: 28px;
     }
@@ -326,10 +326,15 @@
     }
     .metric-value {
       font-family: 'DM Serif Display', serif;
-      font-size: 30px;
+      font-size: clamp(22px, 2.6vw, 30px);
       font-weight: 400;
       color: var(--text);
       letter-spacing: -0.02em;
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      max-width: 100%;
     }
     .metric-value.warning { color: var(--warning); }
     .metric-value.success { color: var(--success); }
@@ -350,6 +355,25 @@
 
     .metric-card.red    { border-left: 3px solid var(--danger); }
     .metric-card.orange { border-left: 3px solid var(--warning); }
+
+    /* ── MASK (olhinho — esconde valores monetários sensíveis) ── */
+    .is-masked .mask-target {
+      filter: blur(8px);
+      transition: filter .15s ease;
+      user-select: none;
+      cursor: pointer;
+    }
+    .is-masked .mask-target:hover { filter: blur(0); }
+    .mask-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 10px;
+      font-size: 12px; color: var(--text-2); cursor: pointer;
+      font-family: inherit;
+      transition: background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .mask-toggle:hover { background: var(--hover); color: var(--text); border-color: var(--text); }
+    .mask-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 
     /* ── CARDS ── */
     .card {
@@ -2104,6 +2128,9 @@
             <button class="ov-arrow" onclick="ovShiftMonth(1)" title="Próximo mês" aria-label="Próximo mês">›</button>
             <button class="ov-today" onclick="ovGoToday()">hoje</button>
           </div>
+          <button class="mask-toggle" id="maskToggleBtn" onclick="toggleMaskValues()" aria-pressed="false" aria-label="Ocultar valores monetários" title="Esconder/mostrar valores">
+            <span id="maskToggleIcon">👁</span><span id="maskToggleLabel">Ocultar</span>
+          </button>
           <button class="btn-link" onclick="loadOverview(true)" aria-label="Atualizar dados">↻ Atualizar</button>
         </div>
       </header>
@@ -2127,12 +2154,12 @@
         </article>
         <article class="metric-card is-success" onclick="openAReceberModal()" title="Clique para ver os processos" aria-label="A receber — abrir detalhes">
           <div class="metric-label">A receber <span class="metric-arrow" aria-hidden="true">↗</span></div>
-          <div class="metric-value success" id="aReceber">—</div>
+          <div class="metric-value success mask-target" id="aReceber">—</div>
           <div class="metric-sub">honorários contratados — excl. arquivados</div>
         </article>
         <article class="metric-card is-danger">
           <div class="metric-label">A pagar</div>
-          <div class="metric-value danger" id="aPagar">—</div>
+          <div class="metric-value danger mask-target" id="aPagar">—</div>
           <div class="metric-sub">despesas nos próximos 30 dias</div>
         </article>
       </section>
@@ -8642,6 +8669,30 @@
       const el = document.getElementById('ovMonthLabel');
       if (el && _ovMonth) el.textContent = `${OV_MES_NOMES[_ovMonth.month - 1]} ${_ovMonth.year}`;
     }
+    // ── MASK toggle (esconder valores monetários sensíveis) ─────────────────
+    function applyMaskState(masked) {
+      document.body.classList.toggle('is-masked', masked);
+      const icon  = document.getElementById('maskToggleIcon');
+      const label = document.getElementById('maskToggleLabel');
+      const btn   = document.getElementById('maskToggleBtn');
+      if (icon)  icon.textContent  = masked ? '🙈' : '👁';
+      if (label) label.textContent = masked ? 'Mostrar' : 'Ocultar';
+      if (btn)   btn.setAttribute('aria-pressed', masked ? 'true' : 'false');
+    }
+    function toggleMaskValues() {
+      const next = !document.body.classList.contains('is-masked');
+      try { localStorage.setItem('dash_masked', next ? '1' : '0'); } catch(e){}
+      applyMaskState(next);
+    }
+    // Aplica estado salvo ao carregar
+    (function initMask(){
+      let saved = '0';
+      try { saved = localStorage.getItem('dash_masked') || '0'; } catch(e){}
+      // Espera o DOM ter o body pronto
+      if (document.body) applyMaskState(saved === '1');
+      else document.addEventListener('DOMContentLoaded', () => applyMaskState(saved === '1'));
+    })();
+
     function ovShiftMonth(delta) {
       ovInitMonth();
       let m = _ovMonth.month + delta, y = _ovMonth.year;
