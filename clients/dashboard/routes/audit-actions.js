@@ -123,18 +123,19 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   const hoje = ymd(new Date());
   const dataPrazo = ymd(addBusinessDays(new Date(), 3));
   const fromUserId = actorAdvboxId || 198347; // fallback: Eduardo (admin)
-  const tasksId = Number(process.env.ADVBOX_TASK_ID_GENERICA) || null;
+  // ID da task pré-cadastrada no AdvBox (settings.tasks). Default:
+  // "ACOMPANHAR ANDAMENTO PROCESSUAL" (id 8894482, reward 8). Override via env.
+  const tasksId = Number(process.env.ADVBOX_TASK_ID_GENERICA) || 8894482;
 
   const advboxPayload = {
-    task: 'ALERTA AUDITORIA — verificar processo',
-    notes: `Auditoria detectou: ${descricao}. Verificar e tomar ação.`,
+    tasks_id: tasksId,
+    notes: `[Auditoria] ${descricao}. Verificar e tomar ação.`,
     start_date: hoje,
     date_deadline: dataPrazo,
     from: fromUserId,
     lawsuits_id: Number(lawsuit_id),
     guests: [Number(user_id)],
   };
-  if (tasksId) advboxPayload.tasks_id = tasksId;
 
   // ── Chama AdvBox (POST cru para preservar body do erro 4xx) ────────────────
   let advboxResponse = null;
