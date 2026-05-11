@@ -209,6 +209,12 @@ function audTarefasVencidas(tarefas) {
     const users = t.users || [];
     const completed = Array.isArray(users) && users[0] ? !!users[0].completed : false;
     if (completed) continue;
+
+    // Se a tarefa tem DATA DO EVENTO futura (ex: perícia agendada pra próxima semana),
+    // não é vencida — só vai ser concluída depois do evento. date_deadline aqui é
+    // só lembrete interno antes do evento.
+    const dataEvento = parseData(t.date);
+    if (dataEvento && dataEvento.getTime() >= agora) continue;
     const dias = Math.floor((agora - prazo.getTime()) / 86400000);
     problemas.push({
       tipo: 'workflow', nivel: 'erro',
