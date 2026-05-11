@@ -88,17 +88,10 @@ const SLA_POR_FASE = {
   // 'PERICIA MEDICA MARCADA' — REMOVIDO: espera passiva (perícia agendada)
   // 'PERICIAS MARCADAS' — REMOVIDO: espera passiva
 
-  // Financeiro (Cau)
-  'BENEFICIO CONCEDIDO AGUARDAR':            30,
-  // 'SALARIO MATERNIDADE CONCEDIDO' — REMOVIDO: salário maternidade é tudo certo
-  'IMPLANTADO A RECEBER':                    30,
-  'JUDICIAL IMPLANTADO A RECEBER':           30,
-  'ADM IMPLANTADO A RECEBER':                30,
-  'JUDICIAL PARCELADO':                      30,
-  'ADM PARCELADO':                           30,
-  'SALARIO MATERNIDADE PARCELADO':           30,
-  'RPV DO MES':                              30,
-  'RPV DO PROXIMO MES':                      60,
+  // Financeiro (Cau) — TODAS REMOVIDAS
+  // Essas fases são tratadas pela rota /api/audit/kanban-financeiro
+  // (aba "Auditoria" no menu — a antiga, que a Cau já usa).
+  // Não duplicar aqui. Cau não vê alerta nenhum nessa Auditoria de Uso.
 
   // Trabalhista (Eduardo)
   'TRABALHISTA':                             60,
