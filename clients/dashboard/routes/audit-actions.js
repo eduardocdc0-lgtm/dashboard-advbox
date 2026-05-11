@@ -118,14 +118,23 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   }
 
   // ── Monta payload pra AdvBox ───────────────────────────────────────────────
+  // Campos obrigatórios descobertos via erro 422:
+  //   start_date, from, tasks_id, guests, lawsuits_id
+  const hoje = ymd(new Date());
   const dataPrazo = ymd(addBusinessDays(new Date(), 3));
+  const fromUserId = actorAdvboxId || 198347; // fallback: Eduardo (admin)
+  const tasksId = Number(process.env.ADVBOX_TASK_ID_GENERICA) || null;
+
   const advboxPayload = {
     task: 'ALERTA AUDITORIA — verificar processo',
     notes: `Auditoria detectou: ${descricao}. Verificar e tomar ação.`,
+    start_date: hoje,
     date_deadline: dataPrazo,
-    users: [{ user_id: Number(user_id) }],
+    from: fromUserId,
+    lawsuits_id: Number(lawsuit_id),
+    guests: [Number(user_id)],
   };
-  if (lawsuit_id) advboxPayload.lawsuits_id = Number(lawsuit_id);
+  if (tasksId) advboxPayload.tasks_id = tasksId;
 
   // ── Chama AdvBox (POST cru para preservar body do erro 4xx) ────────────────
   let advboxResponse = null;
@@ -201,6 +210,32 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── DEBUG: inspecionar schema real do POST /posts ────────────────────────────
+// Acesse: /api/audit/_debug/posts-sample (admin only)
+// Retorna os 3 primeiros posts do AdvBox + tenta GET /tasks e GET /settings
+// pra revelar onde estão os tasks_id pré-cadastrados.
+router.get('/audit/_debug/posts-sample', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'admin only' });
+  }
+  const out = {};
+  try {
+    const posts = await client.request('/posts');
+    const arr = Array.isArray(posts) ? posts : (posts.data || []);
+    out.posts_sample = arr.slice(0, 3);
+    out.posts_count = arr.length;
+    out.post_keys = arr[0] ? Object.keys(arr[0]) : null;
+  } catch (e) { out.posts_error = e.message; }
+
+  try { out.settings = await client.request('/settings'); }
+  catch (e) { out.settings_error = e.message; }
+
+  try { out.tasks = await client.request('/tasks'); }
+  catch (e) { out.tasks_error = e.message; }
+
+  res.json(out);
 });
 
 module.exports = router;
