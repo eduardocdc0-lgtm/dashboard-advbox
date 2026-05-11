@@ -5202,25 +5202,53 @@
         }).join('');
       }
 
-      // ── OK ───────────────────────────────────────────────────────────────────
+      // ── OK (kanban horizontal por fase) ──────────────────────────────────────
       const okEl = document.getElementById('auditOkList');
       if (!showOk || filtOk.length === 0) {
         okEl.innerHTML = filtOk.length === 0 ? '<div class="empty">Sem processos OK</div>' : '';
       } else {
-        okEl.innerHTML = `<table class="fin-table">
-          <thead><tr>
-            <th>Cliente</th><th>Fase</th><th>Responsável</th>
-            <th style="text-align:center">Lanç.</th><th style="text-align:right">Total mês</th><th></th>
-          </tr></thead>
-          <tbody>${filtOk.map(c => `<tr>
-            <td>${c.cliente}</td>
-            <td style="font-size:12px;color:#666;">${c.fase}</td>
-            <td style="font-size:12px;color:#888;">${c.responsavel || '—'}</td>
-            <td style="text-align:center;font-size:12px;">${c.lancamentosDoMes || '—'}</td>
-            <td style="text-align:right;font-weight:600;" class="success">${c.totalDoMes ? formatMoney(c.totalDoMes) : '—'}</td>
-            <td><a href="${c.linkAdvBox}" target="_blank" class="reg-link" style="font-size:10px;">↗</a></td>
-          </tr>`).join('')}</tbody>
-        </table>`;
+        // Agrupa por fase normalizada
+        const grupos = {};
+        for (const c of filtOk) {
+          const fase = (c.fase || 'Outros').toUpperCase().trim();
+          (grupos[fase] = grupos[fase] || []).push(c);
+        }
+        // Ordem fixa das fases conhecidas + outras alfabéticas no final
+        const ORDEM = ['RPV DO MES', 'JUDICIAL PARCELADO', 'ADM PARCELADO', 'SALARIO MATERNIDADE PARCELADO'];
+        const fases = [
+          ...ORDEM.filter(f => grupos[f]),
+          ...Object.keys(grupos).filter(f => !ORDEM.includes(f)).sort(),
+        ];
+
+        okEl.innerHTML = `<div class="audr-kanban-board">
+          ${fases.map(fase => {
+            const items = grupos[fase];
+            const total = items.reduce((s, c) => s + (c.totalDoMes || 0), 0);
+            return `<div class="audr-kanban-col">
+              <div style="padding:12px 14px;border-bottom:1px solid #eee;background:#fff;border-radius:10px 10px 0 0;position:sticky;top:0;z-index:1;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                  <strong style="font-size:12px;letter-spacing:0.3px;">${fase}</strong>
+                  <span style="background:#0f172a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${items.length}</span>
+                </div>
+                <div style="font-size:11px;color:#16a34a;font-weight:600;margin-top:4px;">${formatMoney(total)}</div>
+              </div>
+              <div style="padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+                ${items.map(c => `<div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+                    <strong style="font-size:13px;line-height:1.25;flex:1;">${c.cliente}</strong>
+                    <a href="${c.linkAdvBox}" target="_blank" class="reg-link" style="font-size:11px;flex-shrink:0;">↗</a>
+                  </div>
+                  ${c.aviso ? `<div style="font-size:10px;color:#b45309;background:#fef3c7;padding:4px 6px;border-radius:4px;margin-bottom:6px;">⚠ ${c.aviso}</div>` : ''}
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#666;">
+                    <span>${c.responsavel || '—'}</span>
+                    <span style="font-weight:700;color:#16a34a;">${c.totalDoMes ? formatMoney(c.totalDoMes) : '—'}</span>
+                  </div>
+                  <div style="font-size:10px;color:#999;margin-top:2px;">${c.lancamentosDoMes || 0} lanç.</div>
+                </div>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
       }
     }
 
