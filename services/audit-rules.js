@@ -55,13 +55,13 @@ const SLA_POR_FASE = {
 
   // ADM (Marília)
   'PARA DAR ENTRADA':                         5,
-  'PROTOCOLADO ADM':                         90,
-  'PROTOCOLADO':                             90,
+  // 'PROTOCOLADO ADM' — REMOVIDO: espera INSS responder
+  // 'PROTOCOLADO' — REMOVIDO: espera INSS responder
   'EM ANALISE PERICIAS FEITAS':              30,
   'AUXILIO INCAPACIDADE':                    30,
   'PROCESSOS SEM LAUDOS':                    14,
   'PROCESSO COM GUARDA BPC':                 30,
-  'PERICIA MARCADA SEM DATA DE AUDIENCIA':   45,
+  // 'PERICIA MARCADA SEM DATA DE AUDIENCIA' — REMOVIDO: espera passiva
   'CANCELADO REQUERIMENTO':                  10,
   'SALARIO MATERNIDADE GUIA PAGA':           15,
   'SALARIO MATERNIDADE 5 7 MESES':           30,
@@ -71,7 +71,7 @@ const SLA_POR_FASE = {
 
   // Judicial (Letícia / Alice)
   'ELABORAR PETICAO INICIAL':                10,
-  'PROTOCOLADO JUDICIAL':                    60,
+  // 'PROTOCOLADO JUDICIAL' — REMOVIDO: espera tribunal
   'COM PRAZO':                                5,
   // 'PERICIA SOCIAL MARCADA' — REMOVIDO: espera passiva (perícia agendada)
   'SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO': 15,
@@ -84,7 +84,7 @@ const SLA_POR_FASE = {
   // 'AGUARDANDO JULGAMENTO DO RECURSO' — REMOVIDO: espera tribunal
   'RECURSO JULGADO ENTRE EM CONTATO':         7,
   'TRANSITO EM JULGADO NAO CABE RECURSO':    15,
-  'AGUARDANDO EXPEDICAO DE RPV':             60,
+  // 'AGUARDANDO EXPEDICAO DE RPV' — REMOVIDO: espera tribunal expedir
   'FAZER ACAO DE GUARDA':                    15,
 
   // Compartilhadas
