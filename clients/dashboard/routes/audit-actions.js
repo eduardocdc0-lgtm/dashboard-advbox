@@ -218,6 +218,115 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
 });
 
+// ── DEBUG: explica por que um lawsuit caiu em críticos do kanban ─────────────
+// GET /api/audit/_debug/explain-critical?lawsuit_id=10339766&mes=05/2026
+router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const lid = Number(req.query.lawsuit_id);
+  const mes = (req.query.mes || '').toString();
+  if (!lid || !mes) return res.status(400).json({ error: 'lawsuit_id e mes obrigatórios' });
+
+  const { fetchTransactions, fetchLawsuits } = require('../../../services/data');
+  const [transactions, lawsuits] = await Promise.all([
+    fetchTransactions(true), fetchLawsuits(true),
+  ]);
+  const law = lawsuits.find(l => l.id === lid);
+  if (!law) return res.json({ error: 'lawsuit não encontrado' });
+
+  const [mm, yyyy] = mes.split('/').map(Number);
+  const matchMes = s => {
+    if (!s) return false;
+    const str = String(s);
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return +str.slice(0,4) === yyyy && +str.slice(5,7) === mm;
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); return +p[1] === mm && +p[2] === yyyy; }
+    return false;
+  };
+
+  // Transações vinculadas ao lawsuit (lógica primária)
+  const direct = transactions.filter(t =>
+    Number(t.lawsuits_id || t.lawsuit_id) === lid &&
+    t.entry_type === 'income' &&
+    (matchMes(t.date_payment) || matchMes(t.date_due))
+  );
+
+  // Clientes do lawsuit
+  const custIds = (law.customers || []).map(c => c.id).filter(Boolean);
+  const custNomes = (law.customers || []).map(c => c.name);
+
+  // Quantos lawsuits cada cliente desses tem em fase parcelada
+  const FASES_COB = ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES'];
+  const isCobranca = s => {
+    const n = (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+    return FASES_COB.some(f => n === f || n.includes(f) || f.includes(n));
+  };
+  const lawsByCustomer = {};
+  for (const l of lawsuits) {
+    if (!isCobranca(l.stage || '')) continue;
+    for (const c of (l.customers || [])) {
+      if (!c.id) continue;
+      (lawsByCustomer[c.id] = lawsByCustomer[c.id] || []).push({ id: l.id, stage: l.stage });
+    }
+  }
+
+  // Transações do mês "soltas" (sem lawsuits_id) — pra cada possível campo de customer
+  const incomeDoMes = transactions.filter(t =>
+    t.entry_type === 'income' && (matchMes(t.date_payment) || matchMes(t.date_due))
+  );
+
+  const candidateCustomerFields = ['customer_id', 'customers_id', 'client_id'];
+  const soltas = incomeDoMes
+    .filter(t => !(t.lawsuits_id || t.lawsuit_id))
+    .map(t => ({
+      id: t.id,
+      amount: t.amount,
+      date_payment: t.date_payment,
+      date_due: t.date_due,
+      description: t.description || t.notes,
+      customer_id: t.customer_id,
+      customers_id: t.customers_id,
+      client_id: t.client_id,
+      customers_array: t.customers,
+      customer_name: t.customer_name,
+      raw_keys: Object.keys(t),
+    }));
+
+  // Quais soltas batem com os custIds do lawsuit?
+  const soltasDoCliente = soltas.filter(s => {
+    return custIds.some(cid => {
+      if (s.customer_id === cid) return true;
+      if (s.customers_id === cid) return true;
+      if (s.client_id === cid) return true;
+      if (Array.isArray(s.customers_array) && s.customers_array.some(c => c.id === cid)) return true;
+      // Match por nome também
+      if (s.customer_name && custNomes.some(n => n && s.customer_name.toUpperCase().includes(n.toUpperCase().split(' ')[0]))) return true;
+      return false;
+    });
+  });
+
+  res.json({
+    lawsuit: { id: law.id, stage: law.stage, customers: law.customers },
+    custIds,
+    custNomes,
+    // ── Diagnóstico do fallback ────────────────────────────────────────────
+    transacoes_diretas_no_mes: direct,
+    quantos_lawsuits_parcelados_por_cliente: custIds.map(cid => ({
+      customer_id: cid,
+      lawsuits: lawsByCustomer[cid] || [],
+    })),
+    quant_soltas_no_mes: soltas.length,
+    primeira_solta_keys: soltas[0]?.raw_keys || null, // mostra quais campos existem nas transações
+    soltas_que_batem_com_cliente: soltasDoCliente,
+    // ── Diagnóstico final ─────────────────────────────────────────────────
+    diagnostico: (() => {
+      if (direct.length) return 'NÃO ERA CRÍTICO — tem transação vinculada direta';
+      const ambig = custIds.some(cid => (lawsByCustomer[cid] || []).length > 1);
+      if (ambig) return 'CRÍTICO — cliente tem múltiplos lawsuits parcelados (fallback não roda por segurança)';
+      if (!soltasDoCliente.length) return 'CRÍTICO — nenhuma transação solta no mês encontrada para o customer_id do lawsuit';
+      return 'DEVERIA TER PASSADO via fallback — investigar campo de customer';
+    })(),
+  });
+});
+
 // ── DEBUG: inspeciona transações financeiras (income) por lawsuit ────────────
 // GET /api/audit/_debug/inspect-financial?lawsuit_id=10339766&mes=05/2026
 router.get('/audit/_debug/inspect-financial', requireAuth, async (req, res) => {
