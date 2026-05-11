@@ -12,6 +12,7 @@ router.use(require('./evolucao'));
 router.use(require('./meta'));
 router.use(require('./registrations'));
 router.use(require('./audit'));
+router.use(require('./audit-actions'));
 router.use(require('./webhook'));
 router.use(require('./birthday'));
 router.use(require('./inss-conference'));

@@ -118,6 +118,22 @@ async function migrate() {
         conferido_em     TIMESTAMP DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_icl_at ON inss_conference_log(conferido_em DESC);
+
+      CREATE TABLE IF NOT EXISTS audit_actions (
+        id                SERIAL PRIMARY KEY,
+        actor_username    TEXT NOT NULL,
+        actor_advbox_id   INT,
+        action_type       TEXT NOT NULL,
+        target_lawsuit_id BIGINT,
+        target_user_id    INT,
+        problema_payload  JSONB NOT NULL,
+        advbox_response   JSONB,
+        success           BOOLEAN NOT NULL,
+        error_message     TEXT,
+        created_at        TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_aa_created_at ON audit_actions(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_aa_cooldown   ON audit_actions(action_type, target_lawsuit_id, created_at DESC);
     `);
 
     // ── Financeiro próprio do dashboard ──

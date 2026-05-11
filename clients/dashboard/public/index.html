@@ -1753,6 +1753,7 @@
           <button class="nav-item tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria geral</button>
           <button class="nav-item tab admin-tab" onclick="showTab('auditresp', event)">Por responsável</button>
           <button class="nav-item tab admin-tab" onclick="showTab('inssConf', event)">Conferência INSS</button>
+          <button class="nav-item tab" onclick="showTab('auditusage', event)">📊 Auditoria de uso</button>
         </div>
       </div>
 
@@ -2427,6 +2428,91 @@
 
       <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">ⓘ Somente processos ativos. 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo. Cache 20 min.</div>
     </div>
+
+    <!-- ABA: AUDITORIA DE USO -->
+    <div id="auditusage" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">📊 Auditoria de Uso</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="auuSummaryBadge">Cadastro + workflow do AdvBox — clique ↺ Atualizar pra recarregar</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="dist-export-btn" onclick="exportAuditUsage()">📊 Exportar CSV</button>
+          <button class="dist-export-btn" onclick="loadAuditUsage(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
+        </div>
+      </div>
+
+      <div id="auuLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando auditoria de uso…</div>
+
+      <div id="auuCardsRow" class="audr-cards-row">
+        <div class="ar-card ar-card-total"><div class="ar-card-label">Clientes</div><div class="ar-card-count" id="auuClientesN">—</div><div class="ar-card-sub">total cadastrado</div></div>
+        <div class="ar-card ar-card-total"><div class="ar-card-label">Processos</div><div class="ar-card-count" id="auuProcessosN">—</div><div class="ar-card-sub">ativos</div></div>
+        <div class="ar-card ar-card-total"><div class="ar-card-label">Tarefas</div><div class="ar-card-count" id="auuTarefasN">—</div><div class="ar-card-sub">no AdvBox</div></div>
+        <div class="ar-card ar-card-error"><div class="ar-card-label">Problemas</div><div class="ar-card-count" id="auuProblemasN">—</div><div class="ar-card-sub" id="auuEscopoLabel">no seu escopo</div></div>
+        <div class="ar-card" style="background:#fffbea;border-color:#fde68a;"><div class="ar-card-label">Conformidade</div><div class="ar-card-count" id="auuTaxaN" style="color:#92400e;">—</div><div class="ar-card-sub">% sem problemas</div></div>
+      </div>
+
+      <!-- Filtros -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
+        <select id="auuTipoFiltro" class="reg-filter" onchange="renderAuditUsageTable()" style="font-size:12px;">
+          <option value="">Todos os tipos</option>
+          <option value="cliente">Cliente</option>
+          <option value="processo">Processo</option>
+          <option value="tarefa">Tarefa</option>
+          <option value="workflow">Workflow</option>
+        </select>
+        <select id="auuNivelFiltro" class="reg-filter" onchange="renderAuditUsageTable()" style="font-size:12px;">
+          <option value="">Todos os níveis</option>
+          <option value="erro">❌ Erro</option>
+          <option value="aviso">⚠️ Aviso</option>
+        </select>
+        <select id="auuRespFiltro" class="reg-filter admin-only" onchange="renderAuditUsageTable()" style="font-size:12px;">
+          <option value="">Todos os responsáveis</option>
+        </select>
+        <input id="auuBusca" class="reg-filter" type="text" placeholder="Buscar descrição..." oninput="renderAuditUsageTable()" style="font-size:12px;min-width:180px;">
+      </div>
+
+      <!-- Tabela -->
+      <div style="overflow-x:auto;">
+        <table class="fin-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>Cliente / Item</th>
+              <th>Tipo</th>
+              <th>Campo</th>
+              <th>Responsável</th>
+              <th>Descrição</th>
+              <th style="text-align:center;">Status</th>
+              <th style="text-align:center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="auuTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">Clique em ↺ Atualizar para carregar a auditoria.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:8px;" id="auuLoadMore"></div>
+
+      <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">
+        ⓘ Cache 30 min. Botão "🔔 Cobrar" cria tarefa no AdvBox pro responsável (cooldown 60 min por processo).
+      </div>
+    </div>
+
+    <!-- MODAL: Cobrar responsável -->
+    <div id="auuCobrarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:10px;">🔔 Cobrar responsável</div>
+        <div id="auuCobrarBody" style="font-size:13px;color:#444;line-height:1.6;margin-bottom:20px;"></div>
+        <div id="auuCobrarErr" style="display:none;background:#fff5f5;border:1px solid #fcd;color:#b02020;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button onclick="auuCobrarFechar()" style="padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+          <button id="auuCobrarConfirmar" onclick="auuCobrarConfirmar()" style="padding:8px 16px;border:none;border-radius:6px;background:#1a1a2e;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="auuToast" style="display:none;position:fixed;bottom:24px;right:24px;background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);font-size:13px;z-index:9999;"></div>
 
         <!-- ABA 10: FLUXO -->
     <div id="fluxo" class="tab-content">
@@ -3212,6 +3298,7 @@
       if (name === 'evolucao'  && !window._evoData)   loadEvolucao();
       if (name === 'auditoria' && !auditData)         loadAudit();
       if (name === 'auditresp' && !_audrData)         loadAuditResp();
+      if (name === 'auditusage' && !window._auuData)  loadAuditUsage();
       if (name === 'admin'     && !window._adminData) loadAdmin();
       if (name === 'leads')                           loadLeads();
       if (name === 'inssConf')                        inssSubTab('conferencia');
@@ -8342,6 +8429,205 @@
       }
     }
     // ── FIM VISÃO GERAL ──────────────────────────────────────────────────────
+
+    // ── AUDITORIA DE USO ─────────────────────────────────────────────────────
+    window._auuData = null;
+    window._auuCobrarPayload = null;
+    const AUU_COBRAVEIS = new Set(['gargalo_etapa', 'responsavel_errado', 'prazo_vencido']);
+
+    function auuEscapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function auuShowToast(msg, isError) {
+      const el = document.getElementById('auuToast');
+      el.textContent = msg;
+      el.style.background = isError ? '#b02020' : '#1a1a2e';
+      el.style.display = 'block';
+      clearTimeout(window._auuToastT);
+      window._auuToastT = setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+    function auuLinkAdvbox(p) {
+      const pid = p.id;
+      if (!pid) return '';
+      if (p.tipo === 'workflow') {
+        if (p.campo === 'prazo_vencido') return `https://app.advbox.com.br/0?t=${pid}`;
+        if (p.campo === 'produtividade_baixa') return '';
+        return `https://app.advbox.com.br/lawsuits/${pid}`;
+      }
+      if (p.tipo === 'processo') return `https://app.advbox.com.br/lawsuits/${pid}`;
+      if (p.tipo === 'tarefa')   return `https://app.advbox.com.br/0?t=${pid}`;
+      if (p.tipo === 'cliente')  return `https://app.advbox.com.br/customers/${pid}`;
+      return '';
+    }
+    function auuResolveNomeResp(uid, porUsuario) {
+      if (!uid) return '—';
+      const u = (porUsuario || []).find(x => String(x.user_id) === String(uid));
+      return (u && u.nome) || `#${uid}`;
+    }
+    async function loadAuditUsage(force) {
+      const loadEl = document.getElementById('auuLoading');
+      const tbody  = document.getElementById('auuTableBody');
+      loadEl.style.display = 'block';
+      tbody.innerHTML = '';
+      try {
+        const params = new URLSearchParams();
+        if (force) params.set('force', '1');
+        const r = await fetch(`/api/audit/usage?${params.toString()}`);
+        if (r.status === 401) { window.location.href = '/'; return; }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        window._auuData = data;
+
+        // Stats
+        document.getElementById('auuClientesN').textContent  = data.resumo.total_clientes ?? '—';
+        document.getElementById('auuProcessosN').textContent = data.resumo.total_processos ?? '—';
+        document.getElementById('auuTarefasN').textContent   = data.resumo.total_tarefas ?? '—';
+        document.getElementById('auuProblemasN').textContent = data.resumo.total_problemas_filtrados ?? data.problemas.length;
+        document.getElementById('auuEscopoLabel').textContent = data.escopo === 'todos' ? 'todos os usuários' : data.escopo;
+        const total = (data.resumo.total_clientes || 0) + (data.resumo.total_processos || 0) + (data.resumo.total_tarefas || 0);
+        const probs = data.resumo.total_problemas_filtrados ?? data.problemas.length;
+        const taxa = total > 0 ? Math.max(0, Math.round((1 - probs / total) * 100)) : 100;
+        document.getElementById('auuTaxaN').textContent = `${taxa}%`;
+        document.getElementById('auuSummaryBadge').textContent =
+          `${probs} problema(s) — atualizado ${new Date(data.geradoEm).toLocaleString('pt-BR')}`;
+
+        // Filtro de responsáveis (admin)
+        const respSel = document.getElementById('auuRespFiltro');
+        if (data.escopo === 'todos' && data.porUsuario) {
+          const atual = respSel.value;
+          respSel.innerHTML = '<option value="">Todos os responsáveis</option>' +
+            data.porUsuario.map(u => `<option value="${u.user_id}">${auuEscapeHtml(u.nome || ('#' + u.user_id))}</option>`).join('');
+          respSel.value = atual;
+        }
+
+        renderAuditUsageTable();
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#b02020;">Erro: ${auuEscapeHtml(e.message)}</td></tr>`;
+      } finally {
+        loadEl.style.display = 'none';
+      }
+    }
+    function renderAuditUsageTable() {
+      const data = window._auuData;
+      if (!data) return;
+      const tipo  = document.getElementById('auuTipoFiltro').value;
+      const nivel = document.getElementById('auuNivelFiltro').value;
+      const resp  = document.getElementById('auuRespFiltro').value;
+      const busca = (document.getElementById('auuBusca').value || '').toLowerCase().trim();
+
+      let lista = data.problemas || [];
+      if (tipo)  lista = lista.filter(p => p.tipo === tipo);
+      if (nivel) lista = lista.filter(p => p.nivel === nivel);
+      if (resp)  lista = lista.filter(p => String(p.user_id) === String(resp));
+      if (busca) lista = lista.filter(p => (p.descricao || '').toLowerCase().includes(busca));
+
+      const tbody = document.getElementById('auuTableBody');
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">Nenhum problema no filtro atual ✅</td></tr>';
+        document.getElementById('auuLoadMore').innerHTML = '';
+        return;
+      }
+      const MAX = 500;
+      const slice = lista.slice(0, MAX);
+      tbody.innerHTML = slice.map(p => {
+        const nomeResp = auuResolveNomeResp(p.user_id, data.porUsuario);
+        const nivelBadge = p.nivel === 'erro'
+          ? '<span style="background:#fdedec;color:#c0392b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">ERRO</span>'
+          : '<span style="background:#fff8e7;color:#b9770e;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">AVISO</span>';
+        const tipoBadge = `<span style="background:#eef;color:#446;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${auuEscapeHtml(p.tipo)}</span>`;
+        const url = auuLinkAdvbox(p);
+        const linkAdv = url ? `<a href="${url}" target="_blank" style="font-size:11px;color:#1a73e8;text-decoration:none;">↗ Abrir</a>` : '';
+        const cobravel = p.tipo === 'workflow' && AUU_COBRAVEIS.has(p.campo);
+        const btnCobrar = cobravel
+          ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">🔔 Cobrar</button>`
+          : '<span style="color:#bbb;font-size:11px;">—</span>';
+        return `<tr>
+          <td>${linkAdv} <span style="font-size:11px;color:#888;">#${auuEscapeHtml(p.id)}</span></td>
+          <td>${tipoBadge}</td>
+          <td style="font-size:12px;color:#666;">${auuEscapeHtml(p.campo || '—')}</td>
+          <td style="font-size:12px;">${auuEscapeHtml(nomeResp)}</td>
+          <td style="font-size:12px;">${auuEscapeHtml(p.descricao)}</td>
+          <td style="text-align:center;">${nivelBadge}</td>
+          <td style="text-align:center;">${btnCobrar}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('auuLoadMore').innerHTML = lista.length > MAX
+        ? `<span style="font-size:11px;color:#aaa;">Mostrando ${MAX} de ${lista.length}. Use os filtros pra reduzir.</span>` : '';
+    }
+    function exportAuditUsage() {
+      const data = window._auuData;
+      if (!data || !data.problemas || !data.problemas.length) {
+        auuShowToast('Nada pra exportar', true);
+        return;
+      }
+      const header = ['tipo','nivel','user_id','responsavel','id','campo','descricao'];
+      const rows = data.problemas.map(p => [
+        p.tipo, p.nivel, p.user_id || '', auuResolveNomeResp(p.user_id, data.porUsuario),
+        p.id, p.campo || '', (p.descricao || '').replace(/"/g, '""'),
+      ]);
+      const csv = [header.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `auditoria-uso-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ── Cobrar responsável (Modal + POST) ────────────────────────────────────
+    function auuCobrarAbrir(problemaId, problemaCampo, userId, nomeResp, descricao) {
+      window._auuCobrarPayload = {
+        problema_id: problemaId,
+        problema_tipo: 'workflow',
+        problema_campo: problemaCampo,
+        // gargalo_etapa e responsavel_errado: id é lawsuit_id. prazo_vencido: é task id → backend trata.
+        lawsuit_id: (problemaCampo === 'gargalo_etapa' || problemaCampo === 'responsavel_errado') ? problemaId : null,
+        user_id: userId ? Number(userId) : null,
+        descricao,
+      };
+      const body = document.getElementById('auuCobrarBody');
+      const desc = String(descricao || '').replace(/&#39;/g, "'");
+      body.innerHTML = `Vai criar uma tarefa para <strong>${auuEscapeHtml(nomeResp)}</strong>
+        no problema <code style="background:#f5f5f5;padding:1px 6px;border-radius:3px;">${auuEscapeHtml(problemaCampo)}</code>
+        com prazo <strong>+3 dias úteis</strong> e descrição:<br>
+        <em style="display:block;margin-top:6px;color:#555;">"${auuEscapeHtml(desc)}"</em>
+        <br>Confirma?`;
+      document.getElementById('auuCobrarErr').style.display = 'none';
+      document.getElementById('auuCobrarConfirmar').disabled = false;
+      document.getElementById('auuCobrarConfirmar').textContent = 'Confirmar';
+      document.getElementById('auuCobrarModal').style.display = 'flex';
+    }
+    function auuCobrarFechar() {
+      document.getElementById('auuCobrarModal').style.display = 'none';
+      window._auuCobrarPayload = null;
+    }
+    async function auuCobrarConfirmar() {
+      const payload = window._auuCobrarPayload;
+      if (!payload) return;
+      const btn = document.getElementById('auuCobrarConfirmar');
+      const errEl = document.getElementById('auuCobrarErr');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      errEl.style.display = 'none';
+      try {
+        const r = await fetch('/api/audit/action/cobrar-responsavel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        auuCobrarFechar();
+        auuShowToast('✓ Tarefa criada no AdvBox');
+      } catch (e) {
+        errEl.textContent = 'Erro: ' + e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+      }
+    }
+    // ── FIM AUDITORIA DE USO ─────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->
