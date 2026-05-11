@@ -186,6 +186,17 @@ const FASES_INATIVAS = new Set([
 
 const ZONAS_QUE_PETICIONAM = new Set(['LETICIA_OU_ALICE', 'EDUARDO']);
 
+// Palavras-chave que indicam que um responsável (nome real no AdvBox)
+// pertence a uma zona. Ex: zona LETICIA_OU_ALICE aceita nomes que
+// contenham "LETICIA" ou "ALICE".
+const ZONA_KEYWORDS = {
+  MARILIA:          ['MARILIA'],
+  LETICIA_OU_ALICE: ['LETICIA', 'ALICE'],
+  CAU:              ['CAU', 'CLAUDIANA'],
+  TAMMYRES:         ['TAMMYRES'],
+  EDUARDO:          ['EDUARDO'],
+};
+
 // ── QUALIDADE ────────────────────────────────────────────────────────────────
 
 const LIMITE_VERDE = 90.0;
@@ -208,6 +219,7 @@ module.exports = {
   FASES_IGNORADAS_RESPONSAVEL,
   FASES_INATIVAS,
   ZONAS_QUE_PETICIONAM,
+  ZONA_KEYWORDS,
   LIMITE_VERDE,
   LIMITE_AMARELO,
 };

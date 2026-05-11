@@ -273,12 +273,11 @@ function audResponsavelErrado(processos) {
     const responsavelAtual = normStr(p.responsible);
     if (!responsavelAtual) continue;
 
-    if (zonasMulti) {
-      if (zonasMulti.some(z => responsavelAtual.includes(z))) continue;
-    } else {
-      if (responsavelAtual.includes(zonaCerta)) continue;
-      if (zonaCerta === 'CAU' && responsavelAtual.includes('CLAUDIANA')) continue;
-    }
+    // Pra cada zona esperada, busca SUAS keywords (ex: zona LETICIA_OU_ALICE
+    // aceita "LETICIA" ou "ALICE" no nome real do AdvBox).
+    const zonasEsperadas = zonasMulti || [zonaCerta];
+    const keywordsAceitas = zonasEsperadas.flatMap(z => r.ZONA_KEYWORDS[z] || [z]);
+    if (keywordsAceitas.some(k => responsavelAtual.includes(k))) continue;
 
     const pid = p.id;
     const nome = pickClientName(p) || `#${pid}`;
