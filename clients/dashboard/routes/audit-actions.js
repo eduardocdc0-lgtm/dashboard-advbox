@@ -249,9 +249,12 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
     (matchMes(t.date_payment) || matchMes(t.date_due))
   );
 
-  // Clientes do lawsuit
-  const custIds = (law.customers || []).map(c => c.id).filter(Boolean);
-  const custNomes = (law.customers || []).map(c => c.name);
+  // Clientes do lawsuit — IGNORA PARTE CONTRÁRIA. Campo certo é customer_id (não id).
+  const custReais = (law.customers || []).filter(c =>
+    c && (c.origin || '').toUpperCase() !== 'PARTE CONTRÁRIA'
+  );
+  const custIds = custReais.map(c => c.customer_id).filter(Boolean);
+  const custNomes = custReais.map(c => c.name).filter(Boolean);
 
   // Quantos lawsuits cada cliente desses tem em fase parcelada
   const FASES_COB = ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES'];
@@ -263,17 +266,19 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
   for (const l of lawsuits) {
     if (!isCobranca(l.stage || '')) continue;
     for (const c of (l.customers || [])) {
-      if (!c.id) continue;
-      (lawsByCustomer[c.id] = lawsByCustomer[c.id] || []).push({ id: l.id, stage: l.stage });
+      const cid = c?.customer_id;
+      if (!cid) continue;
+      if ((c.origin || '').toUpperCase() === 'PARTE CONTRÁRIA') continue;
+      (lawsByCustomer[cid] = lawsByCustomer[cid] || []).push({ id: l.id, stage: l.stage });
     }
   }
 
-  // Transações do mês "soltas" (sem lawsuits_id) — pra cada possível campo de customer
+  // Transações income do mês — todas, pra calcular soltas + match
   const incomeDoMes = transactions.filter(t =>
     t.entry_type === 'income' && (matchMes(t.date_payment) || matchMes(t.date_due))
   );
 
-  const candidateCustomerFields = ['customer_id', 'customers_id', 'client_id'];
+  // "Soltas" = sem lawsuits_id. Transação tem campo `name` (cliente), não customer_id direto.
   const soltas = incomeDoMes
     .filter(t => !(t.lawsuits_id || t.lawsuit_id))
     .map(t => ({
@@ -282,25 +287,19 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
       date_payment: t.date_payment,
       date_due: t.date_due,
       description: t.description || t.notes,
-      customer_id: t.customer_id,
-      customers_id: t.customers_id,
-      client_id: t.client_id,
-      customers_array: t.customers,
-      customer_name: t.customer_name,
+      name: t.name,
+      identification: t.identification,
       raw_keys: Object.keys(t),
     }));
 
-  // Quais soltas batem com os custIds do lawsuit?
+  // Match por NOME entre soltas e custNomes (transactions têm t.name, não customer_id)
+  const normalize = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+  const custNomesNorm = custNomes.map(normalize).filter(Boolean);
   const soltasDoCliente = soltas.filter(s => {
-    return custIds.some(cid => {
-      if (s.customer_id === cid) return true;
-      if (s.customers_id === cid) return true;
-      if (s.client_id === cid) return true;
-      if (Array.isArray(s.customers_array) && s.customers_array.some(c => c.id === cid)) return true;
-      // Match por nome também
-      if (s.customer_name && custNomes.some(n => n && s.customer_name.toUpperCase().includes(n.toUpperCase().split(' ')[0]))) return true;
-      return false;
-    });
+    const sn = normalize(s.name);
+    if (!sn) return false;
+    // match exato OU um contém o outro (handles abreviações)
+    return custNomesNorm.some(cn => sn === cn || sn.includes(cn) || cn.includes(sn));
   });
 
   res.json({
@@ -317,9 +316,13 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
     primeira_solta_keys: soltas[0]?.raw_keys || null,
     // ── Lista os NOMES das soltas (pra ver se algum bate com o cliente) ────
     soltas_sample: soltas.slice(0, 15).map(s => ({
-      id: s.id, name: s.name, customer_name: s.customer_name,
-      amount: s.amount, date_due: s.date_due, date_payment: s.date_payment,
-      description: s.description, customers_array: s.customers_array,
+      id: s.id,
+      name: s.name,
+      identification: s.identification,
+      amount: s.amount,
+      date_due: s.date_due,
+      date_payment: s.date_payment,
+      description: s.description,
     })),
     soltas_que_batem_com_cliente: soltasDoCliente,
     // ── Diagnóstico final ─────────────────────────────────────────────────
