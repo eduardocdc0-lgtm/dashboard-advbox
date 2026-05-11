@@ -218,6 +218,75 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
 });
 
+// ── DEBUG: inspeciona transações financeiras (income) por lawsuit ────────────
+// GET /api/audit/_debug/inspect-financial?lawsuit_id=10339766&mes=05/2026
+router.get('/audit/_debug/inspect-financial', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const lid = Number(req.query.lawsuit_id);
+  const mes = (req.query.mes || '').toString(); // "MM/YYYY"
+  if (!lid) return res.status(400).json({ error: 'lawsuit_id obrigatório' });
+
+  const { fetchTransactions } = require('../../../services/data');
+  const transactions = await fetchTransactions(true); // force=true → ignora cache
+
+  // Tudo que TEM lawsuit_id matching
+  const doLawsuit = transactions.filter(t =>
+    Number(t.lawsuits_id || t.lawsuit_id) === lid
+  );
+
+  // Tudo que MENCIONA o lawsuit em notes/description (caso esteja "solto")
+  const mencionaNoTexto = transactions.filter(t => {
+    if (Number(t.lawsuits_id || t.lawsuit_id) === lid) return false;
+    const blob = JSON.stringify(t).toLowerCase();
+    return blob.includes(`#${lid}`.toLowerCase()) || blob.includes(`"${lid}"`);
+  });
+
+  // Pega lawsuit pra extrair nome do cliente
+  const { fetchLawsuits } = require('../../../services/data');
+  const lawsuits = await fetchLawsuits(true);
+  const law = lawsuits.find(l => l.id === lid);
+  const clientName = ((law?.customers || [])[0] || {}).name || null;
+
+  // Filtra qualquer transação que cite o nome do cliente nas notes
+  let matchNome = [];
+  if (clientName) {
+    const partes = clientName.split(/\s+/).filter(p => p.length >= 5).slice(0, 2);
+    matchNome = transactions.filter(t => {
+      if (Number(t.lawsuits_id || t.lawsuit_id) === lid) return false;
+      const blob = JSON.stringify(t).toUpperCase();
+      return partes.every(p => blob.includes(p));
+    });
+  }
+
+  // Filtra pelo mês alvo (se passado)
+  let doMesAlvo = null;
+  if (mes) {
+    const [mm, yyyy] = mes.split('/').map(Number);
+    const matchMes = s => {
+      if (!s) return false;
+      const str = String(s);
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) return +str.slice(0,4) === yyyy && +str.slice(5,7) === mm;
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); return +p[1] === mm && +p[2] === yyyy; }
+      return false;
+    };
+    doMesAlvo = transactions.filter(t =>
+      (matchMes(t.date_payment) || matchMes(t.date_due) || (t.competence === mes)) &&
+      t.entry_type === 'income'
+    ).map(t => ({ id: t.id, lawsuits_id: t.lawsuits_id, entry_type: t.entry_type, amount: t.amount, competence: t.competence, date_payment: t.date_payment, date_due: t.date_due, description: t.description || t.notes, customer_name: t.customer_name }));
+  }
+
+  res.json({
+    lawsuit_id: lid,
+    cliente: clientName,
+    fase: law?.stage,
+    transacoes_do_lawsuit: doLawsuit.map(t => ({ id: t.id, entry_type: t.entry_type, amount: t.amount, competence: t.competence, date_payment: t.date_payment, date_due: t.date_due, description: t.description || t.notes })),
+    transacoes_mencionam_no_texto: mencionaNoTexto.slice(0, 10),
+    transacoes_match_nome_cliente: matchNome.slice(0, 10).map(t => ({ id: t.id, lawsuits_id: t.lawsuits_id, entry_type: t.entry_type, amount: t.amount, competence: t.competence, date_payment: t.date_payment, date_due: t.date_due, customer_name: t.customer_name, description: t.description || t.notes })),
+    todas_income_do_mes_alvo: doMesAlvo,
+    total_transactions: transactions.length,
+  });
+});
+
 // ── DEBUG: inspeciona um cliente/processo + regras que dispararam ────────────
 // GET /api/audit/_debug/inspect-client?q=MARCOS%20VINICIUS%20DORNELAS
 router.get('/audit/_debug/inspect-client', requireAuth, async (req, res) => {
