@@ -9,11 +9,35 @@
 
 'use strict';
 
+const fetch = require('node-fetch');
 const { Router } = require('express');
 const { requireAuth } = require('../../../middleware/auth');
 const { query: dbQuery } = require('../../../services/db');
 const { client } = require('../../../services/data');
 const { TEAM_USERS, advboxUserIdFromSession } = require('../../../services/team-users');
+
+const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
+const ADVBOX_UA   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// POST cru no AdvBox que preserva o body completo do erro (4xx).
+// O AdvBoxClient padrão só pega body.message — em 422, o AdvBox costuma
+// retornar { errors: { campo: ["msg"] } } com o diagnóstico real do payload.
+async function advboxPostRaw(endpoint, payload) {
+  const resp = await fetch(`${ADVBOX_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.ADVBOX_TOKEN}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': ADVBOX_UA,
+    },
+    body: JSON.stringify(payload),
+  });
+  const raw = await resp.text();
+  let body;
+  try { body = JSON.parse(raw); } catch { body = { raw }; }
+  return { ok: resp.ok, status: resp.status, body };
+}
 
 const router = Router();
 
@@ -103,21 +127,26 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   };
   if (lawsuit_id) advboxPayload.lawsuits_id = Number(lawsuit_id);
 
-  // ── Chama AdvBox ───────────────────────────────────────────────────────────
+  // ── Chama AdvBox (POST cru para preservar body do erro 4xx) ────────────────
   let advboxResponse = null;
+  let advboxStatus = null;
   let success = false;
   let errorMessage = null;
 
   try {
-    advboxResponse = await client.request('/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(advboxPayload),
-    });
-    success = true;
+    const r = await advboxPostRaw('/posts', advboxPayload);
+    advboxResponse = r.body;
+    advboxStatus = r.status;
+    success = r.ok;
+    if (!success) {
+      const detail = r.body && (r.body.errors || r.body.message || r.body.error || r.body.raw);
+      errorMessage = `${r.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+      console.error('[audit-actions] AdvBox 4xx — payload:', JSON.stringify(advboxPayload), '| resp:', errorMessage);
+    }
   } catch (err) {
     errorMessage = err.message || String(err);
     success = false;
+    console.error('[audit-actions] AdvBox network error:', errorMessage);
   }
 
   // ── Audit log SEMPRE ───────────────────────────────────────────────────────
@@ -144,7 +173,11 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   }
 
   if (!success) {
-    return res.status(502).json({ error: `AdvBox: ${errorMessage}` });
+    return res.status(502).json({
+      error: `AdvBox ${errorMessage}`,
+      payload_enviado: advboxPayload,
+      advbox_response: advboxResponse,
+    });
   }
 
   res.json({
