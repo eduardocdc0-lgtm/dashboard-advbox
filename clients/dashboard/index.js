@@ -67,13 +67,29 @@ const USERS = {
   [config.users.team.username]:  { password: config.users.team.password,  role: 'team'  },
 };
 
+const { findTeamUser } = require('../../services/team-users');
+
 app.post('/api/login', loginLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body || {};
+
+  // 1) Tenta usuário individual do time (advogados) — sempre roda pra timing-safe
+  const teamUser = findTeamUser(username, String(password || ''));
+
+  // 2) Fallback nos perfis genéricos antigos (admin/team)
   const user = USERS[username];
-  // Sempre faz a comparação para não vazar timing por "usuário existe ou não"
   const expected = user?.password || '';
-  const ok = !!user && expected.length > 0 && safeCompare(String(password || ''), expected);
-  if (!ok) throw new AuthenticationError('Usuário ou senha incorretos.');
+  const genericOk = !!user && expected.length > 0 && safeCompare(String(password || ''), expected);
+
+  if (teamUser) {
+    req.session.user = {
+      username: teamUser.username,
+      name: teamUser.name,
+      role: teamUser.role,
+      advboxUserId: teamUser.advboxUserId,
+    };
+    return res.json({ ok: true, role: teamUser.role });
+  }
+  if (!genericOk) throw new AuthenticationError('Usuário ou senha incorretos.');
   req.session.user = { username, role: user.role };
   res.json({ ok: true, role: user.role });
 }));
