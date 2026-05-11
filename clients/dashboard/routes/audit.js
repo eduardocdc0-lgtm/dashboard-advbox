@@ -103,6 +103,34 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
         if (!ex || dt > (ex.date_payment || ex.date_due || '')) lastTx[lid] = t;
       });
 
+      // ── Fallback por cliente (vincula transações "soltas" via customer_id) ────
+      // Cau às vezes lança a parcela preenchendo só "Pessoa" no AdvBox sem
+      // selecionar o lawsuit específico — lawsuits_id fica null. Aqui tentamos
+      // resgatar: se a transação tem um customer_id e esse cliente tem APENAS
+      // 1 lawsuit em fase de cobrança no mês, atribuímos a transação a ele.
+      // Se o cliente tem múltiplos parcelados, NÃO arriscamos (ambíguo).
+      const customerIdFromTx = (t) => t.customer_id || t.customers_id || t.client_id ||
+        (Array.isArray(t.customers) && t.customers[0]?.id) || null;
+
+      const lawsByCustomer = new Map(); // customer_id -> [lawsuit_id]
+      for (const l of lawsuits) {
+        if (!matchFase(l.stage || l.step || '', FASES_COBRANCA)) continue;
+        for (const c of (l.customers || [])) {
+          if (!c.id) continue;
+          if (!lawsByCustomer.has(c.id)) lawsByCustomer.set(c.id, []);
+          lawsByCustomer.get(c.id).push(String(l.id));
+        }
+      }
+
+      const txDoMesByCustomer = {}; // customer_id -> [transactions sem lawsuits_id]
+      txDoMes.forEach(t => {
+        if (t.lawsuits_id || t.lawsuit_id) return; // só "soltas"
+        const cid = customerIdFromTx(t);
+        if (!cid) return;
+        if (!txDoMesByCustomer[cid]) txDoMesByCustomer[cid] = [];
+        txDoMesByCustomer[cid].push(t);
+      });
+
       const criticos = [], monitoramento = [], ok = [];
 
       for (const l of lawsuits) {
@@ -122,9 +150,36 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
         const entry = { lawsuitId: lawId, cliente, processo: l.process_number || `#${lawId}`, fase: stage, diasNaFase, valorFees: feesValue, responsavel: l.responsible || '', linkAdvBox: `https://app.advbox.com.br/lawsuits/${lawId}` };
 
         if (isCobranca) {
-          const txMes = txByLaw[lawId] || []; const lTx = lastTx[lawId];
-          if (!txMes.length) criticos.push({ ...entry, ultimoLancamento: lTx ? (lTx.date_payment || lTx.date_due || null) : null, ultimoValor: lTx ? Number(lTx.amount || 0) : null, motivo: `Em fase parcelada, sem lançamento em ${mes}` });
-          else ok.push({ ...entry, lancamentosDoMes: txMes.length, totalDoMes: txMes.reduce((s, t) => s + Number(t.amount || 0), 0) });
+          let txMes = txByLaw[lawId] || []; const lTx = lastTx[lawId];
+          let viaFallback = null;
+
+          // Fallback por cliente — só se o cliente tem APENAS este lawsuit em fase
+          // parcelada (evita falso positivo quando há ambiguidade).
+          if (!txMes.length) {
+            for (const c of clientsArr) {
+              if (!c.id) continue;
+              const lawsDoCliente = lawsByCustomer.get(c.id) || [];
+              if (lawsDoCliente.length === 1 && lawsDoCliente[0] === lawId) {
+                const soltos = txDoMesByCustomer[c.id] || [];
+                if (soltos.length) {
+                  txMes = soltos;
+                  viaFallback = c.id;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!txMes.length) {
+            criticos.push({ ...entry, ultimoLancamento: lTx ? (lTx.date_payment || lTx.date_due || null) : null, ultimoValor: lTx ? Number(lTx.amount || 0) : null, motivo: `Em fase parcelada, sem lançamento em ${mes}` });
+          } else {
+            ok.push({
+              ...entry,
+              lancamentosDoMes: txMes.length,
+              totalDoMes: txMes.reduce((s, t) => s + Number(t.amount || 0), 0),
+              ...(viaFallback ? { aviso: `Lançamento vinculado via cliente (transação sem lawsuits_id). Recomendado vincular ao processo no AdvBox.` } : {}),
+            });
+          }
         } else { monitoramento.push(entry); }
       }
 
