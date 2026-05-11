@@ -174,7 +174,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 14px;
-      margin-bottom: 28px;
+      margin: 32px 0;
     }
     .metric-card {
       position: relative;
@@ -326,7 +326,7 @@
     }
     .metric-value {
       font-family: 'DM Serif Display', serif;
-      font-size: clamp(18px, 2.1vw, 28px);
+      font-size: clamp(20px, 2vw, 26px);
       font-weight: 400;
       color: var(--text);
       letter-spacing: -0.02em;
@@ -1591,11 +1591,11 @@
     /* ── VISÃO GERAL — Header + Kanban por setor ──────────────────────── */
     .ov-page-head {
       display: flex; justify-content: space-between; align-items: flex-end;
-      gap: 18px; flex-wrap: wrap; margin-bottom: 18px;
+      gap: 18px; flex-wrap: wrap; margin-bottom: 24px;
     }
     .ov-page-title {
       font-family: 'DM Serif Display', serif;
-      font-size: 26px; line-height: 1.05; letter-spacing: -.01em;
+      font-size: 28px; line-height: 1.05; letter-spacing: -.01em;
       color: var(--text); margin: 0;
     }
     .ov-page-sub {
@@ -1603,7 +1603,7 @@
     }
     .ov-section-head {
       display: flex; justify-content: space-between; align-items: flex-end;
-      margin: 28px 0 14px; gap: 14px; flex-wrap: wrap;
+      margin: 0 0 16px; gap: 14px; flex-wrap: wrap;
     }
     .ov-section-head__left {
       display: flex; flex-direction: column; gap: 2px;
@@ -1705,12 +1705,13 @@
     .ov-section:last-of-type { border-bottom: none; }
     .ov-row {
       display: flex; align-items: center; justify-content: space-between;
-      gap: 6px; cursor: pointer; padding: 6px 4px; border-radius: 4px;
+      gap: 10px; cursor: pointer; padding: 8px 6px; border-radius: 6px;
       transition: background 0.15s;
     }
     .ov-row:hover { background: var(--hover); }
     .ov-row-label {
-      font-size: 10.5px; color: var(--text-2); flex: 1; line-height: 1.25;
+      font-size: 11.5px; font-weight: 500; color: #555;
+      flex: 1; line-height: 1.3;
       min-width: 0; overflow: hidden;
     }
     .ov-row-value {
@@ -1746,17 +1747,41 @@
     .ov-row-item a:hover { color: var(--text); }
 
     .ov-col-foot {
-      padding: 7px 8px; border-top: 1px solid var(--border);
-      background: var(--bg); margin-top: auto;
+      padding: 10px 12px 12px; border-top: 1px solid var(--border);
+      background: transparent; margin-top: auto;
     }
     .ov-notify-btn {
       width: 100%; background: var(--text); color: #fff; border: none;
-      padding: 6px 8px; border-radius: 6px; font-family: inherit;
-      font-size: 10.5px; font-weight: 500; cursor: pointer;
-      transition: opacity 0.15s;
+      padding: 8px 10px; border-radius: 6px; font-family: inherit;
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      transition: opacity 0.15s, transform .12s ease;
     }
-    .ov-notify-btn:hover { opacity: 0.85; }
-    .ov-notify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ov-notify-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .ov-notify-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+    .ov-notify-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Estiliza o .btn-link só no contexto da toolbar de overview pra
+       não impactar outros lugares onde a classe é usada (cancelar modal etc.) */
+    .ov-toolbar .btn-link {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 12px;
+      font-family: inherit; font-size: 12px; color: var(--text-2);
+      cursor: pointer;
+      transition: background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .ov-toolbar .btn-link:hover { background: var(--hover); color: var(--text); border-color: var(--text); }
+    .ov-toolbar .btn-link:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+
+    /* Focus-visible nos demais controles da toolbar */
+    .ov-arrow:focus-visible,
+    .ov-today:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 6px; }
+
+    @media (max-width: 700px) {
+      .ov-toolbar { width: 100%; flex-direction: column; align-items: stretch; }
+      .ov-toolbar > * { width: 100%; justify-content: center; }
+      .ov-month { justify-content: space-between; }
+      .ov-month-label { flex: 1; }
+    }
 
     /* ── CALENDÁRIO FINANCEIRO (lançamentos próprios) ────────────────── */
     .fc-toolbar {
@@ -2142,7 +2167,7 @@
       </section>
 
       <!-- ── 4 métricas principais ── -->
-      <section class="metrics" style="margin-top: 28px;" aria-label="Métricas principais">
+      <section class="metrics" aria-label="Métricas principais">
         <article class="metric-card is-neutral">
           <div class="metric-label">Total de processos</div>
           <div class="metric-value" id="totalProcessos">—</div>
