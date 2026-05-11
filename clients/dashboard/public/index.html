@@ -953,15 +953,77 @@
     .audr-hist-row { display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f5f5f5;font-size:12px;flex-wrap:wrap;gap:4px; }
     .audr-hist-row:hover { background:#fafafa; }
     .audr-hist-empty { padding:24px;text-align:center;color:#aaa;font-size:13px; }
-    /* Monitor row */
-    .audit-monitor-row { display:flex;justify-content:space-between;align-items:center;padding:9px 6px;border-bottom:1px solid #f5f5f5;flex-wrap:wrap;gap:6px; }
-    .audit-monitor-row:last-child{border-bottom:none;}
-    .audit-mon-left { display:flex;flex-direction:column;gap:2px; }
-    .audit-mon-nome { font-size:13px;font-weight:500; }
-    .audit-mon-fase { font-size:11px;color:#999; }
-    .audit-mon-right { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
-    .audit-mon-fees  { font-size:12px;font-weight:600;color:#555; }
-    .audit-mon-resp  { font-size:11px;color:#999; }
+    /* ── Monitoramento (lista de processos aguardando lançamento) ── */
+    .audit-mon-list {
+      border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff;
+    }
+    .audit-mon-row {
+      display:grid;
+      grid-template-columns: 10px minmax(0,1fr) auto auto auto 32px;
+      align-items:center;
+      gap:18px;
+      padding:14px 18px;
+      border-bottom:1px solid #f3f3f3;
+      transition: background .12s ease;
+    }
+    .audit-mon-row:last-child { border-bottom:none; }
+    .audit-mon-row:hover { background:#fafafa; }
+    .audit-mon-row__status {
+      width:10px;height:10px;border-radius:50%;
+      background:#eab308;
+      box-shadow:0 0 0 3px rgba(234,179,8,.12);
+    }
+    .audit-mon-row__main { min-width:0; }
+    .audit-mon-row__client {
+      font-size:13.5px;font-weight:600;letter-spacing:-.005em;color:var(--text);
+      margin:0 0 5px;line-height:1.2;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-family:'DM Sans',sans-serif;
+    }
+    .audit-mon-row__phase {
+      font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+      color:#999;margin:0;line-height:1;
+    }
+    .audit-mon-row__days {
+      font-size:11px;font-weight:700;color:#666;
+      font-variant-numeric:tabular-nums;letter-spacing:.01em;
+      background:#f4f4f4;border:1px solid #ececec;
+      padding:4px 10px;border-radius:999px;
+      white-space:nowrap;
+    }
+    .audit-mon-row__days--warn   { color:#92400e;background:#fef9c3;border-color:#fde68a; }
+    .audit-mon-row__days--danger { color:#991b1b;background:#fee2e2;border-color:#fca5a5; }
+    .audit-mon-row__amount {
+      font-size:13px;font-weight:700;color:var(--text);
+      font-variant-numeric:tabular-nums;letter-spacing:-.005em;
+      white-space:nowrap;text-align:right;min-width:90px;
+    }
+    .audit-mon-row__owner {
+      font-size:11.5px;font-weight:500;color:#777;
+      white-space:nowrap;
+      padding-left:14px;border-left:1px solid #ececec;
+      max-width:200px;overflow:hidden;text-overflow:ellipsis;
+    }
+    .audit-mon-row__link {
+      display:inline-flex;align-items:center;justify-content:center;
+      width:30px;height:30px;border-radius:8px;
+      color:#999;text-decoration:none;font-size:14px;
+      transition: background .12s ease, color .12s ease;
+    }
+    .audit-mon-row__link:hover { background:#f3f3f3;color:var(--text); }
+    .audit-mon-row__link:focus-visible {
+      outline:2px solid var(--text);outline-offset:1px;
+    }
+    @media(max-width:760px){
+      .audit-mon-row {
+        grid-template-columns: 10px minmax(0,1fr) auto;
+        row-gap:10px;
+        padding:14px;
+      }
+      .audit-mon-row__amount,
+      .audit-mon-row__owner,
+      .audit-mon-row__link { grid-column: 2 / -1;padding-left:0;border-left:none;text-align:left;min-width:0; }
+    }
 
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
@@ -5292,24 +5354,23 @@
       else if (filtMon.length === 0) {
         monEl.innerHTML = '<div class="empty">Nenhum processo em monitoramento</div>';
       } else {
-        monEl.innerHTML = filtMon.map(c => {
-          const diasCls = c.diasNaFase == null ? ''
-            : c.diasNaFase > 30 ? 'dist-dias-badge velho'
-            : c.diasNaFase > 15 ? 'dist-dias-badge mid'
-            : 'dist-dias-badge ok';
-          return `<div class="audit-monitor-row">
-            <div class="audit-mon-left">
-              <span class="audit-mon-nome">🟡 ${c.cliente}</span>
-              <span class="audit-mon-fase">${c.fase}</span>
+        monEl.innerHTML = '<div class="audit-mon-list" role="list">' + filtMon.map(c => {
+          const diasMod = c.diasNaFase == null ? ''
+            : c.diasNaFase > 365 ? 'audit-mon-row__days--danger'
+            : c.diasNaFase > 90  ? 'audit-mon-row__days--warn'
+            : '';
+          return `<article class="audit-mon-row" role="listitem">
+            <span class="audit-mon-row__status" aria-hidden="true"></span>
+            <div class="audit-mon-row__main">
+              <h4 class="audit-mon-row__client">${c.cliente}</h4>
+              <p class="audit-mon-row__phase">${c.fase}</p>
             </div>
-            <div class="audit-mon-right">
-              ${c.diasNaFase != null ? `<span class="${diasCls}">${c.diasNaFase}d</span>` : ''}
-              ${c.valorFees ? `<span class="audit-mon-fees">${formatMoney(c.valorFees)}</span>` : ''}
-              ${c.responsavel ? `<span class="audit-mon-resp">${c.responsavel}</span>` : ''}
-              <a href="${c.linkAdvBox}" target="_blank" class="reg-link" style="font-size:10px;">↗</a>
-            </div>
-          </div>`;
-        }).join('');
+            ${c.diasNaFase != null ? `<span class="audit-mon-row__days ${diasMod}">${c.diasNaFase} dias</span>` : '<span></span>'}
+            ${c.valorFees ? `<span class="audit-mon-row__amount">${formatMoney(c.valorFees)}</span>` : '<span></span>'}
+            ${c.responsavel ? `<span class="audit-mon-row__owner">${c.responsavel}</span>` : '<span></span>'}
+            <a href="${c.linkAdvBox}" target="_blank" rel="noopener" class="audit-mon-row__link" aria-label="Abrir ${c.cliente} no AdvBox">↗</a>
+          </article>`;
+        }).join('') + '</div>';
       }
 
       // ── OK (kanban horizontal por fase, com filtro de fase) ─────────────────
