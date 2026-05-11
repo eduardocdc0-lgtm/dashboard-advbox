@@ -213,6 +213,27 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
 });
 
+// ── DEBUG: audit trail (últimas 20 ações) ────────────────────────────────────
+// GET /api/audit/_debug/actions-log?limit=20 (admin only)
+router.get('/audit/_debug/actions-log', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const limit = Math.min(Number(req.query.limit) || 20, 200);
+  try {
+    const { rows } = await dbQuery(
+      `SELECT id, actor_username, actor_advbox_id, action_type,
+              target_lawsuit_id, target_user_id, success, error_message,
+              problema_payload, advbox_response, created_at
+       FROM audit_actions
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+    res.json({ count: rows.length, actions: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DEBUG: inspecionar schema real do POST /posts ────────────────────────────
 // Acesse: /api/audit/_debug/posts-sample (admin only)
 // Retorna os 3 primeiros posts do AdvBox + tenta GET /tasks e GET /settings
