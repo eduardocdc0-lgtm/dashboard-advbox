@@ -73,7 +73,7 @@ const SLA_POR_FASE = {
   'ELABORAR PETICAO INICIAL':                10,
   'PROTOCOLADO JUDICIAL':                    60,
   'COM PRAZO':                                5,
-  'PERICIA SOCIAL MARCADA':                  45,
+  // 'PERICIA SOCIAL MARCADA' — REMOVIDO: espera passiva (perícia agendada)
   'SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO': 15,
   'SENTENCA IMPROCEDENTE':                   10,
   'PROCEDENTE EM PARTE FAZER RECURSO':       10,
@@ -81,15 +81,15 @@ const SLA_POR_FASE = {
   'DESENVOLVENDO RECURSO AOS TRIBUNAIS':     15,
   'RECURSO PROTOCOLADO INICIADO':            90,
   'APRESENTADA RESPOSTA A RECURSO':          60,
-  'AGUARDANDO JULGAMENTO DO RECURSO':       120,
+  // 'AGUARDANDO JULGAMENTO DO RECURSO' — REMOVIDO: espera tribunal
   'RECURSO JULGADO ENTRE EM CONTATO':         7,
   'TRANSITO EM JULGADO NAO CABE RECURSO':    15,
   'AGUARDANDO EXPEDICAO DE RPV':             60,
   'FAZER ACAO DE GUARDA':                    15,
 
   // Compartilhadas
-  'PERICIA MEDICA MARCADA':                  45,
-  'PERICIAS MARCADAS':                       45,
+  // 'PERICIA MEDICA MARCADA' — REMOVIDO: espera passiva (perícia agendada)
+  // 'PERICIAS MARCADAS' — REMOVIDO: espera passiva
 
   // Financeiro (Cau)
   'BENEFICIO CONCEDIDO AGUARDAR':            30,
