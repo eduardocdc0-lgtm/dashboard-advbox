@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Auditoria de Uso — AdvBox</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #2c3e50; padding: 32px; line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px 32px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 24px; margin-bottom: 4px; }
+  header .meta { opacity: 0.9; font-size: 13px; }
+  header .escopo { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 12px; }
+  section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  section h2 { font-size: 18px; margin-bottom: 16px; color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-box { background: #f8f9fa; padding: 14px; border-radius: 8px; text-align: center; }
+  .stat-box .valor { font-size: 26px; font-weight: bold; }
+  .stat-box .label { font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filters select, .filters button { padding: 8px 14px; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; cursor: pointer; }
+  .filters button.primary { background: #667eea; color: white; border-color: #667eea; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table th, table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #ecf0f1; }
+  table th { background: #f8f9fa; font-weight: 600; color: #34495e; font-size: 11px; text-transform: uppercase; }
+  table tr:hover { background: #f8f9fa; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .badge.erro { background: #fdedec; color: #c0392b; }
+  .badge.aviso { background: #fff8e7; color: #b9770e; }
+  .badge.cliente { background: #e8f4fd; color: #2874a6; }
+  .badge.processo { background: #f4ecf7; color: #6c3483; }
+  .badge.tarefa { background: #e8f8f5; color: #117a65; }
+  .badge.workflow { background: #fff3e0; color: #b25e09; }
+  .link-advbox { display: inline-block; padding: 4px 10px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .link-advbox:hover { background: #5568d3; }
+  .link-advbox.disabled { background: #ecf0f1; color: #95a5a6; pointer-events: none; }
+  .loading, .empty { text-align: center; padding: 32px; color: #95a5a6; font-style: italic; }
+  .error { background: #fdedec; color: #c0392b; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>📊 Auditoria de Uso — AdvBox</h1>
+      <div class="meta">Atualizado em <span id="geradoEm">—</span></div>
+    </div>
+    <div class="escopo" id="escopo">carregando…</div>
+  </header>
+
+  <section>
+    <h2>📌 Resumo</h2>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section>
+    <h2>🔎 Problemas</h2>
+    <div class="filters">
+      <select id="fTipo">
+        <option value="">Todos os tipos</option>
+        <option value="cliente">Cliente</option>
+        <option value="processo">Processo</option>
+        <option value="tarefa">Tarefa</option>
+        <option value="workflow">Workflow</option>
+      </select>
+      <select id="fNivel">
+        <option value="">Todos os níveis</option>
+        <option value="erro">Erro</option>
+        <option value="aviso">Aviso</option>
+      </select>
+      <button id="btnFiltrar" class="primary">Aplicar</button>
+      <button id="btnRefresh">↻ Atualizar (force)</button>
+    </div>
+    <div id="errBox"></div>
+    <div id="problemas"></div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function linkAdvbox(p) {
+  const pid = p.id;
+  if (!pid) return '';
+  if (p.tipo === 'workflow') {
+    if (p.campo === 'prazo_vencido') return `https://app.advbox.com.br/0?t=${pid}`;
+    if (p.campo === 'produtividade_baixa') return '';
+    return `https://app.advbox.com.br/lawsuits/${pid}`;
+  }
+  if (p.tipo === 'processo') return `https://app.advbox.com.br/lawsuits/${pid}`;
+  if (p.tipo === 'tarefa')   return `https://app.advbox.com.br/0?t=${pid}`;
+  if (p.tipo === 'cliente')  return `https://app.advbox.com.br/customers/${pid}`;
+  return '';
+}
+
+function renderStats(resumo) {
+  $('stats').innerHTML = `
+    <div class="stat-box"><div class="valor">${resumo.total_clientes}</div><div class="label">Clientes</div></div>
+    <div class="stat-box"><div class="valor">${resumo.total_processos}</div><div class="label">Processos ativos</div></div>
+    <div class="stat-box"><div class="valor">${resumo.total_tarefas}</div><div class="label">Tarefas</div></div>
+    <div class="stat-box"><div class="valor" style="color:#e74c3c">${resumo.total_problemas_filtrados}</div><div class="label">Seus problemas</div></div>
+  `;
+}
+
+function renderProblemas(lista) {
+  if (!lista || lista.length === 0) {
+    $('problemas').innerHTML = '<div class="empty">Nenhum problema no filtro atual ✅</div>';
+    return;
+  }
+  const linhas = lista.slice(0, 500).map(p => {
+    const url = linkAdvbox(p);
+    const link = url ? `<a class="link-advbox" href="${url}" target="_blank">Abrir</a>` : '<span class="link-advbox disabled">—</span>';
+    return `<tr>
+      <td><span class="badge ${p.tipo}">${p.tipo}</span></td>
+      <td><span class="badge ${p.nivel}">${p.nivel}</span></td>
+      <td>#${p.id}</td>
+      <td>${p.campo || '—'}</td>
+      <td>${escapeHtml(p.descricao)}</td>
+      <td>${link}</td>
+    </tr>`;
+  }).join('');
+  const aviso = lista.length > 500 ? `<p style="margin-top:8px;color:#95a5a6;font-size:12px">Mostrando 500 de ${lista.length} problemas. Use filtros pra reduzir.</p>` : '';
+  $('problemas').innerHTML = `
+    <table>
+      <thead><tr><th>Tipo</th><th>Nível</th><th>ID</th><th>Campo</th><th>Descrição</th><th>Ver</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    ${aviso}
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function carregar({ force = false } = {}) {
+  $('problemas').innerHTML = '<div class="loading">Carregando…</div>';
+  $('errBox').innerHTML = '';
+  const params = new URLSearchParams();
+  if (force) params.set('force', '1');
+  const tipo  = $('fTipo').value;  if (tipo)  params.set('tipo', tipo);
+  const nivel = $('fNivel').value; if (nivel) params.set('nivel', nivel);
+  try {
+    const r = await fetch(`/api/audit/usage?${params.toString()}`);
+    if (r.status === 401) { window.location.href = '/'; return; }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    $('escopo').textContent = data.escopo;
+    $('geradoEm').textContent = new Date(data.geradoEm).toLocaleString('pt-BR');
+    renderStats(data.resumo);
+    renderProblemas(data.problemas);
+  } catch (e) {
+    $('errBox').innerHTML = `<div class="error">Erro: ${escapeHtml(e.message)}</div>`;
+    $('problemas').innerHTML = '';
+  }
+}
+
+$('btnFiltrar').onclick = () => carregar();
+$('btnRefresh').onclick = () => carregar({ force: true });
+carregar();
+</script>
+</body>
+</html>

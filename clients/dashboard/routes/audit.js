@@ -1,11 +1,62 @@
 const { Router } = require('express');
-const { requireAdmin } = require('../../../middleware/auth');
+const { requireAdmin, requireAuth } = require('../../../middleware/auth');
 const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
+const { runAudit } = require('../../../services/auditor');
+const { advboxUserIdFromSession } = require('../../../services/team-users');
 
 const router = Router();
+
+// ── Auditoria de Uso (cadastro + workflow) ───────────────────────────────────
+// GET /api/audit/usage
+//   Admin: vê tudo
+//   Team:  vê só problemas do próprio advboxUserId (filtrado server-side)
+//
+// Query params:
+//   force=1   → ignora cache, re-busca da API AdvBox
+//   tipo=     → filtra (cliente|processo|tarefa|workflow)
+//   nivel=    → filtra (erro|aviso)
+
+cache.define('audit_usage', 30 * 60 * 1000); // 30 min
+
+router.get('/audit/usage', requireAuth, async (req, res, next) => {
+  try {
+    const force = req.query.force === '1';
+    const tipo  = req.query.tipo  || null;
+    const nivel = req.query.nivel || null;
+
+    const data = await cache.getOrFetch('audit_usage', () => runAudit({ force }), force);
+
+    const advboxUserId = advboxUserIdFromSession(req.session.user);
+    const isAdmin      = req.session.user.role === 'admin';
+
+    // Filtra problemas
+    let problemas = data.problemas;
+    if (!isAdmin && advboxUserId) {
+      problemas = problemas.filter(p => p.user_id === advboxUserId);
+    }
+    if (tipo)  problemas = problemas.filter(p => p.tipo === tipo);
+    if (nivel) problemas = problemas.filter(p => p.nivel === nivel);
+
+    // Filtra resumo por usuário
+    let porUsuario = data.porUsuario;
+    if (!isAdmin && advboxUserId) {
+      porUsuario = porUsuario.filter(u => u.user_id === advboxUserId);
+    }
+
+    res.json({
+      resumo:    { ...data.resumo, total_problemas_filtrados: problemas.length },
+      problemas,
+      porUsuario,
+      geradoEm:  data.geradoEm,
+      escopo:    isAdmin ? 'todos' : `apenas ${req.session.user.name || req.session.user.username}`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ── Kanban Financeiro ────────────────────────────────────────────────────────
 
