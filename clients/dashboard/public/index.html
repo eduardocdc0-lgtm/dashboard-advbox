@@ -4803,6 +4803,7 @@
     let _audrPage     = 1;
     let _audrKanbanView = 'lista';
     let _audrResolved = new Set(); // IDs marcados como passados nesta sessão
+    const _audrColItemsByResp = {}; // nome do responsável -> array de items (evita JSON.parse no onclick)
     const AUDR_PER_PAGE = 60;
 
     const AUDR_ZONE_LABEL_FE = {
@@ -5065,9 +5066,8 @@
           return groupHdr + cards;
         }).join('');
 
-        const colItems = items;
+        _audrColItemsByResp[resp] = items; // armazena items por responsável, evita JSON.parse no onclick
         const safeResp = JSON.stringify(resp);
-        const safeItems = JSON.stringify(colItems).replace(/'/g,"&#39;");
         const initials = resp.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
         return `<div class="audr-kanban-col">
           <div class="audr-kanban-col-header">
@@ -5081,7 +5081,7 @@
           </div>
           <div class="audr-kanban-col-body">${cardsHtml}</div>
           <div class="audr-kanban-col-footer">
-            <button class="audr-kb-btn-cobrar" onclick="audrGerarCobranca(${safeResp}, JSON.parse(this.dataset.items))" data-items='${safeItems}'>📋 Gerar lista de cobrança</button>
+            <button class="audr-kb-btn-cobrar" onclick="audrGerarCobranca(${safeResp}, _audrColItemsByResp[${safeResp}])">📋 Gerar lista de cobrança</button>
           </div>
         </div>`;
       }).join('');
