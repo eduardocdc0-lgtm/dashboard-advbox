@@ -218,6 +218,41 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
 });
 
+// ── DEBUG: sonda endpoints de upload do AdvBox ───────────────────────────────
+// GET /api/audit/_debug/probe-upload?lawsuit_id=10339673&post_id=210808069
+// Testa paths prováveis e devolve status code + 200 chars do body de cada.
+router.get('/audit/_debug/probe-upload', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const lid = Number(req.query.lawsuit_id) || 10339673;
+  const pid = Number(req.query.post_id) || 210808069;
+  const paths = [
+    '/attachments', '/files', '/documents', '/uploads', '/media',
+    `/lawsuits/${lid}/attachments`, `/lawsuits/${lid}/files`,
+    `/lawsuits/${lid}/documents`, `/lawsuits/${lid}/uploads`,
+    `/lawsuits/${lid}/media`,
+    `/posts/${pid}/attachments`, `/posts/${pid}/files`,
+    `/posts/${pid}/documents`,
+    '/customers/attachments', '/customers/files',
+  ];
+  const results = [];
+  for (const p of paths) {
+    try {
+      const r = await fetch(`https://app.advbox.com.br/api/v1${p}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.ADVBOX_TOKEN}`,
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
+      const txt = (await r.text()).slice(0, 200);
+      results.push({ path: p, status: r.status, body_preview: txt });
+    } catch (e) {
+      results.push({ path: p, error: e.message });
+    }
+  }
+  res.json({ probed: paths.length, results });
+});
+
 // ── DEBUG: audit trail (últimas 20 ações) ────────────────────────────────────
 // GET /api/audit/_debug/actions-log?limit=20 (admin only)
 router.get('/audit/_debug/actions-log', requireAuth, async (req, res) => {
