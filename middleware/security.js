@@ -16,9 +16,10 @@ function helmetMiddleware() {
   return helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc:  ["'self'"],
-        scriptSrc:   ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-        styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        defaultSrc:    ["'self'"],
+        scriptSrc:     ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+        scriptSrcAttr: ["'unsafe-inline'"], // permite onclick="..." inline (dashboard inteiro usa)
+        styleSrc:      ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc:      ["'self'", 'data:', 'https:'],
         connectSrc:  ["'self'", 'https://app.advbox.com.br', 'https://graph.facebook.com'],
