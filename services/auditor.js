@@ -220,6 +220,7 @@ function audTarefasVencidas(tarefas) {
       tipo: 'workflow', nivel: 'erro',
       user_id: userIdDaTarefa(t),
       id: t.id, campo: 'prazo_vencido',
+      lawsuit_id: t.lawsuits_id || null,
       descricao: `Tarefa #${t.id} '${t.task || '(sem nome)'}' venceu há ${dias} dia(s)`,
     });
   }
@@ -260,6 +261,7 @@ function audGargaloPorEtapa(processos, tarefas) {
       tipo: 'workflow', nivel,
       user_id: p.responsible_id || null,
       id: pid, campo: 'gargalo_etapa',
+      lawsuit_id: pid,
       descricao: `${procLabel} parado em '${p.stage}' há ${diasParado} dia(s) (SLA: ${slaDias})`,
     });
   }
@@ -294,6 +296,7 @@ function audResponsavelErrado(processos) {
       tipo: 'workflow', nivel: 'erro',
       user_id: p.responsible_id || null,
       id: pid, campo: 'responsavel_errado',
+      lawsuit_id: pid,
       descricao: `Processo ${procLabel} em '${p.stage}' deveria ser de ${zonaLabel}, está com ${p.responsible}`,
     });
   }

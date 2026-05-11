@@ -8537,9 +8537,9 @@
         const tipoBadge = `<span style="background:#eef;color:#446;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${auuEscapeHtml(p.tipo)}</span>`;
         const url = auuLinkAdvbox(p);
         const linkAdv = url ? `<a href="${url}" target="_blank" style="font-size:11px;color:#1a73e8;text-decoration:none;">↗ Abrir</a>` : '';
-        const cobravel = p.tipo === 'workflow' && AUU_COBRAVEIS.has(p.campo);
+        const cobravel = p.tipo === 'workflow' && AUU_COBRAVEIS.has(p.campo) && !!p.lawsuit_id;
         const btnCobrar = cobravel
-          ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">🔔 Cobrar</button>`
+          ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.lawsuit_id)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">🔔 Cobrar</button>`
           : '<span style="color:#bbb;font-size:11px;">—</span>';
         return `<tr>
           <td>${linkAdv} <span style="font-size:11px;color:#888;">#${auuEscapeHtml(p.id)}</span></td>
@@ -8576,13 +8576,12 @@
     }
 
     // ── Cobrar responsável (Modal + POST) ────────────────────────────────────
-    function auuCobrarAbrir(problemaId, problemaCampo, userId, nomeResp, descricao) {
+    function auuCobrarAbrir(problemaId, problemaCampo, lawsuitId, userId, nomeResp, descricao) {
       window._auuCobrarPayload = {
         problema_id: problemaId,
         problema_tipo: 'workflow',
         problema_campo: problemaCampo,
-        // gargalo_etapa e responsavel_errado: id é lawsuit_id. prazo_vencido: é task id → backend trata.
-        lawsuit_id: (problemaCampo === 'gargalo_etapa' || problemaCampo === 'responsavel_errado') ? problemaId : null,
+        lawsuit_id: lawsuitId ? Number(lawsuitId) : null,
         user_id: userId ? Number(userId) : null,
         descricao,
       };

@@ -54,6 +54,9 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   if (!user_id) {
     return res.status(400).json({ error: 'user_id (responsável) é obrigatório.' });
   }
+  if (!lawsuit_id) {
+    return res.status(400).json({ error: 'lawsuit_id é obrigatório (AdvBox exige vincular task a um processo).' });
+  }
   if (!descricao) {
     return res.status(400).json({ error: 'descricao é obrigatória.' });
   }
@@ -68,7 +71,6 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   }
 
   // ── Cooldown ───────────────────────────────────────────────────────────────
-  const cooldownLawsuitId = lawsuit_id || `task:${problema_id}`;
   try {
     const { rows } = await dbQuery(
       `SELECT id, created_at FROM audit_actions
