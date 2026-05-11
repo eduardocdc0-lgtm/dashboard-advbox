@@ -103,32 +103,36 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
         if (!ex || dt > (ex.date_payment || ex.date_due || '')) lastTx[lid] = t;
       });
 
-      // ── Fallback por cliente (vincula transações "soltas" via customer_id) ────
+      // ── Fallback por cliente (vincula transações "soltas" via nome) ──────────
       // Cau às vezes lança a parcela preenchendo só "Pessoa" no AdvBox sem
-      // selecionar o lawsuit específico — lawsuits_id fica null. Aqui tentamos
-      // resgatar: se a transação tem um customer_id e esse cliente tem APENAS
-      // 1 lawsuit em fase de cobrança no mês, atribuímos a transação a ele.
-      // Se o cliente tem múltiplos parcelados, NÃO arriscamos (ambíguo).
-      const customerIdFromTx = (t) => t.customer_id || t.customers_id || t.client_id ||
-        (Array.isArray(t.customers) && t.customers[0]?.id) || null;
+      // selecionar o lawsuit específico — lawsuits_id fica null. Match real é
+      // por NOME (transação tem campo `name`, lawsuit.customers[].name).
+      // Só atribui quando há um único lawsuit parcelado pra esse cliente.
+      const normNome = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g,'')
+        .toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 
-      const lawsByCustomer = new Map(); // customer_id -> [lawsuit_id]
+      const clientesDoLawsuit = (l) => (l.customers || [])
+        .filter(c => (c.origin || '').toUpperCase() !== 'PARTE CONTRÁRIA' &&
+                     (c.origin || '').toUpperCase() !== 'PARTE CONTRARIA')
+        .map(c => normNome(c.name));
+
+      const lawsByCustomerName = new Map(); // nome -> [lawsuit_id]
       for (const l of lawsuits) {
         if (!matchFase(l.stage || l.step || '', FASES_COBRANCA)) continue;
-        for (const c of (l.customers || [])) {
-          if (!c.id) continue;
-          if (!lawsByCustomer.has(c.id)) lawsByCustomer.set(c.id, []);
-          lawsByCustomer.get(c.id).push(String(l.id));
+        for (const cName of clientesDoLawsuit(l)) {
+          if (!cName) continue;
+          if (!lawsByCustomerName.has(cName)) lawsByCustomerName.set(cName, []);
+          lawsByCustomerName.get(cName).push(String(l.id));
         }
       }
 
-      const txDoMesByCustomer = {}; // customer_id -> [transactions sem lawsuits_id]
+      const txDoMesByCustomerName = {}; // nome -> [transactions sem lawsuits_id]
       txDoMes.forEach(t => {
         if (t.lawsuits_id || t.lawsuit_id) return; // só "soltas"
-        const cid = customerIdFromTx(t);
-        if (!cid) return;
-        if (!txDoMesByCustomer[cid]) txDoMesByCustomer[cid] = [];
-        txDoMesByCustomer[cid].push(t);
+        const txName = normNome(t.name || t.customer_name || '');
+        if (!txName) return;
+        if (!txDoMesByCustomerName[txName]) txDoMesByCustomerName[txName] = [];
+        txDoMesByCustomerName[txName].push(t);
       });
 
       const criticos = [], monitoramento = [], ok = [];
@@ -153,17 +157,18 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
           let txMes = txByLaw[lawId] || []; const lTx = lastTx[lawId];
           let viaFallback = null;
 
-          // Fallback por cliente — só se o cliente tem APENAS este lawsuit em fase
-          // parcelada (evita falso positivo quando há ambiguidade).
+          // Fallback por NOME do cliente — só se o cliente tem APENAS este lawsuit
+          // em fase parcelada (evita falso positivo quando há ambiguidade).
+          // Ignora customers com origin "PARTE CONTRÁRIA".
           if (!txMes.length) {
-            for (const c of clientsArr) {
-              if (!c.id) continue;
-              const lawsDoCliente = lawsByCustomer.get(c.id) || [];
+            for (const cName of clientesDoLawsuit(l)) {
+              if (!cName) continue;
+              const lawsDoCliente = lawsByCustomerName.get(cName) || [];
               if (lawsDoCliente.length === 1 && lawsDoCliente[0] === lawId) {
-                const soltos = txDoMesByCustomer[c.id] || [];
+                const soltos = txDoMesByCustomerName[cName] || [];
                 if (soltos.length) {
                   txMes = soltos;
-                  viaFallback = c.id;
+                  viaFallback = cName;
                   break;
                 }
               }
