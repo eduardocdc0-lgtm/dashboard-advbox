@@ -1005,13 +1005,17 @@
     }
     .audit-mon-row {
       display:grid;
-      grid-template-columns: 10px minmax(0,1fr) auto auto auto 32px;
+      grid-template-columns: 10px minmax(0,1fr) 110px 130px 210px 32px;
       align-items:center;
       gap:18px;
       padding:14px 18px;
       border-bottom:1px solid #f3f3f3;
       transition: background .12s ease;
     }
+    .audit-mon-row__cell--days { display:flex;justify-content:flex-start; }
+    .audit-mon-row__cell--amount { text-align:right; }
+    .audit-mon-row__cell--owner { text-align:left; }
+    .audit-mon-row__placeholder { color:#d4d4d4;font-size:11px; }
     .audit-mon-row:last-child { border-bottom:none; }
     .audit-mon-row:hover { background:#fafafa; }
     .audit-mon-row__status {
@@ -5494,9 +5498,21 @@
               <h4 class="audit-mon-row__client">${c.cliente}</h4>
               <p class="audit-mon-row__phase">${c.fase}</p>
             </div>
-            ${c.diasNaFase != null ? `<span class="audit-mon-row__days ${diasMod}">${c.diasNaFase} dias</span>` : '<span></span>'}
-            ${c.valorFees ? `<span class="audit-mon-row__amount">${formatMoney(c.valorFees)}</span>` : '<span></span>'}
-            ${c.responsavel ? `<span class="audit-mon-row__owner">${c.responsavel}</span>` : '<span></span>'}
+            <div class="audit-mon-row__cell--days">
+              ${c.diasNaFase != null
+                ? `<span class="audit-mon-row__days ${diasMod}">${c.diasNaFase} dias</span>`
+                : `<span class="audit-mon-row__placeholder">—</span>`}
+            </div>
+            <div class="audit-mon-row__cell--amount">
+              ${c.valorFees
+                ? `<span class="audit-mon-row__amount">${formatMoney(c.valorFees)}</span>`
+                : `<span class="audit-mon-row__placeholder">—</span>`}
+            </div>
+            <div class="audit-mon-row__cell--owner">
+              ${c.responsavel
+                ? `<span class="audit-mon-row__owner">${c.responsavel}</span>`
+                : `<span class="audit-mon-row__placeholder">—</span>`}
+            </div>
             <a href="${c.linkAdvBox}" target="_blank" rel="noopener" class="audit-mon-row__link" aria-label="Abrir ${c.cliente} no AdvBox">↗</a>
           </article>`;
         }).join('') + '</div>';
