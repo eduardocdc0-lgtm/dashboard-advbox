@@ -218,6 +218,58 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
 });
 
+// ── DEBUG: inspeciona um cliente/processo + regras que dispararam ────────────
+// GET /api/audit/_debug/inspect-client?q=MARCOS%20VINICIUS%20DORNELAS
+router.get('/audit/_debug/inspect-client', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const q = (req.query.q || '').toString().trim().toUpperCase();
+  if (!q) return res.status(400).json({ error: 'q (nome ou trecho) obrigatório' });
+
+  const { fetchCustomers, fetchLawsuits, fetchAllPosts } = require('../../../services/data');
+  const { runAudit } = require('../../../services/auditor');
+
+  const [customers, lawsuits, tasks] = await Promise.all([
+    fetchCustomers(true), fetchLawsuits(true), fetchAllPosts(true),
+  ]);
+
+  const norm = s => String(s || '').toUpperCase();
+  const cust = customers.filter(c => norm(c.name).includes(q));
+  const custIds = new Set(cust.map(c => c.id));
+
+  const laws = lawsuits.filter(l => {
+    if (custIds.size && (l.customers || []).some(c => custIds.has(c.id))) return true;
+    return (l.customers || []).some(c => norm(c.name).includes(q));
+  });
+  const lawIds = new Set(laws.map(l => l.id));
+
+  const tarefas = tasks.filter(t => lawIds.has(t.lawsuits_id));
+
+  // Roda audit completo e filtra problemas relacionados a esses lawsuits
+  const audit = await runAudit({ force: true });
+  const problemas = (audit.problemas || []).filter(p => {
+    if (p.lawsuit_id && lawIds.has(p.lawsuit_id)) return true;
+    if (p.id && lawIds.has(p.id)) return true;
+    if (p.id && tarefas.some(t => t.id === p.id)) return true;
+    return false;
+  });
+
+  res.json({
+    query: q,
+    customers: cust.map(c => ({ id: c.id, name: c.name, cpf: c.cpf, birthdate: c.birthdate })),
+    lawsuits: laws.map(l => ({
+      id: l.id, process_number: l.process_number, stage: l.stage,
+      responsible: l.responsible, responsible_id: l.responsible_id,
+      type_lawsuit: l.type_lawsuit, status_closure: l.status_closure,
+      created_at: l.created_at,
+    })),
+    tarefas: tarefas.map(t => ({
+      id: t.id, task: t.task, date: t.date, date_deadline: t.date_deadline,
+      users: t.users, lawsuits_id: t.lawsuits_id,
+    })),
+    problemas_do_auditor: problemas,
+  });
+});
+
 // ── DEBUG: sonda endpoints de upload do AdvBox ───────────────────────────────
 // GET /api/audit/_debug/probe-upload?lawsuit_id=10339673&post_id=210808069
 // Testa paths prováveis e devolve status code + 200 chars do body de cada.
