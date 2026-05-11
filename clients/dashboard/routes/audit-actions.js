@@ -314,7 +314,13 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
       lawsuits: lawsByCustomer[cid] || [],
     })),
     quant_soltas_no_mes: soltas.length,
-    primeira_solta_keys: soltas[0]?.raw_keys || null, // mostra quais campos existem nas transações
+    primeira_solta_keys: soltas[0]?.raw_keys || null,
+    // ── Lista os NOMES das soltas (pra ver se algum bate com o cliente) ────
+    soltas_sample: soltas.slice(0, 15).map(s => ({
+      id: s.id, name: s.name, customer_name: s.customer_name,
+      amount: s.amount, date_due: s.date_due, date_payment: s.date_payment,
+      description: s.description, customers_array: s.customers_array,
+    })),
     soltas_que_batem_com_cliente: soltasDoCliente,
     // ── Diagnóstico final ─────────────────────────────────────────────────
     diagnostico: (() => {
