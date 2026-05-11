@@ -5579,7 +5579,21 @@
       else if (filtMon.length === 0) {
         monEl.innerHTML = '<div class="empty">Nenhum processo em monitoramento</div>';
       } else {
-        monEl.innerHTML = '<div class="audit-mon-list" role="list">' + filtMon.map(c => {
+        // Ordem fixa das fases (Eduardo): RPV DO MES > ADM IMPLANTADO > JUDICIAL IMPLANTADO > SAL. MATERNIDADE
+        const MON_ORDEM = ['RPV DO MES', 'ADM IMPLANTADO A RECEBER', 'JUDICIAL IMPLANTADO A RECEBER', 'SALARIO MATERNIDADE CONCEDIDO'];
+        const normFase = (s) => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+        const faseRank = (s) => {
+          const n = normFase(s);
+          const idx = MON_ORDEM.findIndex(f => n.includes(f) || f.includes(n));
+          return idx === -1 ? 99 : idx;
+        };
+        const monOrdenado = [...filtMon].sort((a, b) => {
+          const ra = faseRank(a.fase), rb = faseRank(b.fase);
+          if (ra !== rb) return ra - rb;
+          return (a.cliente || '').localeCompare(b.cliente || ''); // dentro do grupo, alfabético
+        });
+
+        monEl.innerHTML = '<div class="audit-mon-list" role="list">' + monOrdenado.map(c => {
           const diasMod = c.diasNaFase == null ? ''
             : c.diasNaFase > 365 ? 'audit-mon-row__days--danger'
             : c.diasNaFase > 90  ? 'audit-mon-row__days--warn'
