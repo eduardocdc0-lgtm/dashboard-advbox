@@ -2792,45 +2792,69 @@
 
     <!-- ABA: AUDITORIA DE USO -->
     <div id="auditusage" class="tab-content">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+      <!-- Header padronizado (mesmo padrão da Visão Geral) -->
+      <header class="ov-page-head">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">📊 Auditoria de Uso</div>
-          <div style="font-size:12px;color:#888;margin-top:3px;" id="auuSummaryBadge">Cadastro + workflow do AdvBox — clique ↺ Atualizar pra recarregar</div>
+          <h1 class="ov-page-title">📊 Auditoria de uso</h1>
+          <div class="ov-page-sub" id="auuSummaryBadge">cadastro + workflow do AdvBox — clique ↺ Atualizar pra recarregar</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="dist-export-btn" onclick="exportAuditUsage()">📊 Exportar CSV</button>
-          <button class="dist-export-btn" onclick="loadAuditUsage(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
+        <div class="ov-toolbar" style="margin-bottom:0;">
+          <button class="btn-link" onclick="exportAuditUsage()" aria-label="Exportar como CSV">📊 Exportar CSV</button>
+          <button class="btn-link" onclick="loadAuditUsage(true)" aria-label="Atualizar dados">↺ Atualizar</button>
         </div>
-      </div>
+      </header>
 
       <div id="auuLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando auditoria de uso…</div>
 
-      <div id="auuCardsRow" class="audr-cards-row">
-        <div class="ar-card ar-card-total"><div class="ar-card-label">Clientes</div><div class="ar-card-count" id="auuClientesN">—</div><div class="ar-card-sub">total cadastrado</div></div>
-        <div class="ar-card ar-card-total"><div class="ar-card-label">Processos</div><div class="ar-card-count" id="auuProcessosN">—</div><div class="ar-card-sub">ativos</div></div>
-        <div class="ar-card ar-card-total"><div class="ar-card-label">Tarefas</div><div class="ar-card-count" id="auuTarefasN">—</div><div class="ar-card-sub">no AdvBox</div></div>
-        <div class="ar-card ar-card-error"><div class="ar-card-label">Problemas</div><div class="ar-card-count" id="auuProblemasN">—</div><div class="ar-card-sub" id="auuEscopoLabel">no seu escopo</div></div>
-        <div class="ar-card" style="background:#fffbea;border-color:#fde68a;"><div class="ar-card-label">Conformidade</div><div class="ar-card-count" id="auuTaxaN" style="color:#92400e;">—</div><div class="ar-card-sub">% sem problemas</div></div>
-      </div>
+      <!-- 5 stat cards no padrão .metric-card.is-* (Visão Geral) -->
+      <section id="auuCardsRow" class="metrics" aria-label="Resumo da auditoria">
+        <article class="metric-card is-neutral">
+          <div class="metric-label">Clientes</div>
+          <div class="metric-value" id="auuClientesN">—</div>
+          <div class="metric-sub">total cadastrado</div>
+        </article>
+        <article class="metric-card is-neutral">
+          <div class="metric-label">Processos</div>
+          <div class="metric-value" id="auuProcessosN">—</div>
+          <div class="metric-sub">ativos</div>
+        </article>
+        <article class="metric-card is-neutral">
+          <div class="metric-label">Tarefas</div>
+          <div class="metric-value" id="auuTarefasN">—</div>
+          <div class="metric-sub">no AdvBox</div>
+        </article>
+        <article class="metric-card is-danger">
+          <div class="metric-label">Problemas</div>
+          <div class="metric-value danger" id="auuProblemasN">—</div>
+          <div class="metric-sub" id="auuEscopoLabel">no seu escopo</div>
+        </article>
+        <article class="metric-card is-success">
+          <div class="metric-label">Conformidade</div>
+          <div class="metric-value success" id="auuTaxaN">—</div>
+          <div class="metric-sub">% sem problemas</div>
+        </article>
+      </section>
 
       <!-- Filtros -->
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
-        <select id="auuTipoFiltro" class="reg-filter" onchange="renderAuditUsageTable()" style="font-size:12px;">
-          <option value="">Todos os tipos</option>
-          <option value="cliente">Cliente</option>
-          <option value="processo">Processo</option>
-          <option value="tarefa">Tarefa</option>
-          <option value="workflow">Workflow</option>
-        </select>
-        <select id="auuNivelFiltro" class="reg-filter" onchange="renderAuditUsageTable()" style="font-size:12px;">
-          <option value="">Todos os níveis</option>
-          <option value="erro">❌ Erro</option>
-          <option value="aviso">⚠️ Aviso</option>
-        </select>
-        <select id="auuRespFiltro" class="reg-filter admin-only" onchange="renderAuditUsageTable()" style="font-size:12px;">
-          <option value="">Todos os responsáveis</option>
-        </select>
-        <input id="auuBusca" class="reg-filter" type="text" placeholder="Buscar descrição..." oninput="renderAuditUsageTable()" style="font-size:12px;min-width:180px;">
+      <div class="audit-section-toolbar" role="search" aria-label="Filtros da auditoria">
+        <div class="audit-section-toolbar-left" style="gap:10px;flex-wrap:wrap;">
+          <select id="auuTipoFiltro" class="reg-filter" onchange="renderAuditUsageTable()" aria-label="Tipo de problema">
+            <option value="">Todos os tipos</option>
+            <option value="cliente">Cliente</option>
+            <option value="processo">Processo</option>
+            <option value="tarefa">Tarefa</option>
+            <option value="workflow">Workflow</option>
+          </select>
+          <select id="auuNivelFiltro" class="reg-filter" onchange="renderAuditUsageTable()" aria-label="Nível">
+            <option value="">Todos os níveis</option>
+            <option value="erro">❌ Erro</option>
+            <option value="aviso">⚠️ Aviso</option>
+          </select>
+          <select id="auuRespFiltro" class="reg-filter admin-only" onchange="renderAuditUsageTable()" aria-label="Responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <input id="auuBusca" class="reg-filter" type="text" placeholder="Buscar descrição..." oninput="renderAuditUsageTable()" aria-label="Buscar na descrição" style="min-width:200px;">
+        </div>
       </div>
 
       <!-- Tabela -->
