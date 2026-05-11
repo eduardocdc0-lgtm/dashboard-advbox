@@ -87,6 +87,31 @@ class AdvBoxClient {
   }
 
   getTransactions(limit = 1000) { return this.request(`/transactions?limit=${limit}`); }
+
+  /**
+   * Pagina /transactions via offset. AdvBox tem cap de 1000 por chamada,
+   * mas o totalCount real pode ser maior (ex: 1040+). Sem paginar,
+   * transações recentes ficam fora — causa #1 de falsos críticos no
+   * kanban-financeiro (lançamento existia mas não chegava ao dashboard).
+   */
+  async getAllTransactions(pageSize = 1000, maxPages = 20) {
+    const all = [];
+    const seen = new Set();
+    for (let page = 0; page < maxPages; page++) {
+      const data = await this.request(`/transactions?limit=${pageSize}&offset=${page * pageSize}`);
+      const arr  = Array.isArray(data) ? data : (data.data || []);
+      if (!arr.length) break;
+      let added = 0;
+      for (const t of arr) {
+        if (t?.id && !seen.has(t.id)) { seen.add(t.id); all.push(t); added++; }
+      }
+      this.logger.info(`[AdvBox] Transactions p${page + 1}: ${arr.length} (novos: ${added}, total: ${all.length})`);
+      if (arr.length < pageSize) break;
+      if (added === 0) break; // API ignorou offset e devolveu mesmos itens
+    }
+    return all;
+  }
+
   getCustomers(limit = 1000)    { return this.request(`/customers?limit=${limit}`); }
   getBirthdays()                { return this.request('/customers/birthdays'); }
   getLastMovements(limit = 500) { return this.request(`/last_movements?limit=${limit}`); }

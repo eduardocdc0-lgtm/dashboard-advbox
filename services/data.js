@@ -23,10 +23,9 @@ async function fetchCustomers(force = false) {
 }
 
 async function fetchTransactions(force = false) {
-  return cache.getOrFetch('transactions', async () => {
-    const data = await client.getTransactions();
-    return Array.isArray(data) ? data : (data.data || []);
-  }, force);
+  // Usa paginação — sem isso, /transactions trunca em 1000 e as 40+ tx mais
+  // recentes ficam fora (caso Marcos Vinicius 28/05/2026 confirmou o bug).
+  return cache.getOrFetch('transactions', () => client.getAllTransactions(), force);
 }
 
 async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 600) {
