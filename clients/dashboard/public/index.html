@@ -9048,7 +9048,10 @@
         const cobravel = p.tipo === 'workflow' && AUU_COBRAVEIS.has(p.campo) && !!p.lawsuit_id;
         const btnCobrar = cobravel
           ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.lawsuit_id)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">🔔 Cobrar</button>`
-          : '<span style="color:#bbb;font-size:11px;">—</span>';
+          : '';
+        // Botão "Tratei" disponível pra TODOS os problemas — ignora no auditor por 30 dias.
+        const btnTratei = `<button onclick="auuTrateiClick(this,'${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.tipo)}','${auuEscapeHtml(p.campo || '')}','${auuEscapeHtml(p.lawsuit_id || '')}')" style="background:#eee;color:#333;border:1px solid #ddd;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px;" title="Marcar como tratado — some do auditor por 30 dias">✅ Tratei</button>`;
+        const acoes = (btnCobrar || '<span style="color:#bbb;font-size:11px;">—</span>') + btnTratei;
         return `<tr>
           <td>${linkAdv} <span style="font-size:11px;color:#888;">#${auuEscapeHtml(p.id)}</span></td>
           <td>${tipoBadge}</td>
@@ -9056,7 +9059,7 @@
           <td style="font-size:12px;">${auuEscapeHtml(nomeResp)}</td>
           <td style="font-size:12px;">${auuEscapeHtml(p.descricao)}</td>
           <td style="text-align:center;">${nivelBadge}</td>
-          <td style="text-align:center;">${btnCobrar}</td>
+          <td style="text-align:center;white-space:nowrap;">${acoes}</td>
         </tr>`;
       }).join('');
       document.getElementById('auuLoadMore').innerHTML = lista.length > MAX
@@ -9081,6 +9084,42 @@
       a.download = `auditoria-uso-${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    // ── Tratei (ignora problema por 30 dias) ─────────────────────────────────
+    async function auuTrateiClick(btn, problemaId, problemaTipo, problemaCampo, lawsuitId) {
+      if (!confirm('Marcar como tratado? Vai sumir do auditor por 30 dias.\n\nSe ainda estiver pendente no AdvBox depois desse prazo, volta a aparecer automaticamente.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      try {
+        const r = await fetch('/api/audit/action/ignorar-tarefa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            problema_id: problemaId,
+            problema_tipo: problemaTipo,
+            problema_campo: problemaCampo,
+            lawsuit_id: lawsuitId ? Number(lawsuitId) : null,
+          }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        btn.textContent = '✓ Tratado';
+        btn.style.background = '#d4edda';
+        btn.style.color = '#155724';
+        btn.style.border = '1px solid #c3e6cb';
+        // Remove a linha após 800ms
+        const tr = btn.closest('tr');
+        if (tr) {
+          tr.style.transition = 'opacity 0.4s';
+          setTimeout(() => { tr.style.opacity = '0.3'; }, 400);
+          setTimeout(() => { tr.remove(); }, 900);
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '✅ Tratei';
+        auuShowToast('Erro: ' + e.message, true);
+      }
     }
 
     // ── Cobrar responsável (Modal + POST) ────────────────────────────────────
