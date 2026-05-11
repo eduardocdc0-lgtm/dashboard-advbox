@@ -1636,12 +1636,35 @@
     }
     .ov-col {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); display: flex; flex-direction: column;
-      min-width: 0; /* permite shrink dentro do grid */
+      border-radius: var(--radius); min-width: 0;
+      transition: box-shadow .15s ease, border-color .15s ease;
     }
+    .ov-col[open] {
+      box-shadow: 0 4px 18px rgba(0,0,0,.06); border-color: #ccc;
+    }
+    .ov-col > summary {
+      list-style: none; cursor: pointer;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid transparent;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .ov-col > summary::-webkit-details-marker { display: none; }
+    .ov-col > summary:hover { background: var(--hover); }
+    .ov-col[open] > summary { border-bottom-color: var(--border); }
+    .ov-col-chevron {
+      margin-left: auto;
+      font-size: 11px; color: var(--text-2);
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 6px; background: #f5f5f5;
+      transition: transform .2s ease, background .15s ease;
+    }
+    .ov-col[open] .ov-col-chevron { transform: rotate(180deg); background: #e8e8e8; }
+    .ov-col-body { display: flex; flex-direction: column; }
     .ov-col-hdr {
-      padding: 9px 11px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 7px;
+      /* mantido como classe do summary — sem padding/border próprio (vai no summary) */
+      display: contents;
     }
     .ov-col-icon { font-size: 15px; line-height: 1; }
     .ov-col-name {
@@ -8676,93 +8699,103 @@
       const d = _ovData;
       const html = `
         <!-- Processos ADM -->
-        <div class="ov-col">
-          <div class="ov-col-hdr"><span class="ov-col-icon">📋</span><span class="ov-col-name">Processos ADM</span></div>
-          <div class="ov-section">
-            <div class="ov-row" onclick="ovToggleRow(this)">
-              <span class="ov-row-label">${d.adm.aguardandoConclusao.label}</span>
-              <span class="ov-row-value">${d.adm.aguardandoConclusao.count}<span class="ov-row-arrow">▾</span></span>
+        <details class="ov-col">
+          <summary class="ov-col-hdr"><span class="ov-col-icon">📋</span><span class="ov-col-name">Processos ADM</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <div class="ov-col-body">
+            <div class="ov-section">
+              <div class="ov-row" onclick="ovToggleRow(this)">
+                <span class="ov-row-label">${d.adm.aguardandoConclusao.label}</span>
+                <span class="ov-row-value">${d.adm.aguardandoConclusao.count}<span class="ov-row-arrow">▾</span></span>
+              </div>
+              <div class="ov-row-list">${ovItemsHtml(d.adm.aguardandoConclusao.items)}</div>
             </div>
-            <div class="ov-row-list">${ovItemsHtml(d.adm.aguardandoConclusao.items)}</div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Notificar setor</button></div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Avisar Cau</button></div>
-        </div>
+        </details>
 
         <!-- Judicial -->
-        <div class="ov-col">
-          <div class="ov-col-hdr"><span class="ov-col-icon">⚖️</span><span class="ov-col-name">Judicial</span></div>
-          <div class="ov-section">
-            <div class="ov-row" onclick="ovToggleRow(this)">
-              <span class="ov-row-label">${d.judicial.peticionados.label}</span>
-              <span class="ov-row-value success">${d.judicial.peticionados.count}<span class="ov-row-arrow">▾</span></span>
+        <details class="ov-col">
+          <summary class="ov-col-hdr"><span class="ov-col-icon">⚖️</span><span class="ov-col-name">Judicial</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <div class="ov-col-body">
+            <div class="ov-section">
+              <div class="ov-row" onclick="ovToggleRow(this)">
+                <span class="ov-row-label">${d.judicial.peticionados.label}</span>
+                <span class="ov-row-value success">${d.judicial.peticionados.count}<span class="ov-row-arrow">▾</span></span>
+              </div>
+              <div class="ov-row-list">${ovItemsHtml(d.judicial.peticionados.items)}</div>
             </div>
-            <div class="ov-row-list">${ovItemsHtml(d.judicial.peticionados.items)}</div>
-          </div>
-          <div class="ov-section">
-            <div class="ov-row" onclick="ovToggleRow(this)">
-              <span class="ov-row-label">${d.judicial.elaborarPeticao.label}</span>
-              <span class="ov-row-value">${d.judicial.elaborarPeticao.count}<span class="ov-row-arrow">▾</span></span>
+            <div class="ov-section">
+              <div class="ov-row" onclick="ovToggleRow(this)">
+                <span class="ov-row-label">${d.judicial.elaborarPeticao.label}</span>
+                <span class="ov-row-value">${d.judicial.elaborarPeticao.count}<span class="ov-row-arrow">▾</span></span>
+              </div>
+              <div class="ov-row-list">${ovItemsHtml(d.judicial.elaborarPeticao.items)}</div>
             </div>
-            <div class="ov-row-list">${ovItemsHtml(d.judicial.elaborarPeticao.items)}</div>
-          </div>
-          <div class="ov-section">
-            <div class="ov-row" onclick="ovToggleRow(this)">
-              <span class="ov-row-label">${d.judicial.sentencaProcedente.label}</span>
-              <span class="ov-row-value">${d.judicial.sentencaProcedente.count}<span class="ov-row-arrow">▾</span></span>
+            <div class="ov-section">
+              <div class="ov-row" onclick="ovToggleRow(this)">
+                <span class="ov-row-label">${d.judicial.sentencaProcedente.label}</span>
+                <span class="ov-row-value">${d.judicial.sentencaProcedente.count}<span class="ov-row-arrow">▾</span></span>
+              </div>
+              <div class="ov-row-list">${ovItemsHtml(d.judicial.sentencaProcedente.items)}</div>
             </div>
-            <div class="ov-row-list">${ovItemsHtml(d.judicial.sentencaProcedente.items)}</div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Notificar setor</button></div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Avisar Cau</button></div>
-        </div>
+        </details>
 
         <!-- Financeiro (Críticos) -->
-        <div class="ov-col">
-          <div class="ov-col-hdr"><span class="ov-col-icon">🚨</span><span class="ov-col-name">Financeiro</span></div>
-          <div class="ov-section">
-            <div class="ov-row" onclick="ovToggleRow(this)">
-              <span class="ov-row-label">${d.financeiro.criticos.label}</span>
-              <span class="ov-row-value danger">${d.financeiro.criticos.count}<span class="ov-row-arrow">▾</span></span>
+        <details class="ov-col">
+          <summary class="ov-col-hdr"><span class="ov-col-icon">🚨</span><span class="ov-col-name">Financeiro</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <div class="ov-col-body">
+            <div class="ov-section">
+              <div class="ov-row" onclick="ovToggleRow(this)">
+                <span class="ov-row-label">${d.financeiro.criticos.label}</span>
+                <span class="ov-row-value danger">${d.financeiro.criticos.count}<span class="ov-row-arrow">▾</span></span>
+              </div>
+              <div class="ov-row-list">${ovItemsHtml(d.financeiro.criticos.items)}</div>
             </div>
-            <div class="ov-row-list">${ovItemsHtml(d.financeiro.criticos.items)}</div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Notificar setor</button></div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Avisar Cau</button></div>
-        </div>
+        </details>
 
         <!-- Receitas -->
-        <div class="ov-col">
-          <div class="ov-col-hdr"><span class="ov-col-icon">💰</span><span class="ov-col-name">Receitas</span></div>
-          <div class="ov-section">
-            <div class="ov-row">
-              <span class="ov-row-label">Recebido em caixa</span>
-              <span class="ov-row-money success">${ovFmt(d.receitas.pagas)}</span>
+        <details class="ov-col">
+          <summary class="ov-col-hdr"><span class="ov-col-icon">💰</span><span class="ov-col-name">Receitas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <div class="ov-col-body">
+            <div class="ov-section">
+              <div class="ov-row">
+                <span class="ov-row-label">Recebido em caixa</span>
+                <span class="ov-row-money success">${ovFmt(d.receitas.pagas)}</span>
+              </div>
+              <div class="ov-row">
+                <span class="ov-row-label">Previsto (não pago)</span>
+                <span class="ov-row-money">${ovFmt(d.receitas.previstas)}</span>
+              </div>
+              <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
+                <span class="ov-row-label" style="font-weight:500;">Faturado total</span>
+                <span class="ov-row-money">${ovFmt(d.receitas.total)}</span>
+              </div>
             </div>
-            <div class="ov-row">
-              <span class="ov-row-label">Previsto (não pago)</span>
-              <span class="ov-row-money">${ovFmt(d.receitas.previstas)}</span>
-            </div>
-            <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
-              <span class="ov-row-label" style="font-weight:500;">Faturado total</span>
-              <span class="ov-row-money">${ovFmt(d.receitas.total)}</span>
-            </div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Notificar setor</button></div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar Cau</button></div>
-        </div>
+        </details>
 
         <!-- Despesas -->
-        <div class="ov-col">
-          <div class="ov-col-hdr"><span class="ov-col-icon">💸</span><span class="ov-col-name">Despesas</span></div>
-          <div class="ov-section">
-            <div class="ov-row">
-              <span class="ov-row-label">${d.despesas.label}</span>
-              <span class="ov-row-money danger">${ovFmt(d.despesas.pagas)}</span>
+        <details class="ov-col">
+          <summary class="ov-col-hdr"><span class="ov-col-icon">💸</span><span class="ov-col-name">Despesas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <div class="ov-col-body">
+            <div class="ov-section">
+              <div class="ov-row">
+                <span class="ov-row-label">${d.despesas.label}</span>
+                <span class="ov-row-money danger">${ovFmt(d.despesas.pagas)}</span>
+              </div>
+              <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
+                <span class="ov-row-label" style="font-weight:500;">Resultado do mês</span>
+                <span class="ov-row-money ${(d.receitas.pagas - d.despesas.pagas) >= 0 ? 'success' : 'danger'}">${ovFmt(d.receitas.pagas - d.despesas.pagas)}</span>
+              </div>
             </div>
-            <div class="ov-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
-              <span class="ov-row-label" style="font-weight:500;">Resultado do mês</span>
-              <span class="ov-row-money ${(d.receitas.pagas - d.despesas.pagas) >= 0 ? 'success' : 'danger'}">${ovFmt(d.receitas.pagas - d.despesas.pagas)}</span>
-            </div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Notificar setor</button></div>
           </div>
-          <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Avisar Cau</button></div>
-        </div>
+        </details>
       `;
       document.getElementById('ovBoard').innerHTML = html;
     }
