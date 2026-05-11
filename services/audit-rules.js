@@ -9,8 +9,10 @@
 
 // ── CADASTRO ─────────────────────────────────────────────────────────────────
 
-const CAMPOS_OBRIGATORIOS_CLIENTE = ['name', 'identification'];
-const CAMPOS_RECOMENDADOS_CLIENTE = ['birthdate'];
+// Cadastro de cliente NÃO é problema do advogado.
+// Quando o papel "controller" entrar (Alice), reativamos pra ela ver.
+const CAMPOS_OBRIGATORIOS_CLIENTE = [];
+const CAMPOS_RECOMENDADOS_CLIENTE = [];
 
 const CAMPOS_OBRIGATORIOS_PROCESSO = [
   'responsible_id',
@@ -20,7 +22,9 @@ const CAMPOS_OBRIGATORIOS_PROCESSO = [
 ];
 
 const CAMPOS_OBRIGATORIOS_TAREFA = ['users', 'task'];
-const EXIGE_DESCRICAO_TAREFA = true;
+// Descrição muito curta é ruído (tarefas geradas por bot/sistema ficam com notes vazio).
+// Desativado por enquanto.
+const EXIGE_DESCRICAO_TAREFA = false;
 const TAMANHO_MINIMO_DESCRICAO_TAREFA = 10;
 
 const DIAS_PROCESSO_SEM_MOVIMENTACAO = 60;
