@@ -92,10 +92,11 @@ function zonaDoUsuario(nome) {
 }
 
 function isAtivo(lawsuit) {
-  if (lawsuit.status_closure) return false;
+  // ATENÇÃO: status_closure da API NÃO indica encerramento (fica preenchido
+  // em muitos processos ativos). Filtramos só pela FASE.
   const stage = (lawsuit.stage || '').toUpperCase();
-  if (stage.startsWith('ARQUIVADO')) return false;
-  return true;
+  if (!stage) return true;
+  return !r.FASES_INATIVAS.has(stage);
 }
 
 function campoVazio(obj, campo) {

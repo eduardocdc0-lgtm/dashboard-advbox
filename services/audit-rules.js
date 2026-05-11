@@ -168,6 +168,18 @@ const FASES_IGNORADAS_RESPONSAVEL = new Set([
   'ARQUIVADO ENCERRADO',
 ]);
 
+// Fases que indicam processo INATIVO. Usado pra contar "processos ativos".
+// IMPORTANTE: o campo `status_closure` da API do AdvBox NÃO indica
+// encerramento — fica preenchido mesmo em processos ativos. Filtramos só pela fase.
+const FASES_INATIVAS = new Set([
+  'ARQUIVADO - PROCEDENTE',
+  'ARQUIVADO - IMPROCEDENTE',
+  'ARQUIVADO/ENCERRADO',
+  'ARQUIVADO POR DETERMINACAO JUDICIAL',
+  'IGNORAR ESSA ETAPA',
+  'CANCELADO REQUERIMENTO',
+]);
+
 const ZONAS_QUE_PETICIONAM = new Set(['LETICIA_OU_ALICE', 'EDUARDO']);
 
 // ── QUALIDADE ────────────────────────────────────────────────────────────────
@@ -190,6 +202,7 @@ module.exports = {
   RESPONSAVEL_POR_FASE,
   RESPONSAVEL_POR_FASE_MULTI,
   FASES_IGNORADAS_RESPONSAVEL,
+  FASES_INATIVAS,
   ZONAS_QUE_PETICIONAM,
   LIMITE_VERDE,
   LIMITE_AMARELO,
