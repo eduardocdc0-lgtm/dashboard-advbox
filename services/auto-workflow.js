@@ -63,18 +63,27 @@ async function updateSnapshot(lawsuitId, stage) {
 }
 
 async function alreadyDispatched(lawsuitId, workflowName) {
+  // Considera "já feito" só quando NÃO houve erro. Tentativas falhadas
+  // permitem retry no próximo ciclo.
   const res = await query(`
     SELECT 1 FROM workflow_dispatched
-    WHERE lawsuit_id = $1 AND workflow_name = $2
+    WHERE lawsuit_id = $1 AND workflow_name = $2 AND error_message IS NULL
   `, [lawsuitId, workflowName]);
   return res.rows.length > 0;
 }
 
 async function markDispatched(lawsuitId, workflowName, stage, postsCreated, errorMessage) {
+  // Se já tem registro de tentativa anterior COM erro, atualiza (retry). Se
+  // tem registro de sucesso, mantém como está (idempotente).
   await query(`
     INSERT INTO workflow_dispatched (lawsuit_id, workflow_name, stage, posts_created, error_message)
     VALUES ($1, $2, $3, $4::jsonb, $5)
-    ON CONFLICT (lawsuit_id, workflow_name) DO NOTHING;
+    ON CONFLICT (lawsuit_id, workflow_name) DO UPDATE
+      SET dispatched_at = NOW(),
+          stage = EXCLUDED.stage,
+          posts_created = EXCLUDED.posts_created,
+          error_message = EXCLUDED.error_message
+      WHERE workflow_dispatched.error_message IS NOT NULL;
   `, [lawsuitId, workflowName, stage, JSON.stringify(postsCreated || []), errorMessage || null]);
 }
 
@@ -159,11 +168,12 @@ async function createPost({ lawsuitId, task, userId, deadline }) {
  * Roda 1 ciclo de detecção + dispatch.
  * Retorna { processados, novos, criados, erros }.
  */
-async function runCycle({ logger = console, dryRun = false, forceRefresh = true } = {}) {
+async function runCycle({ logger = console, dryRun = false, forceRefresh = true, force = false, onlyLawsuitId = null } = {}) {
   await ensureTables();
 
-  const lawsuits = await fetchLawsuits(forceRefresh);
-  logger.info(`[Auto-Workflow] Analisando ${lawsuits.length} lawsuits...`);
+  let lawsuits = await fetchLawsuits(forceRefresh);
+  if (onlyLawsuitId) lawsuits = lawsuits.filter(l => Number(l.id) === Number(onlyLawsuitId));
+  logger.info(`[Auto-Workflow] Analisando ${lawsuits.length} lawsuits${force ? ' (force=1)' : ''}...`);
 
   let novos = 0;
   let criados = 0;
@@ -184,7 +194,12 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true 
     // rodada após deploy criaria workflow pra todos os ~500 processos ativos.
     const ehPrimeiraVez = prevStage === null;
 
-    if (mudou && !ehPrimeiraVez && TEMPLATES[newStage]) {
+    // force=1 ignora trava de "mudou" e "primeira vez". Continua respeitando
+    // alreadyDispatched (que agora só conta sucessos).
+    const deveDisparar = TEMPLATES[newStage] && (force || (mudou && !ehPrimeiraVez));
+    let dispatchError = false;
+
+    if (deveDisparar) {
       const tpl = TEMPLATES[newStage];
       if (!(await alreadyDispatched(lawId, tpl.name))) {
         novos++;
@@ -204,11 +219,11 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true 
               });
               created.push({ task: t.task, post_id: post?.id || null });
               criados++;
-              // Pequeno delay pra não estourar rate limit
               await new Promise(rs => setTimeout(rs, 800));
             } catch (e) {
               erros++;
               firstError = e.message;
+              dispatchError = true;
               logger.error(`[Auto-Workflow] Falha criando '${t.task}' no lawsuit ${lawId}: ${e.message}`);
               break; // para na primeira falha pra não criar workflow parcial
             }
@@ -219,8 +234,10 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true 
       }
     }
 
-    // Atualiza snapshot só se não for dryRun (pra não comprometer próxima rodada)
-    if (!dryRun) await updateSnapshot(lawId, newStage);
+    // Atualiza snapshot só se a tentativa foi bem-sucedida (ou nem foi tentada).
+    // Se houve erro, mantém snapshot antigo pra próxima rodada detectar "mudou"
+    // de novo e tentar.
+    if (!dryRun && !dispatchError) await updateSnapshot(lawId, newStage);
   }
 
   logger.info(`[Auto-Workflow] Ciclo: ${lawsuits.length} processados, ${novos} workflows novos, ${criados} tarefas criadas, ${erros} erros.`);

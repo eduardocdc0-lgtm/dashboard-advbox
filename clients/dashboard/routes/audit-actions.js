@@ -205,8 +205,13 @@ router.get('/auto-workflow/run', requireAuth, async (req, res) => {
   }
   const { runCycle } = require('../../../services/auto-workflow');
   const dryRun = req.query.dryRun === '1';
+  const force = req.query.force === '1';
+  const onlyLawsuitId = req.query.lawsuit_id ? Number(req.query.lawsuit_id) : null;
+  if (force && !onlyLawsuitId) {
+    return res.status(400).json({ error: 'force=1 exige lawsuit_id (proteção contra disparo em massa).' });
+  }
   try {
-    const result = await runCycle({ dryRun, forceRefresh: true });
+    const result = await runCycle({ dryRun, force, onlyLawsuitId, forceRefresh: true });
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
