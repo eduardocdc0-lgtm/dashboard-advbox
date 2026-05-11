@@ -539,4 +539,83 @@ router.get('/audit/_debug/posts-sample', requireAuth, async (req, res) => {
   res.json(out);
 });
 
+// ── Marcar tarefa como "tratada" (ignorar do auditor por 30 dias) ────────────
+// POST /api/audit/action/ignorar-tarefa
+// body: { problema_id, problema_tipo, problema_campo, lawsuit_id?, motivo? }
+//
+// Comportamento: registra na tabela audit_ignored com janela de 30 dias.
+// O runAudit filtra problemas que tenham ignore válido (não expirado).
+// Self-healing: passados 30 dias, volta a aparecer no auditor se ainda
+// estiver pendente no AdvBox.
+async function ensureIgnoredTable() {
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS audit_ignored (
+      id SERIAL PRIMARY KEY,
+      problema_tipo TEXT NOT NULL,
+      problema_id   TEXT NOT NULL,
+      problema_campo TEXT,
+      lawsuit_id    INT,
+      ignored_by    TEXT NOT NULL,
+      motivo        TEXT,
+      ignored_until TIMESTAMP NOT NULL,
+      created_at    TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ignored_lookup ON audit_ignored(problema_tipo, problema_id, ignored_until);
+  `);
+}
+
+router.post('/audit/action/ignorar-tarefa', requireAuth, async (req, res) => {
+  const username = req.session.user?.username || 'desconhecido';
+  const { problema_id, problema_tipo, problema_campo, lawsuit_id, motivo } = req.body || {};
+  if (!problema_id || !problema_tipo) {
+    return res.status(400).json({ error: 'problema_id e problema_tipo obrigatórios.' });
+  }
+
+  try {
+    await ensureIgnoredTable();
+    const ignoredUntil = new Date(Date.now() + 30 * 86400_000); // +30 dias
+    await dbQuery(`
+      INSERT INTO audit_ignored (problema_tipo, problema_id, problema_campo, lawsuit_id, ignored_by, motivo, ignored_until)
+      VALUES ($1, $2, $3, $4, $5, $6, $7);
+    `, [
+      String(problema_tipo),
+      String(problema_id),
+      problema_campo || null,
+      lawsuit_id ? Number(lawsuit_id) : null,
+      username,
+      motivo || null,
+      ignoredUntil.toISOString(),
+    ]);
+    res.json({
+      ok: true,
+      ignored_until: ignoredUntil.toISOString(),
+      mensagem: `Tarefa marcada como tratada. Volta no auditor em 30 dias se ainda estiver pendente no AdvBox.`,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/audit/action/ignored — lista ignores ativos do usuário (admin vê tudo)
+router.get('/audit/action/ignored', requireAuth, async (req, res) => {
+  try {
+    await ensureIgnoredTable();
+    const isAdmin = req.session.user?.role === 'admin';
+    const params = [];
+    let where = `ignored_until > NOW()`;
+    if (!isAdmin) {
+      where += ` AND ignored_by = $1`;
+      params.push(req.session.user.username);
+    }
+    const r = await dbQuery(
+      `SELECT * FROM audit_ignored WHERE ${where} ORDER BY created_at DESC LIMIT 100`,
+      params,
+    );
+    res.json({ ok: true, total: r.rows.length, items: r.rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
+module.exports.ensureIgnoredTable = ensureIgnoredTable;

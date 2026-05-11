@@ -33,6 +33,7 @@ const cache           = require('../../cache');
 const apiRoutes       = require('./routes');
 const { startBirthdayCron } = require('./cron/birthday');
 const { startAutoWorkflowCron } = require('./cron/auto-workflow');
+const { startDiscordSchedulerCron } = require('./cron/discord-scheduler');
 
 const app = express();
 app.set('trust proxy', 1);    // necessário em PaaS (Replit/Heroku) pra rate-limit ler IP correto
@@ -169,6 +170,7 @@ migrate()
       logger.info(`Dashboard rodando em http://localhost:${config.port} (env: ${config.env})`);
       startBirthdayCron({ logger });
       startAutoWorkflowCron({ logger });
+      startDiscordSchedulerCron({ logger });
     });
   });
 

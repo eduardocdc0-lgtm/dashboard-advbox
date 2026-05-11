@@ -371,12 +371,31 @@ async function runAudit({ force = false } = {}) {
     }
   }
 
-  const problemas = [
+  let problemas = [
     ...auditarClientes(clientes, mapaClienteParaUser),
     ...auditarProcessos(processos),
     ...auditarTarefas(posts),
     ...auditarWorkflow(processos, posts, usuarios),
   ];
+
+  // Filtra problemas marcados como "Tratei" (botão de ignore com 30d).
+  // Self-healing: passados 30d, ignore expira e o problema volta a aparecer.
+  try {
+    const { query } = require('./db');
+    const r = await query(`
+      SELECT problema_tipo, problema_id FROM audit_ignored
+      WHERE ignored_until > NOW()
+    `);
+    if (r.rows.length) {
+      const ignoreSet = new Set(r.rows.map(x => `${x.problema_tipo}:${x.problema_id}`));
+      problemas = problemas.filter(p => !ignoreSet.has(`${p.tipo}:${p.id}`));
+    }
+  } catch (e) {
+    // Se tabela não existe ainda (primeira execução), só ignora silenciosamente.
+    if (!/relation .* does not exist/i.test(e.message)) {
+      console.error('[auditor] erro ao filtrar ignored:', e.message);
+    }
+  }
 
   // Consolida por usuário (igual ao Python)
   const nomePorId = {};
