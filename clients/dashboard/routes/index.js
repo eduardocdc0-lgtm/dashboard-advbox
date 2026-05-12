@@ -23,6 +23,5 @@ router.use(require('./esteira'));
 router.use(require('./finance'));
 router.use(require('./overview'));
 router.use(require('./discord'));
-router.use(require('./djen'));
 
 module.exports = router;
