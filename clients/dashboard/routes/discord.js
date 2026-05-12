@@ -94,4 +94,15 @@ router.get('/discord/test', requireAuth, adminOnly, async (req, res) => {
   }
 });
 
+// GET /api/discord/briefing/preview — dispara o briefing diário AGORA pra testar
+router.get('/discord/briefing/preview', requireAuth, adminOnly, async (req, res) => {
+  try {
+    const { sendBriefing } = require('../../../services/discord-briefing');
+    const result = await sendBriefing({ logger: console });
+    res.json({ ok: true, ...result, hint: 'Briefing disparado. Confere o canal.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
