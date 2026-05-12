@@ -84,4 +84,14 @@ router.post('/admin/discord/run-now', requireAuth, adminOnly, async (req, res) =
   }
 });
 
+// GET /api/discord/test — disparo simples pra confirmar webhook
+router.get('/discord/test', requireAuth, adminOnly, async (req, res) => {
+  try {
+    const result = await sendWebhook(`✅ Webhook OK — disparado por ${req.session.user?.name || req.session.user?.username || 'admin'} em ${new Date().toLocaleString('pt-BR')}`, {});
+    res.json({ ok: true, ...result, hint: 'Confere o canal do Discord.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
