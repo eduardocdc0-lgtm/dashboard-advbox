@@ -2,8 +2,129 @@ const { Router } = require('express');
 const crypto = require('crypto');
 const { query } = require('../../../services/db');
 const { requireAdmin } = require('../../../middleware/auth');
+const { fetchTransactions } = require('../../../services/data');
+const cache = require('../../../cache');
 
 const router = Router();
+
+cache.define('inadimplencia', 30 * 60 * 1000); // 30 min
+
+// ── Helper: filtra parcelas válidas (descarta lixo) ──────────────────────────
+function isParcelaValida(t) {
+  if (t.entry_type !== 'income') return false;
+  const amt = Number(t.amount || 0);
+  if (amt < 1) return false; // 0.01 placeholder usado como "EXCLUIR/ARQUIVADO"
+  const desc = String(t.description || t.notes || '').toUpperCase();
+  if (desc.includes('EXCLUIR')) return false;
+  if (desc.includes('ARQUIVADO')) return false;
+  return true;
+}
+
+function matchMes(dateStr, mm, yyyy) {
+  if (!dateStr) return false;
+  const s = String(dateStr);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return +s.slice(0,4) === yyyy && +s.slice(5,7) === mm;
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) { const p = s.split('/'); return +p[1] === mm && +p[2] === yyyy; }
+  return false;
+}
+
+function calcInadimplenciaMes(transactions, mm, yyyy) {
+  const doMes = transactions
+    .filter(isParcelaValida)
+    .filter(t => matchMes(t.date_due, mm, yyyy));
+
+  let totalDevido = 0, totalPago = 0;
+  const devedoresMap = new Map(); // nome -> { valor, count, oldestDue }
+
+  for (const t of doMes) {
+    const amt = Number(t.amount || 0);
+    totalDevido += amt;
+    if (t.date_payment) {
+      totalPago += amt;
+    } else {
+      // Inadimplente — agrega no devedor
+      const nome = String(t.name || t.customer_name || '').trim().toUpperCase() || '(sem nome)';
+      const cur = devedoresMap.get(nome) || { nome: t.name || t.customer_name || '(sem nome)', valor: 0, count: 0, oldestDue: t.date_due };
+      cur.valor += amt;
+      cur.count += 1;
+      if (t.date_due && (!cur.oldestDue || t.date_due < cur.oldestDue)) cur.oldestDue = t.date_due;
+      devedoresMap.set(nome, cur);
+    }
+  }
+
+  const totalInadimplente = totalDevido - totalPago;
+  const taxa = totalDevido > 0 ? (totalInadimplente / totalDevido) * 100 : 0;
+
+  const hoje = new Date();
+  const topDevedores = [...devedoresMap.values()]
+    .sort((a,b) => b.valor - a.valor)
+    .slice(0, 5)
+    .map(d => {
+      const diasAtraso = d.oldestDue
+        ? Math.max(0, Math.floor((hoje - new Date(d.oldestDue)) / 86400000))
+        : null;
+      return {
+        cliente: d.nome,
+        valor: Number(d.valor.toFixed(2)),
+        parcelas: d.count,
+        dias_atraso: diasAtraso,
+      };
+    });
+
+  return {
+    total_devido:       Number(totalDevido.toFixed(2)),
+    total_pago:         Number(totalPago.toFixed(2)),
+    total_inadimplente: Number(totalInadimplente.toFixed(2)),
+    taxa_inadimplencia: Number(taxa.toFixed(2)),
+    top_devedores:      topDevedores,
+    parcelas_total:     doMes.length,
+    parcelas_pagas:     doMes.filter(t => t.date_payment).length,
+  };
+}
+
+// ── GET /api/finance/inadimplencia?mes=MM/YYYY ───────────────────────────────
+// Calcula índice de inadimplência do mês + trend 6 meses + top devedores.
+router.get('/finance/inadimplencia', requireAdmin, async (req, res, next) => {
+  try {
+    const today = new Date();
+    const defMes = String(today.getMonth() + 1).padStart(2, '0') + '/' + today.getFullYear();
+    const mes = (req.query.mes || defMes).toString();
+    const [mm, yyyy] = mes.split('/').map(Number);
+    if (!mm || !yyyy) return res.status(400).json({ error: 'mes inválido (use MM/YYYY)' });
+
+    const cacheKey = `inadimplencia:${mes}`;
+    cache.define(cacheKey, 30 * 60 * 1000);
+
+    const data = await cache.getOrFetch(cacheKey, async () => {
+      const transactions = await fetchTransactions();
+      const atual = calcInadimplenciaMes(transactions, mm, yyyy);
+
+      // Trend 6 meses (do mês alvo + 5 anteriores)
+      const trend = [];
+      for (let i = 5; i >= 0; i--) {
+        let m = mm - i, y = yyyy;
+        while (m < 1) { m += 12; y -= 1; }
+        const r = calcInadimplenciaMes(transactions, m, y);
+        trend.push({
+          mes: String(m).padStart(2,'0') + '/' + y,
+          taxa: r.taxa_inadimplencia,
+          devido: r.total_devido,
+          pago:   r.total_pago,
+          atraso: r.total_inadimplente,
+        });
+      }
+
+      return {
+        mes,
+        ...atual,
+        trend_6m: trend,
+        cached_at: new Date().toISOString(),
+      };
+    }, req.query.force === '1');
+
+    res.json(data);
+  } catch (err) { next(err); }
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

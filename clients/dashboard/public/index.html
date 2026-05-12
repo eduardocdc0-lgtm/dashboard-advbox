@@ -2410,6 +2410,53 @@
           <div class="metric-value" id="finResultado">-</div>
         </div>
       </div>
+      <!-- ── Índice de Inadimplência ── -->
+      <section class="card" id="inadBlock" aria-labelledby="inadTitle" style="margin-top:14px;margin-bottom:14px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">Índice</div>
+            <h2 id="inadTitle" style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Inadimplência do mês</h2>
+            <div id="inadSub" style="font-size:11.5px;color:#999;margin-top:2px;">% das parcelas com vencimento no mês que não foram pagas</div>
+          </div>
+          <div style="text-align:right;">
+            <div id="inadTaxa" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
+            <div id="inadEstadoBadge" style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;color:#999;">aguardando</div>
+          </div>
+        </header>
+
+        <!-- 3 mini-stats: devido / pago / atraso -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">
+          <div style="padding:12px 14px;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
+            <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;">Devido no mês</div>
+            <div class="mask-target" id="inadDevido" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums;">—</div>
+            <div id="inadDevidoQtd" style="font-size:11px;color:#999;margin-top:2px;">— parcelas</div>
+          </div>
+          <div style="padding:12px 14px;background:#f0faf5;border:1px solid #bbf0d0;border-radius:8px;">
+            <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#166534;">Pago</div>
+            <div class="mask-target" id="inadPago" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#166534;font-variant-numeric:tabular-nums;">—</div>
+            <div id="inadPagoQtd" style="font-size:11px;color:#166534;margin-top:2px;opacity:.8;">— parcelas</div>
+          </div>
+          <div style="padding:12px 14px;background:#fff5f5;border:1px solid #fcd5d5;border-radius:8px;">
+            <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#b02020;">Em atraso</div>
+            <div class="mask-target" id="inadAtraso" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#b02020;font-variant-numeric:tabular-nums;">—</div>
+            <div id="inadAtrasoQtd" style="font-size:11px;color:#b02020;margin-top:2px;opacity:.8;">— parcelas</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="inadBottom">
+          <!-- Tendência 6 meses -->
+          <div>
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Tendência últimos 6 meses</div>
+            <div style="position:relative;height:140px;"><canvas id="inadChart"></canvas></div>
+          </div>
+          <!-- Top devedores -->
+          <div>
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Top 5 devedores do mês</div>
+            <div id="inadTopList"><div class="loading" style="padding:20px 0;font-size:12px;">Carregando...</div></div>
+          </div>
+        </div>
+      </section>
+
       <!-- Categorias: Receitas e Despesas lado a lado -->
       <div class="fin-cols">
         <div class="card" style="margin-bottom:0">
@@ -5978,6 +6025,107 @@
       const d = new Date(yyyy, mm - 1 + delta, 1);
       finMesAtual = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
       renderFinanceiro();
+      loadInadimplencia(); // recarrega o índice ao trocar de mês
+    }
+
+    // ── Índice de Inadimplência ──────────────────────────────────────────────
+    let _inadChart = null;
+    async function loadInadimplencia(force = false) {
+      if (!finMesAtual) return;
+      const taxaEl     = document.getElementById('inadTaxa');
+      const estadoEl   = document.getElementById('inadEstadoBadge');
+      const devEl      = document.getElementById('inadDevido');
+      const pagoEl     = document.getElementById('inadPago');
+      const atrasoEl   = document.getElementById('inadAtraso');
+      const devQtdEl   = document.getElementById('inadDevidoQtd');
+      const pagoQtdEl  = document.getElementById('inadPagoQtd');
+      const atrasoQtdEl= document.getElementById('inadAtrasoQtd');
+      const topEl      = document.getElementById('inadTopList');
+      if (!taxaEl) return;
+      taxaEl.textContent = '…';
+      topEl.innerHTML = '<div class="loading" style="padding:20px 0;font-size:12px;">Carregando...</div>';
+
+      try {
+        const url = `/api/finance/inadimplencia?mes=${encodeURIComponent(finMesAtual)}${force ? '&force=1' : ''}`;
+        const r = await fetch(url);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+
+        const taxa = data.taxa_inadimplencia || 0;
+        taxaEl.textContent = taxa.toFixed(1) + '%';
+        // cor semântica
+        let cor = '#166534', estado = 'Saudável';
+        if (taxa >= 15)      { cor = '#b02020'; estado = 'Crítico'; }
+        else if (taxa >= 5)  { cor = '#856404'; estado = 'Atenção'; }
+        taxaEl.style.color = cor;
+        estadoEl.textContent = estado;
+        estadoEl.style.color = cor;
+
+        devEl.textContent    = formatMoney(data.total_devido);
+        pagoEl.textContent   = formatMoney(data.total_pago);
+        atrasoEl.textContent = formatMoney(data.total_inadimplente);
+        const totalP = data.parcelas_total || 0;
+        const pagasP = data.parcelas_pagas || 0;
+        const atrasoP= totalP - pagasP;
+        devQtdEl.textContent    = `${totalP} parcela${totalP !== 1 ? 's' : ''}`;
+        pagoQtdEl.textContent   = `${pagasP} parcela${pagasP !== 1 ? 's' : ''}`;
+        atrasoQtdEl.textContent = `${atrasoP} parcela${atrasoP !== 1 ? 's' : ''}`;
+
+        // Top devedores
+        if (!data.top_devedores || !data.top_devedores.length) {
+          topEl.innerHTML = '<div class="empty" style="padding:16px;font-size:12px;text-align:center;color:#999;">Nenhum devedor neste mês 🎉</div>';
+        } else {
+          topEl.innerHTML = data.top_devedores.map(d => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f3f3;gap:10px;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.cliente}</div>
+                <div style="font-size:11px;color:#999;margin-top:2px;">${d.parcelas} parcela${d.parcelas !== 1 ? 's' : ''}${d.dias_atraso != null ? ` · ${d.dias_atraso}d atraso` : ''}</div>
+              </div>
+              <div class="mask-target" style="font-size:13px;font-weight:700;color:#b02020;font-variant-numeric:tabular-nums;white-space:nowrap;">${formatMoney(d.valor)}</div>
+            </div>
+          `).join('');
+        }
+
+        // Chart de tendência 6 meses
+        const ctx = document.getElementById('inadChart');
+        if (ctx && data.trend_6m && window.Chart) {
+          if (_inadChart) _inadChart.destroy();
+          _inadChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: data.trend_6m.map(t => t.mes.slice(0,2) + '/' + t.mes.slice(5)),
+              datasets: [{
+                label: 'Inadimplência %',
+                data: data.trend_6m.map(t => t.taxa),
+                backgroundColor: data.trend_6m.map(t =>
+                  t.taxa >= 15 ? '#fcd5d5'
+                  : t.taxa >= 5 ? '#fde68a'
+                  : '#bbf0d0'),
+                borderColor: data.trend_6m.map(t =>
+                  t.taxa >= 15 ? '#b02020'
+                  : t.taxa >= 5 ? '#856404'
+                  : '#166534'),
+                borderWidth: 1,
+                borderRadius: 4,
+              }],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { callbacks: {
+                label: (ctx) => ctx.parsed.y.toFixed(1) + '%',
+              } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#f0f0f0' } },
+                x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+              },
+            },
+          });
+        }
+      } catch (e) {
+        taxaEl.textContent = '—';
+        estadoEl.textContent = 'erro';
+        topEl.innerHTML = `<div class="empty" style="padding:16px;font-size:12px;color:#b02020;">Erro: ${e.message}</div>`;
+      }
     }
 
     function finCatLabel(cat) {
@@ -6262,6 +6410,7 @@
         const now = new Date();
         finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
         renderFinanceiro();
+        loadInadimplencia(); // calcula o índice de inadimplência ao carregar
 
         // A PAGAR = despesas com vencimento (date_due) nos próximos 30 dias, ainda não pagas
         const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
