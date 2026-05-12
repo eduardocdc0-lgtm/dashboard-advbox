@@ -82,6 +82,13 @@ const config = Object.freeze({
     webhookSecret: optional('CHATGURU_WEBHOOK_SECRET', ''),
   },
 
+  // ── RPV ─────────────────────────────────────────────────────────────────────
+  // Valor uniforme atribuído à fase "RPV DO MÊS" no relatório de auditoria.
+  // Reajustado anualmente (piso federal). Default 6648 reflete tabela 2026.
+  rpv: {
+    valorFixoMes: intOpt('RPV_VALOR_FIXO_MES', 6648),
+  },
+
   // ── Banco ───────────────────────────────────────────────────────────────────
   db: {
     url:     optional('DATABASE_URL', ''),

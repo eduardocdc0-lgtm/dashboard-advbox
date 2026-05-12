@@ -8,9 +8,14 @@
 'use strict';
 
 const cron = require('node-cron');
+const jobsRegistry = require('../../../services/jobs-registry');
+
+const CRON_EXPR = '0 9 * * *';
+const TZ = 'America/Recife';
+const JOB_NAME = 'birthday';
 
 function startBirthdayCron({ logger = console } = {}) {
-  const job = cron.schedule('0 9 * * *', async () => {
+  const job = cron.schedule(CRON_EXPR, async () => {
     try {
       // require lazy pra não puxar dependências de DB se cron desabilitado
       const { getConfig, processarAniversariantesHoje } = require('../../../services/birthday');
@@ -31,9 +36,10 @@ function startBirthdayCron({ logger = console } = {}) {
     } catch (err) {
       logger.error({ err: err.message }, '[Cron Birthday] Erro');
     }
-  }, { timezone: 'America/Recife' });
+  }, { timezone: TZ });
 
   logger.info('[Cron Birthday] Agendado: 09:00 America/Recife (ativar via /birthday/config).');
+  jobsRegistry.register(JOB_NAME, { status: 'running', cronExpr: CRON_EXPR, timezone: TZ });
   return job;
 }
 

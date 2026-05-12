@@ -14,7 +14,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../../../middleware/auth');
 const { query: dbQuery } = require('../../../services/db');
 const { client } = require('../../../services/data');
-const { TEAM_USERS, advboxUserIdFromSession } = require('../../../services/team-users');
+const { advboxUserIdFromSession } = require('../../../services/team-users');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
 const ADVBOX_UA   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -402,38 +402,6 @@ router.get('/audit/_debug/inspect-financial', requireAuth, async (req, res) => {
     transacoes_match_nome_cliente: matchNome.slice(0, 10).map(t => ({ id: t.id, lawsuits_id: t.lawsuits_id, entry_type: t.entry_type, amount: t.amount, competence: t.competence, date_payment: t.date_payment, date_due: t.date_due, customer_name: t.customer_name, description: t.description || t.notes })),
     todas_income_do_mes_alvo: doMesAlvo,
     total_transactions: transactions.length,
-  });
-});
-
-// ── DEBUG: status dos secrets de login da equipe ─────────────────────────────
-// GET /api/admin/team-status — mostra quais ADV_USER_* estão configurados.
-// NÃO expõe os valores das senhas — só true/false.
-router.get('/admin/team-status', requireAuth, async (req, res) => {
-  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
-  const { TEAM_USERS } = require('../../../services/team-users');
-  const status = TEAM_USERS.map(u => {
-    const envName = `ADV_USER_${u.username.toUpperCase()}`;
-    const v = process.env[envName];
-    return {
-      username: u.username,
-      name: u.name,
-      role: u.role,
-      advboxUserId: u.advboxUserId,
-      env_var: envName,
-      secret_setado: !!(v && v.length > 0),
-      senha_len: v ? v.length : 0,
-    };
-  });
-  const total = status.length;
-  const setados = status.filter(s => s.secret_setado).length;
-  res.json({
-    total_usuarios: total,
-    com_senha: setados,
-    sem_senha: total - setados,
-    detalhes: status,
-    hint: setados < total
-      ? `Faltam ${total - setados} Secret(s) no Replit. Criar com os nomes 'env_var' marcados como secret_setado:false.`
-      : 'Todos os usuários têm senha configurada.',
   });
 });
 
