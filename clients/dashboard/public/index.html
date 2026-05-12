@@ -2095,6 +2095,7 @@
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('admin', event)">Admin</button>
           <button class="nav-item tab admin-tab" onclick="showTab('discordMsgs', event); discordLoadList();">💬 Mensagens (Discord)</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('diagnostico', event); loadDiagnostico();">🩺 Diagnóstico</button>
         </div>
       </div>
 
@@ -3386,6 +3387,35 @@
         <h2 id="dmListTitle" class="card-title">Mensagens agendadas</h2>
         <div id="dmListBody"><div class="loading">Carregando...</div></div>
       </section>
+    </div>
+
+    <!-- ABA: DIAGNÓSTICO -->
+    <div id="diagnostico" class="tab-content">
+      <header class="ov-page-head">
+        <div>
+          <h1 class="ov-page-title">🩺 Diagnóstico do Sistema</h1>
+          <div class="ov-page-sub">status dos jobs automáticos (crons) e dos secrets configurados</div>
+        </div>
+        <div class="ov-toolbar" style="margin-bottom:0;">
+          <button class="btn-link" onclick="loadDiagnostico()" aria-label="Atualizar">↺ Atualizar</button>
+        </div>
+      </header>
+
+      <div id="diagOverall" style="margin-bottom:18px;padding:14px 18px;border-radius:10px;font-size:14px;font-weight:600;display:none;"></div>
+
+      <section class="card" style="margin-bottom:18px;">
+        <h2 class="card-title">⏰ Jobs automáticos (crons)</h2>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">tarefas agendadas que rodam no servidor sem precisar de ninguém clicar</div>
+        <div id="diagJobsBody"><div class="loading">Carregando…</div></div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">🔐 Secrets / chaves de configuração</h2>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">credenciais necessárias pra cada integração funcionar — nenhum valor é exibido, só "configurado" ou "faltando"</div>
+        <div id="diagSecretsBody"><div class="loading">Carregando…</div></div>
+      </section>
+
+      <div id="diagFooter" style="margin-top:14px;font-size:11px;color:#999;text-align:right;"></div>
     </div>
 
     <div id="admin" class="tab-content">
@@ -7439,6 +7469,107 @@
         dmShowStatus('Erro: ' + e.message, 'error');
       } finally {
         btn.disabled = false; btn.textContent = orig;
+      }
+    }
+
+    // ── Diagnóstico do sistema ────────────────────────────────────────────────
+    async function loadDiagnostico() {
+      const jobsEl   = document.getElementById('diagJobsBody');
+      const secEl    = document.getElementById('diagSecretsBody');
+      const overall  = document.getElementById('diagOverall');
+      const footer   = document.getElementById('diagFooter');
+      if (!jobsEl || !secEl) return;
+      jobsEl.innerHTML = '<div class="loading">Carregando…</div>';
+      secEl.innerHTML  = '<div class="loading">Carregando…</div>';
+      overall.style.display = 'none';
+
+      try {
+        const r = await fetch('/api/healthz/jobs', { credentials: 'include' });
+        if (!r.ok) {
+          const msg = r.status === 401 ? 'Sessão expirada — faça login novamente.'
+                    : r.status === 403 ? 'Acesso restrito a administradores.'
+                    : `Erro ${r.status} ao consultar diagnóstico.`;
+          jobsEl.innerHTML = `<div style="padding:14px;color:#B02020;">${msg}</div>`;
+          secEl.innerHTML  = '';
+          return;
+        }
+        const data = await r.json();
+
+        // Overall banner
+        const okColors  = { bg: '#E6F4EA', fg: '#1B5E20', txt: '✅ Tudo no ar' };
+        const attColors = { bg: '#FFF4E5', fg: '#B45309', txt: '⚠️ Atenção — checar itens abaixo' };
+        const c = data.overall === 'ok' ? okColors : attColors;
+        overall.style.background = c.bg;
+        overall.style.color = c.fg;
+        overall.textContent = c.txt + (data.hint ? ` · ${data.hint}` : '');
+        overall.style.display = 'block';
+
+        // Jobs
+        const jobLabels = {
+          'birthday':         'Aniversários (09:00)',
+          'auto-workflow':    'Auto-workflow (a cada hora)',
+          'discord-scheduler':'Mensagens agendadas (cada minuto)',
+          'discord-briefing': 'Briefing diário (7h30 seg–sex)',
+        };
+        const statusBadge = {
+          running:  { bg: '#E6F4EA', fg: '#1B5E20', txt: 'RODANDO' },
+          disabled: { bg: '#EEE',    fg: '#666',    txt: 'DESLIGADO' },
+          skipped:  { bg: '#FEEBEB', fg: '#B02020', txt: 'NÃO INICIOU' },
+          unknown:  { bg: '#FFF4E5', fg: '#B45309', txt: 'DESCONHECIDO' },
+        };
+        if (!data.jobs || data.jobs.length === 0) {
+          jobsEl.innerHTML = '<div style="padding:14px;color:#888;">Nenhum job registrado.</div>';
+        } else {
+          jobsEl.innerHTML = `
+            <table class="data-table" style="width:100%;">
+              <thead><tr>
+                <th style="text-align:left;">Job</th>
+                <th style="text-align:left;">Status</th>
+                <th style="text-align:left;">Quando roda</th>
+                <th style="text-align:left;">Observação</th>
+              </tr></thead>
+              <tbody>
+                ${data.jobs.map(j => {
+                  const b = statusBadge[j.status] || statusBadge.unknown;
+                  return `<tr>
+                    <td><strong>${jobLabels[j.name] || j.name}</strong><div style="font-size:11px;color:#999;">${j.name}</div></td>
+                    <td><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${b.bg};color:${b.fg};">${b.txt}</span></td>
+                    <td style="font-family:monospace;font-size:12px;color:#666;">${j.cronExpr || '—'}</td>
+                    <td style="font-size:12px;color:#666;">${j.reason || ''}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+
+        // Secrets
+        secEl.innerHTML = `
+          <table class="data-table" style="width:100%;">
+            <thead><tr>
+              <th style="text-align:left;">Nome</th>
+              <th style="text-align:left;">Obrigatório?</th>
+              <th style="text-align:left;">Status</th>
+            </tr></thead>
+            <tbody>
+              ${data.secrets.map(s => {
+                const bg = s.set ? '#E6F4EA' : (s.required ? '#FEEBEB' : '#FFF4E5');
+                const fg = s.set ? '#1B5E20' : (s.required ? '#B02020' : '#B45309');
+                const txt = s.set ? 'CONFIGURADO' : (s.required ? 'FALTA (obrigatório)' : 'não setado');
+                return `<tr>
+                  <td style="font-family:monospace;font-size:12px;">${s.name}</td>
+                  <td>${s.required ? 'Sim' : 'Não'}</td>
+                  <td><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${bg};color:${fg};">${txt}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        footer.textContent = `Última checagem: ${new Date(data.checked_at).toLocaleString('pt-BR')}`;
+      } catch (e) {
+        jobsEl.innerHTML = `<div style="padding:14px;color:#B02020;">Erro: ${e.message}</div>`;
+        secEl.innerHTML = '';
       }
     }
 
