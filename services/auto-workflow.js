@@ -19,7 +19,17 @@ const { query } = require('./db');
 
 function normStr(s) {
   if (!s) return '';
-  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  // NFD pra separar acentos, remove combinings, upper, depois normaliza pontuação
+  // (hífens, traços, múltiplos espaços) — o AdvBox tem fases tipo
+  // "PROCEDENTE EM PARTE - FAZER RECURSO" e queremos bater no template
+  // mesmo se alguém digitou "PROCEDENTE EM PARTE FAZER RECURSO".
+  return String(s)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/[-–—]/g, ' ')   // hífens viram espaço
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // ── Migrations ───────────────────────────────────────────────────────────────

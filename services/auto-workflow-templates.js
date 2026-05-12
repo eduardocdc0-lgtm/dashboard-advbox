@@ -62,6 +62,7 @@ const TEMPLATES = {
       { task: 'CONFIRMAR IMPLANTAÇÃO + COBRAR HONORÁRIOS', user_id: USERS.CAU,   prazo_dias: 97 },
     ],
   },
+  // Fase real no AdvBox: "PROCEDENTE EM PARTE - FAZER RECURSO" (hífen vira espaço pelo normStr)
   'PROCEDENTE EM PARTE FAZER RECURSO': {
     name: 'SENTENÇA PROCEDENTE PARCIAL',
     tasks: [
@@ -70,7 +71,8 @@ const TEMPLATES = {
       { task: 'PROTOCOLAR RECURSO',                                 user_id: USERS.LETICIA, prazo_dias: 10 },
     ],
   },
-  'IMPROCEDENTE CABE RECURSO': {
+  // Fase real no AdvBox: "SENTENÇA IMPROCEDENTE" (não "IMPROCEDENTE CABE RECURSO")
+  'SENTENCA IMPROCEDENTE': {
     name: 'SENTENÇA IMPROCEDENTE - RECURSO',
     tasks: [
       { task: 'ANALISAR IMPROCEDÊNCIA + DECIDIR RECURSO', user_id: USERS.ALICE,   prazo_dias: 2 },

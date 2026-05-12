@@ -148,7 +148,10 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
         const cliente    = (personal || clientsArr[0] || {}).name || `#${l.id}`;
         const stageAt    = l.stage_date || l.stage_at || l.updated_at || l.created_at || '';
         const diasNaFase = stageAt ? Math.max(0, Math.floor((now - new Date(stageAt).getTime()) / 86400000)) : null;
-        const feesValue  = parseFloat(String(l.fees_money || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        const feesRaw    = parseFloat(String(l.fees_money || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        // RPV do Mês: Eduardo definiu valor fixo de R$ 6.648,00 pra todos
+        // (RPV federal segue piso uniforme — fees_money do AdvBox vem inconsistente)
+        const feesValue  = normFase(stage) === 'RPV DO MES' ? 6648 : feesRaw;
         const lawId      = String(l.id || l.lawsuits_id || '');
 
         const entry = { lawsuitId: lawId, cliente, processo: l.process_number || `#${lawId}`, fase: stage, diasNaFase, valorFees: feesValue, responsavel: l.responsible || '', linkAdvBox: `https://app.advbox.com.br/lawsuits/${lawId}` };
