@@ -2096,6 +2096,7 @@
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('admin', event)">Admin</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('discordMsgs', event); discordLoadList();">💬 Mensagens (Discord)</button>
         </div>
       </div>
 
@@ -3280,6 +3281,68 @@
     </div>
 
     <!-- ABA ADMIN -->
+    <!-- ABA: DISCORD MENSAGENS -->
+    <div id="discordMsgs" class="tab-content">
+      <header class="ov-page-head">
+        <div>
+          <h1 class="ov-page-title">💬 Mensagens — Discord</h1>
+          <div class="ov-page-sub">envia agora ou agenda mensagens pro canal do escritório (Spidey Bot)</div>
+        </div>
+        <div class="ov-toolbar" style="margin-bottom:0;">
+          <button class="btn-link" onclick="discordLoadList()" aria-label="Atualizar lista">↺ Atualizar</button>
+        </div>
+      </header>
+
+      <!-- Compor nova mensagem -->
+      <section class="card" aria-labelledby="dmComposeTitle">
+        <h2 id="dmComposeTitle" class="card-title">Nova mensagem</h2>
+
+        <label for="dmContent" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:6px;">Mensagem</label>
+        <textarea id="dmContent" rows="5" placeholder="Digite sua mensagem... markdown do Discord funciona (**negrito**, *itálico*, `código`)"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;"></textarea>
+
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+          <div role="radiogroup" aria-label="Quando enviar" style="display:flex;gap:14px;align-items:center;">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+              <input type="radio" name="dmWhen" value="now" checked onchange="dmToggleSchedule()"> Enviar agora
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+              <input type="radio" name="dmWhen" value="schedule" onchange="dmToggleSchedule()"> Agendar
+            </label>
+          </div>
+        </div>
+
+        <div id="dmScheduleFields" style="display:none;margin-top:14px;padding:14px;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;">
+            <div>
+              <label for="dmSendAt" style="display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:6px;">Data e hora</label>
+              <input type="datetime-local" id="dmSendAt" class="reg-filter" style="font-size:13px;">
+            </div>
+            <div>
+              <label for="dmRepeats" style="display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:6px;">Repetição</label>
+              <select id="dmRepeats" class="reg-filter" style="font-size:13px;">
+                <option value="once">Uma vez</option>
+                <option value="daily">Todo dia</option>
+                <option value="weekly">Toda semana</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="dmStatus" style="display:none;margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button id="dmSubmitBtn" class="ov-notify-btn" style="width:auto;padding:10px 20px;font-size:13px;" onclick="dmSubmit()">📤 Enviar</button>
+        </div>
+      </section>
+
+      <!-- Mensagens agendadas -->
+      <section class="card" aria-labelledby="dmListTitle" style="margin-top:18px;">
+        <h2 id="dmListTitle" class="card-title">Mensagens agendadas</h2>
+        <div id="dmListBody"><div class="loading">Carregando...</div></div>
+      </section>
+    </div>
+
     <div id="admin" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
         <div>
@@ -7158,6 +7221,125 @@
 
     // ── ADMIN ─────────────────────────────────────────────────────────────────
     window._adminData = null;
+
+    // ── DISCORD MENSAGENS ─────────────────────────────────────────────────────
+    function dmToggleSchedule() {
+      const v = document.querySelector('input[name="dmWhen"]:checked')?.value;
+      const fields = document.getElementById('dmScheduleFields');
+      const btn    = document.getElementById('dmSubmitBtn');
+      if (v === 'schedule') {
+        fields.style.display = 'block';
+        btn.textContent = '📅 Agendar';
+        // sugere "agora + 1h" como default
+        if (!document.getElementById('dmSendAt').value) {
+          const d = new Date(Date.now() + 60*60*1000);
+          const pad = n => String(n).padStart(2, '0');
+          document.getElementById('dmSendAt').value =
+            `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+      } else {
+        fields.style.display = 'none';
+        btn.textContent = '📤 Enviar';
+      }
+    }
+
+    function dmShowStatus(msg, kind) {
+      const el = document.getElementById('dmStatus');
+      const colors = {
+        ok:    { bg:'#f0faf5', bd:'#bbf0d0', fg:'#166534' },
+        error: { bg:'#fff5f5', bd:'#fcd5d5', fg:'#b02020' },
+        info:  { bg:'#fffbea', bd:'#fde68a', fg:'#856404' },
+      };
+      const c = colors[kind] || colors.info;
+      el.style.display = 'block';
+      el.style.background = c.bg;
+      el.style.border = `1px solid ${c.bd}`;
+      el.style.color = c.fg;
+      el.textContent = msg;
+      if (kind === 'ok') setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function dmSubmit() {
+      const content = document.getElementById('dmContent').value.trim();
+      if (!content) return dmShowStatus('Mensagem não pode ser vazia.', 'error');
+      const when = document.querySelector('input[name="dmWhen"]:checked')?.value;
+      const btn = document.getElementById('dmSubmitBtn');
+      btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳ Enviando...';
+
+      try {
+        let endpoint, body;
+        if (when === 'now') {
+          endpoint = '/api/admin/discord/send-now';
+          body = { content };
+        } else {
+          const sendAtRaw = document.getElementById('dmSendAt').value;
+          if (!sendAtRaw) throw new Error('Escolha data e hora.');
+          const repeats = document.getElementById('dmRepeats').value;
+          endpoint = '/api/admin/discord/schedule';
+          body = { content, sendAt: new Date(sendAtRaw).toISOString(), repeats };
+        }
+        const r = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        dmShowStatus(when === 'now' ? '✅ Mensagem enviada.' : '✅ Mensagem agendada.', 'ok');
+        document.getElementById('dmContent').value = '';
+        if (when === 'schedule') discordLoadList();
+      } catch (e) {
+        dmShowStatus('Erro: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
+      }
+    }
+
+    async function discordLoadList() {
+      const el = document.getElementById('dmListBody');
+      if (!el) return;
+      el.innerHTML = '<div class="loading">Carregando...</div>';
+      try {
+        const r = await fetch('/api/admin/discord/list');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        const items = (data.items || []).filter(i => !i.sent_at && !i.cancelled);
+        if (!items.length) {
+          el.innerHTML = '<div class="empty">Nenhuma mensagem agendada.</div>';
+          return;
+        }
+        const repeatsLabel = { once: 'uma vez', daily: 'todo dia', weekly: 'toda semana' };
+        el.innerHTML = `<table class="fin-table" style="width:100%;">
+          <thead><tr>
+            <th>Mensagem</th><th>Quando</th><th>Repete</th><th style="text-align:center;">Ação</th>
+          </tr></thead>
+          <tbody>${items.map(i => `<tr>
+            <td style="max-width:380px;">${(i.content || '').replace(/</g,'&lt;').slice(0,160)}${(i.content||'').length>160?'...':''}</td>
+            <td style="font-size:12px;font-variant-numeric:tabular-nums;">${new Date(i.send_at).toLocaleString('pt-BR')}</td>
+            <td style="font-size:12px;color:#666;">${repeatsLabel[i.repeats] || i.repeats}</td>
+            <td style="text-align:center;"><button onclick="dmCancel(${i.id})" style="font-size:11px;padding:4px 10px;border:1px solid #fcd5d5;background:#fff5f5;color:#b02020;border-radius:6px;cursor:pointer;">Cancelar</button></td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+      } catch (e) {
+        el.innerHTML = `<div class="empty">Erro: ${e.message}</div>`;
+      }
+    }
+
+    async function dmCancel(id) {
+      if (!confirm('Cancelar essa mensagem agendada?')) return;
+      try {
+        const r = await fetch('/api/admin/discord/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        discordLoadList();
+      } catch (e) {
+        alert('Erro: ' + e.message);
+      }
+    }
 
     async function loadAdmin(force = false) {
       if (!force && window._adminData) return;
