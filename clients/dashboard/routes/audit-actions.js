@@ -405,6 +405,38 @@ router.get('/audit/_debug/inspect-financial', requireAuth, async (req, res) => {
   });
 });
 
+// ── DEBUG: status dos secrets de login da equipe ─────────────────────────────
+// GET /api/admin/team-status — mostra quais ADV_USER_* estão configurados.
+// NÃO expõe os valores das senhas — só true/false.
+router.get('/admin/team-status', requireAuth, async (req, res) => {
+  if (req.session.user?.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const { TEAM_USERS } = require('../../../services/team-users');
+  const status = TEAM_USERS.map(u => {
+    const envName = `ADV_USER_${u.username.toUpperCase()}`;
+    const v = process.env[envName];
+    return {
+      username: u.username,
+      name: u.name,
+      role: u.role,
+      advboxUserId: u.advboxUserId,
+      env_var: envName,
+      secret_setado: !!(v && v.length > 0),
+      senha_len: v ? v.length : 0,
+    };
+  });
+  const total = status.length;
+  const setados = status.filter(s => s.secret_setado).length;
+  res.json({
+    total_usuarios: total,
+    com_senha: setados,
+    sem_senha: total - setados,
+    detalhes: status,
+    hint: setados < total
+      ? `Faltam ${total - setados} Secret(s) no Replit. Criar com os nomes 'env_var' marcados como secret_setado:false.`
+      : 'Todos os usuários têm senha configurada.',
+  });
+});
+
 // ── DEBUG: inspeciona um cliente/processo + regras que dispararam ────────────
 // GET /api/audit/_debug/inspect-client?q=MARCOS%20VINICIUS%20DORNELAS
 router.get('/audit/_debug/inspect-client', requireAuth, async (req, res) => {
