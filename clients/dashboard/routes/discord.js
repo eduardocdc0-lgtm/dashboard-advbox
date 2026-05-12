@@ -62,12 +62,17 @@ router.post('/admin/discord/cancel', requireAuth, adminOnly, async (req, res) =>
 });
 
 // POST /api/admin/discord/send-now
-// body: { content, username?, channelUrl? }  — envia imediatamente (teste)
+// body: { content?, username?, channelUrl?, attachmentUrl?, attachmentFilename? }
+// Envia imediatamente (teste). content OU attachmentUrl é obrigatório.
 router.post('/admin/discord/send-now', requireAuth, adminOnly, async (req, res) => {
   try {
-    const { content, username, channelUrl } = req.body || {};
-    if (!content) return res.status(400).json({ error: 'content obrigatório' });
-    const result = await sendWebhook(content, { username, url: channelUrl });
+    const { content, username, channelUrl, attachmentUrl, attachmentFilename } = req.body || {};
+    if (!content && !attachmentUrl) {
+      return res.status(400).json({ error: 'content ou attachmentUrl obrigatório' });
+    }
+    const result = await sendWebhook(content || '', {
+      username, url: channelUrl, attachmentUrl, attachmentFilename,
+    });
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });

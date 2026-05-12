@@ -24,5 +24,6 @@ router.use(require('./finance'));
 router.use(require('./overview'));
 router.use(require('./discord'));
 router.use(require('./admin'));
+router.use(require('./sentencas'));
 
 module.exports = router;
