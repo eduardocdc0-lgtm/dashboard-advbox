@@ -130,6 +130,13 @@ class AdvBoxClient {
   getLastMovements(limit = 500) { return this.request(`/last_movements?limit=${limit}`); }
   getSettings()                 { return this.request('/settings'); }
 
+  updateLawsuit(id, patch) {
+    return this.request(`/lawsuits/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+  }
+
   // ── Privados ───────────────────────────────────────────────────────────────
 
   async _respectRateLimit() {

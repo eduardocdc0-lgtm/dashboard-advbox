@@ -5,8 +5,10 @@
 'use strict';
 
 const { Router } = require('express');
-const { requireAuth } = require('../../../middleware/auth');
+const { requireAuth, requireAdmin } = require('../../../middleware/auth');
 const { buildOverview, cobrarLote } = require('../../../services/controller');
+const { client } = require('../../../services/data');
+const cache = require('../../../cache');
 
 const router = Router();
 
@@ -43,6 +45,23 @@ router.post('/controller/cobrar-lote', requireAuth, async (req, res, next) => {
       items,
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/controller/move-stage
+// Body: { lawsuit_id, from_cat, to_cat, target_stage }
+// Apenas admin — mover processo muda dado real no AdvBox.
+router.post('/controller/move-stage', requireAdmin, async (req, res, next) => {
+  try {
+    const { lawsuit_id, target_stage } = req.body || {};
+    if (!lawsuit_id || !target_stage) {
+      return res.status(400).json({ error: 'lawsuit_id e target_stage obrigatórios' });
+    }
+    await client.updateLawsuit(Number(lawsuit_id), { stage: target_stage });
+    cache.invalidate('lawsuits');
+    res.json({ ok: true, lawsuit_id, target_stage });
   } catch (err) {
     next(err);
   }

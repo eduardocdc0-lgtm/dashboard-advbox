@@ -1256,6 +1256,59 @@
     .ctrl-cobrar-btn:hover { background:var(--accent-bg); }
     .ctrl-sem-resp { color:var(--text-3);font-size:var(--text-sm); }
 
+    /* ── CONTROLLER KANBAN ── */
+    .ctrl-kb-board { display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;align-items:flex-start; }
+    .ctrl-kb-board::-webkit-scrollbar { height:6px; }
+    .ctrl-kb-board::-webkit-scrollbar-track { background:#f0f0f0;border-radius:4px; }
+    .ctrl-kb-board::-webkit-scrollbar-thumb { background:#ccc;border-radius:4px; }
+    .ctrl-kb-col {
+      width:260px;min-width:260px;border-radius:var(--radius-lg);border:1px solid var(--border);
+      background:var(--surface-2);display:flex;flex-direction:column;
+      max-height:calc(100vh - 260px);transition:border-color .15s,box-shadow .15s;
+    }
+    .ctrl-kb-col.drag-over { border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg); }
+    .ctrl-kb-col-header {
+      padding:14px 14px 10px;background:var(--bg);
+      border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+      border-bottom:1px solid var(--border);flex-shrink:0;
+    }
+    .ctrl-kb-col-label { font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:2px; }
+    .ctrl-kb-col-title { font-size:var(--text-md);font-weight:700;color:var(--text);line-height:1.2; }
+    .ctrl-kb-col-meta { font-size:var(--text-sm);color:var(--text-3);margin-top:3px; }
+    .ctrl-kb-col-count { font-family:'DM Serif Display',serif;font-size:28px;color:var(--accent);line-height:1;margin-top:6px; }
+    .ctrl-kb-col-sla-warn { font-size:var(--text-sm);color:var(--danger);font-weight:600;margin-top:2px; }
+    .ctrl-kb-col--urgent { border-top:3px solid var(--danger); }
+    .ctrl-kb-col--warn   { border-top:3px solid var(--warning); }
+    .ctrl-kb-col-body {
+      overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;flex:1;
+    }
+    .ctrl-kb-col-body::-webkit-scrollbar { width:4px; }
+    .ctrl-kb-col-body::-webkit-scrollbar-thumb { background:#ddd;border-radius:4px; }
+    .ctrl-kb-card {
+      background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
+      padding:10px 12px;cursor:grab;transition:box-shadow .15s,border-color .15s,opacity .15s;
+      user-select:none;
+    }
+    .ctrl-kb-card:active { cursor:grabbing; }
+    .ctrl-kb-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.09);border-color:#b8b8b8; }
+    .ctrl-kb-card.dragging { opacity:.35;pointer-events:none; }
+    .ctrl-kb-card--sla { border-left:3px solid var(--danger); }
+    .ctrl-kb-card-name { font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px; }
+    .ctrl-kb-card-name a { color:inherit;text-decoration:none; }
+    .ctrl-kb-card-name a:hover { color:var(--accent);text-decoration:underline; }
+    .ctrl-kb-card-tipo { font-size:var(--text-sm);color:var(--text-3);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .ctrl-kb-card-footer { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+    .ctrl-kb-dias { display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--hover);color:var(--text-2);font-variant-numeric:tabular-nums; }
+    .ctrl-kb-dias--crit { background:#fee2e2;color:var(--danger); }
+    .ctrl-kb-resp { font-size:10.5px;color:var(--text-3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .ctrl-kb-empty { padding:28px 12px;text-align:center;color:var(--text-3);font-size:var(--text-sm); }
+    .ctrl-kb-more  { padding:6px 8px;text-align:center;font-size:11px;color:var(--text-3);font-style:italic;border-top:1px solid var(--border);flex-shrink:0; }
+    /* Toggle Lista/Kanban */
+    .ctrl-view-toggle { display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden; }
+    .ctrl-view-btn { padding:7px 14px;background:var(--bg);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s; }
+    .ctrl-view-btn.active { background:var(--text);color:#fff; }
+    .ctrl-view-btn:hover:not(.active) { background:var(--hover);color:var(--text); }
+
     /* ── CANAIS / KANBAN ── */
     .kanban-toolbar {
       display: flex;
@@ -3188,15 +3241,19 @@
           <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🎛️ Controller — Esteira</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="ctrlMeta">Carregando...</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="controllerLoad(true)" style="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;font-size:13px;">🔄 Recarregar</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="ctrl-view-toggle">
+            <button class="ctrl-view-btn" id="ctrlBtnKanban" onclick="ctrlSetView('kanban')">⊞ Kanban</button>
+            <button class="ctrl-view-btn" id="ctrlBtnList"   onclick="ctrlSetView('list')">☰ Lista</button>
+          </div>
+          <button onclick="controllerLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
         </div>
       </div>
 
       <div id="ctrlCards" class="ctrl-cards-row"></div>
 
       <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-        <input id="ctrlBusca" placeholder="🔎 Filtrar por cliente, CPF, lawsuit, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:360px;font-size:14px;">
+        <input id="ctrlBusca" placeholder="🔎 Filtrar por cliente, CPF, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:360px;font-size:14px;font-family:'DM Sans',sans-serif;">
         <div id="ctrlBulkBar" style="display:none;align-items:center;gap:10px;padding:8px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;">
           <span style="font-weight:600;color:#3730a3;font-size:13px;"><span id="ctrlBulkCount">0</span> selecionado(s)</span>
           <button onclick="controllerCobrarSelecionados()" id="ctrlBulkBtn" style="padding:6px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📢 Cobrar selecionados</button>
@@ -10292,6 +10349,38 @@
 
     // ── CONTROLLER (esteira) ─────────────────────────────────────────────────
     let CTRL_DATA = null;
+    let ctrlViewMode = 'kanban'; // padrão: kanban
+
+    // Ordem das colunas no Kanban (pipeline da triagem ao acompanhamento)
+    const CTRL_KB_ORDER = [
+      'sem_laudo_prevdoc',    // 1. Triagem — falta laudo
+      'dar_entrada',          // 2. Para dar entrada ADM
+      'protocolado_adm_velho',// 3. Protocolado ADM (aguardando INSS)
+      'reprotocolar',         // 4. Re-protocolar (cancelado)
+      'peticao_inicial',      // 5. Elaborar petição inicial (judicial)
+      'com_prazo',            // 6. Com prazo (judicial urgente)
+    ];
+
+    // Stage alvo ao soltar um card em cada coluna
+    const CTRL_KB_TARGET_STAGE = {
+      sem_laudo_prevdoc:     'FALTA LAUDO - FAZER PREVDOC',
+      dar_entrada:           'PARA DAR ENTRADA',
+      protocolado_adm_velho: 'PROTOCOLADO ADM',
+      reprotocolar:          'CANCELADO REQUERIMENTO',
+      peticao_inicial:       'ELABORAR PETIÇÃO INICIAL',
+      com_prazo:             'COM PRAZO',
+    };
+
+    function ctrlSetView(mode) {
+      ctrlViewMode = mode;
+      document.getElementById('ctrlBtnKanban').classList.toggle('active', mode === 'kanban');
+      document.getElementById('ctrlBtnList').classList.toggle('active', mode === 'list');
+      // Bulk bar só faz sentido na lista (tem checkboxes)
+      if (mode === 'kanban') {
+        document.getElementById('ctrlBulkBar').style.display = 'none';
+      }
+      controllerRender();
+    }
 
     async function controllerLoad(force = false) {
       const meta = document.getElementById('ctrlMeta');
@@ -10300,6 +10389,11 @@
       meta.textContent = 'Carregando...';
       cards.innerHTML = '';
       sections.innerHTML = '';
+      // Garante estado visual inicial do toggle
+      const btnK = document.getElementById('ctrlBtnKanban');
+      const btnL = document.getElementById('ctrlBtnList');
+      if (btnK) { btnK.classList.toggle('active', ctrlViewMode === 'kanban'); }
+      if (btnL) { btnL.classList.toggle('active', ctrlViewMode === 'list'); }
       try {
         const url = '/api/controller/overview' + (force ? '?force=1' : '');
         const r = await fetch(url, { credentials: 'same-origin' });
@@ -10314,12 +10408,14 @@
     function controllerRender() {
       const d = CTRL_DATA;
       if (!d) return;
-      const meta = document.getElementById('ctrlMeta');
-      meta.textContent = `${d.totalNoController} processos pendentes de ação · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
 
+      document.getElementById('ctrlMeta').textContent =
+        `${d.totalNoController} processos pendentes · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
+
+      // Cards de resumo no topo (linkam para a seção/coluna)
       const cards = document.getElementById('ctrlCards');
       cards.innerHTML = d.categorias.map(c => `
-        <a href="#ctrl-${c.id}" class="ctrl-card${c.estourados ? ' ctrl-card--sla' : ''}">
+        <a href="#ctrl-kb-col-${c.id}" class="ctrl-card${c.estourados ? ' ctrl-card--sla' : ''}" onclick="if(ctrlViewMode==='list')this.href='#ctrl-${c.id}'">
           <span class="ctrl-card__resp">${auuEscapeHtml(c.responsavel || 'sem resp.')}</span>
           <strong class="ctrl-card__num">${c.total}</strong>
           <span class="ctrl-card__titulo">${auuEscapeHtml(c.titulo)}</span>
@@ -10330,7 +10426,78 @@
       `).join('');
 
       const sections = document.getElementById('ctrlSections');
-      sections.innerHTML = d.categorias.map(c => {
+      if (ctrlViewMode === 'kanban') {
+        ctrlKanbanRender(sections, d);
+      } else {
+        ctrlListRender(sections, d);
+      }
+    }
+
+    // ── Vista: Kanban ─────────────────────────────────────────────────────────
+    function ctrlKanbanRender(container, d) {
+      const catMap = new Map(d.categorias.map(c => [c.id, c]));
+      const cols = CTRL_KB_ORDER.map(id => catMap.get(id)).filter(Boolean);
+      container.innerHTML = `<div class="ctrl-kb-board" id="ctrlKbBoard">${
+        cols.map(c => {
+          const urgente = c.estourados && c.estourados === c.total;
+          const colMod = urgente ? ' ctrl-kb-col--urgent' : (c.estourados ? ' ctrl-kb-col--warn' : '');
+          return `
+          <div class="ctrl-kb-col${colMod}" id="ctrl-kb-col-${c.id}" data-cat="${c.id}"
+               ondragover="ctrlKbDragOver(event)"
+               ondragleave="ctrlKbDragLeave(event)"
+               ondrop="ctrlKbDrop(event)">
+            <div class="ctrl-kb-col-header">
+              <div class="ctrl-kb-col-label">${auuEscapeHtml(c.responsavel || '—')} · SLA ${c.slaDias}d</div>
+              <div class="ctrl-kb-col-title">${auuEscapeHtml(c.titulo)}</div>
+              <div class="ctrl-kb-col-count" id="ctrl-kb-cnt-${c.id}">${c.total}</div>
+              ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠️ ${c.estourados} fora do SLA</div>` : ''}
+            </div>
+            <div class="ctrl-kb-col-body" id="ctrl-kb-body-${c.id}">${
+              c.processos.length === 0
+                ? `<div class="ctrl-kb-empty">Nenhum processo 🎉</div>`
+                : c.processos.slice(0, 60).map(p => ctrlKbCardHtml(p, c.id)).join('')
+            }${c.processos.length > 60 ? `</div><div class="ctrl-kb-more">+${c.processos.length - 60} a mais · use Lista para ver todos` : ''}</div>
+          </div>`;
+        }).join('')
+      }</div>`;
+    }
+
+    function ctrlKbCardHtml(p, catId) {
+      const slaClass = p.estourouSla ? ' ctrl-kb-card--sla' : '';
+      const diasClass = p.estourouSla ? ' ctrl-kb-dias--crit' : '';
+      const safeResp = auuEscapeHtml(p.responsavel_advbox || '');
+      const safeStage = (p.stage || '').replace(/"/g, '&quot;');
+      return `<div class="ctrl-kb-card${slaClass}"
+           draggable="true"
+           data-lawsuit="${p.lawsuit_id}"
+           data-user="${p.responsible_id || ''}"
+           data-cat="${catId}"
+           data-resp="${safeResp}"
+           data-stage="${safeStage}"
+           data-dias="${p.diasParado}"
+           ondragstart="ctrlKbDragStart(event)"
+           ondragend="ctrlKbDragEnd(event)">
+        <div class="ctrl-kb-card-name">
+          <a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="advbox" rel="noopener">${auuEscapeHtml(p.cliente || '(s/cliente)')}</a>
+        </div>
+        <div class="ctrl-kb-card-tipo">${auuEscapeHtml(p.tipo || '')}${p.cpf ? ' · ' + auuEscapeHtml(p.cpf) : ''}</div>
+        <div class="ctrl-kb-card-footer">
+          <span class="ctrl-kb-dias${diasClass}">${p.diasParado}d</span>
+          ${safeResp ? `<span class="ctrl-kb-resp">${safeResp}</span>` : ''}
+          ${p.responsible_id
+            ? `<button class="ctrl-cobrar-btn"
+                 data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}"
+                 data-cat="${catId}" data-resp="${safeResp}"
+                 data-stage="${safeStage}" data-dias="${p.diasParado}"
+                 onclick="event.stopPropagation();controllerCobrar(this)">📢</button>`
+            : ''}
+        </div>
+      </div>`;
+    }
+
+    // ── Vista: Lista ──────────────────────────────────────────────────────────
+    function ctrlListRender(container, d) {
+      container.innerHTML = d.categorias.map(c => {
         const headerMod = c.total === 0 ? ' ctrl-section__header--empty' : (c.estourados ? ' ctrl-section__header--sla' : '');
         return `
         <section id="ctrl-${c.id}" class="ctrl-section">
@@ -10347,48 +10514,130 @@
           ${c.total === 0
             ? `<div class="ctrl-section__empty">Nenhum processo nessa categoria 🎉</div>`
             : `<table class="ctrl-table">
-            <thead>
-              <tr>
-                <th class="ctrl-th-center" style="width:32px;"><input type="checkbox" onchange="controllerToggleCategoria(this, '${c.id}')" title="Selecionar todos visíveis"></th>
-                <th>Cliente</th>
-                <th>CPF</th>
-                <th>Tipo</th>
-                <th>Fase</th>
-                <th class="ctrl-th-right">Dias parado</th>
-                <th>Responsável AdvBox</th>
-                <th>Notas</th>
-                <th class="ctrl-th-center">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${c.processos.map(p => `
-                <tr class="ctrl-row" data-lawsuit="${p.lawsuit_id}">
-                  <td class="ctrl-th-center">${p.responsible_id ? `<input type="checkbox" class="ctrl-chk" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox || '')}" data-stage="${(p.stage || '').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onchange="controllerUpdateBulkBar()">` : ''}</td>
-                  <td class="ctrl-cell-nome"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="advbox" rel="noopener">${auuEscapeHtml(p.cliente || '(s/cliente)')}</a></td>
-                  <td class="ctrl-cell-sec">${auuEscapeHtml(p.cpf || '')}</td>
-                  <td class="ctrl-cell-sec">${auuEscapeHtml(p.tipo || '')}</td>
-                  <td class="ctrl-cell-sec">${auuEscapeHtml(p.stage || '')}</td>
-                  <td class="ctrl-cell-dias${p.estourouSla ? ' ctrl-cell-dias--critico' : ''}">${p.diasParado}d</td>
-                  <td class="ctrl-cell-sec">${auuEscapeHtml(p.responsavel_advbox || '—')}</td>
-                  <td class="ctrl-cell-notes">${auuEscapeHtml((p.notes || '').slice(0, 200))}</td>
-                  <td class="ctrl-cell-acao">
-                    ${p.responsible_id
-                      ? `<button class="ctrl-cobrar-btn" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox || '')}" data-stage="${(p.stage || '').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onclick="controllerCobrar(this)">📢 Cobrar</button>`
-                      : '<span class="ctrl-sem-resp">sem resp.</span>'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>`}
+            <thead><tr>
+              <th class="ctrl-th-center" style="width:32px;"><input type="checkbox" onchange="controllerToggleCategoria(this,'${c.id}')" title="Selecionar todos visíveis"></th>
+              <th>Cliente</th><th>CPF</th><th>Tipo</th><th>Fase</th>
+              <th class="ctrl-th-right">Dias parado</th>
+              <th>Responsável AdvBox</th><th>Notas</th>
+              <th class="ctrl-th-center">Ação</th>
+            </tr></thead>
+            <tbody>${c.processos.map(p => `
+              <tr class="ctrl-row" data-lawsuit="${p.lawsuit_id}">
+                <td class="ctrl-th-center">${p.responsible_id ? `<input type="checkbox" class="ctrl-chk" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox||'')}" data-stage="${(p.stage||'').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onchange="controllerUpdateBulkBar()">` : ''}</td>
+                <td class="ctrl-cell-nome"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="advbox" rel="noopener">${auuEscapeHtml(p.cliente||'(s/cliente)')}</a></td>
+                <td class="ctrl-cell-sec">${auuEscapeHtml(p.cpf||'')}</td>
+                <td class="ctrl-cell-sec">${auuEscapeHtml(p.tipo||'')}</td>
+                <td class="ctrl-cell-sec">${auuEscapeHtml(p.stage||'')}</td>
+                <td class="ctrl-cell-dias${p.estourouSla?' ctrl-cell-dias--critico':''}">${p.diasParado}d</td>
+                <td class="ctrl-cell-sec">${auuEscapeHtml(p.responsavel_advbox||'—')}</td>
+                <td class="ctrl-cell-notes">${auuEscapeHtml((p.notes||'').slice(0,200))}</td>
+                <td class="ctrl-cell-acao">
+                  ${p.responsible_id
+                    ? `<button class="ctrl-cobrar-btn" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox||'')}" data-stage="${(p.stage||'').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onclick="controllerCobrar(this)">📢 Cobrar</button>`
+                    : '<span class="ctrl-sem-resp">sem resp.</span>'}
+                </td>
+              </tr>`).join('')}
+            </tbody></table>`}
         </section>`;
       }).join('');
     }
 
     function controllerFiltrar() {
       const q = (document.getElementById('ctrlBusca').value || '').toLowerCase().trim();
-      document.querySelectorAll('.ctrl-row').forEach(tr => {
-        const txt = tr.textContent.toLowerCase();
-        tr.style.display = !q || txt.includes(q) ? '' : 'none';
+      if (ctrlViewMode === 'list') {
+        document.querySelectorAll('.ctrl-row').forEach(tr => {
+          tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+      } else {
+        document.querySelectorAll('.ctrl-kb-card').forEach(card => {
+          card.style.display = !q || card.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+      }
+    }
+
+    // ── Drag and Drop ─────────────────────────────────────────────────────────
+    let _ctrlDragging = null;
+
+    function ctrlKbDragStart(ev) {
+      _ctrlDragging = ev.currentTarget;
+      ev.currentTarget.classList.add('dragging');
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', ev.currentTarget.dataset.lawsuit);
+    }
+
+    function ctrlKbDragEnd(ev) {
+      if (_ctrlDragging) _ctrlDragging.classList.remove('dragging');
+      document.querySelectorAll('.ctrl-kb-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+    }
+
+    function ctrlKbDragOver(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const col = ev.currentTarget.closest('.ctrl-kb-col');
+      if (col) col.classList.add('drag-over');
+    }
+
+    function ctrlKbDragLeave(ev) {
+      const col = ev.currentTarget.closest('.ctrl-kb-col');
+      if (col && !col.contains(ev.relatedTarget)) col.classList.remove('drag-over');
+    }
+
+    async function ctrlKbDrop(ev) {
+      ev.preventDefault();
+      const col = ev.currentTarget.closest('.ctrl-kb-col');
+      if (col) col.classList.remove('drag-over');
+
+      const card = _ctrlDragging;
+      _ctrlDragging = null;
+      if (!card) return;
+      card.classList.remove('dragging');
+
+      const fromCat = card.dataset.cat;
+      const toCat   = col ? col.dataset.cat : null;
+      if (!toCat || fromCat === toCat) return;
+
+      const targetStage = CTRL_KB_TARGET_STAGE[toCat];
+      if (!targetStage) return;
+
+      const lawsuitId = card.dataset.lawsuit;
+
+      // Atualização otimista: move o card visualmente já
+      const toBody = document.getElementById('ctrl-kb-body-' + toCat);
+      if (!toBody) return;
+      const emptyEl = toBody.querySelector('.ctrl-kb-empty');
+      if (emptyEl) emptyEl.remove();
+      card.dataset.cat = toCat;
+      toBody.insertBefore(card, toBody.firstChild);
+      _ctrlUpdateKbCounts(fromCat, toCat);
+
+      try {
+        const r = await fetch('/api/controller/move-stage', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lawsuit_id: Number(lawsuitId), from_cat: fromCat, to_cat: toCat, target_stage: targetStage }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          ctrlToast('Erro ao mover: ' + (data.error || 'HTTP ' + r.status), 'erro');
+          // Reverte
+          const fromBody = document.getElementById('ctrl-kb-body-' + fromCat);
+          if (fromBody) { card.dataset.cat = fromCat; fromBody.insertBefore(card, fromBody.firstChild); }
+          _ctrlUpdateKbCounts(toCat, fromCat);
+        } else {
+          card.dataset.stage = targetStage;
+          ctrlToast(`✓ Movido para "${targetStage}"`, 'ok');
+        }
+      } catch (e) {
+        ctrlToast('Erro de rede: ' + e.message, 'erro');
+      }
+    }
+
+    function _ctrlUpdateKbCounts(fromCat, toCat) {
+      [fromCat, toCat].forEach(id => {
+        const body = document.getElementById('ctrl-kb-body-' + id);
+        const cnt  = document.getElementById('ctrl-kb-cnt-' + id);
+        if (body && cnt) cnt.textContent = body.querySelectorAll('.ctrl-kb-card').length;
       });
     }
 
