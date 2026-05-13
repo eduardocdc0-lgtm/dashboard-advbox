@@ -4396,7 +4396,7 @@
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             ${hora ? `<span class="hoje-task-hora">${hora}</span>` : ''}
-            ${link ? `<a href="${link}" target="_blank" class="advbox-link" style="font-size:12px;">↗</a>` : ''}
+            ${link ? `<a href="${link}" target="advbox" rel="noopener" class="advbox-link" style="font-size:12px;">↗</a>` : ''}
           </div>
         </div>`;
       };
@@ -4854,7 +4854,7 @@
           <td style="text-align:center;font-weight:${l.diasParado !== null && l.diasParado > 30 ? '700' : '400'};color:${l.sev === 'crit' ? '#b02020' : l.sev === 'warn' ? '#856404' : '#333'};">${dias}</td>
           <td style="font-size:12px;color:#555;">${l.responsible || '—'}</td>
           <td style="text-align:center;">${sevLabel[l.sev] || ''}</td>
-          <td><a href="${link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
+          <td><a href="${link}" target="advbox" rel="noopener" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
         </tr>`;
       }).join('');
 
@@ -5104,7 +5104,7 @@
           <td><a class="cell-link" href="${link}" target="_blank">${l.type || '—'}</a></td>
           <td><a class="cell-link" href="${link}" target="_blank">${l.stage || '—'}</a></td>
           <td><a class="cell-link" href="${link}" target="_blank">${dias}d</a></td>
-          <td><a href="${link}" target="_blank" class="advbox-link">↗</a></td>
+          <td><a href="${link}" target="advbox" rel="noopener" class="advbox-link">↗</a></td>
         </tr>`;
       }).join('');
       document.getElementById('prodDetailContent').innerHTML = list.length
@@ -5209,7 +5209,7 @@
         const cliente = t.lawsuit?.customers?.[0]?.name || '—';
         const dt = t.completedAt ? t.completedAt.substring(0, 10) : '—';
         const c = (v) => href ? `<a class="cell-link" href="${href}" target="_blank">${v}</a>` : v;
-        const linkCell = href ? `<a href="${href}" target="_blank" class="advbox-link">↗</a>` : '—';
+        const linkCell = href ? `<a href="${href}" target="advbox" rel="noopener" class="advbox-link">↗</a>` : '—';
         return `<tr class="${rowClass}">
           <td>${c(t.user)}</td>
           <td>${c(dt)}</td>
@@ -5373,7 +5373,7 @@
           <td style="font-size:12px;">${i.expectedZone ? (AUDR_ZONE_LABEL_FE[i.expectedZone]||i.expectedZone) : '<span style="color:#aaa">—</span>'}</td>
           <td style="font-size:12px;">${i.expectedRespLabel || '<span style="color:#aaa">—</span>'}</td>
           <td style="text-align:center;">${statusIcon}</td>
-          <td><a href="${i.link}" target="_blank" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
+          <td><a href="${i.link}" target="advbox" rel="noopener" class="advbox-link" onclick="event.stopPropagation()">↗</a></td>
         </tr>`;
       }).join('');
 
@@ -5909,7 +5909,7 @@
             </div>
             <div class="audit-alert-actions">
               <button class="audit-btn-cobrar" onclick="auditCopiarMsg(this,decodeURIComponent('${msgEnc}'))">📋 Cobrar Cau</button>
-              <a href="${c.linkAdvBox}" target="_blank" class="audit-btn-advbox">↗ Abrir no AdvBox</a>
+              <a href="${c.linkAdvBox}" target="advbox" rel="noopener" class="audit-btn-advbox">↗ Abrir no AdvBox</a>
             </div>
           </div>`;
         }).join('');
@@ -6923,7 +6923,7 @@
           ? formatDate(t.date_payment)
           : (t.date_due ? 'Venc. ' + formatDate(t.date_due) : '—');
         const link = t.lawsuit_id
-          ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 4px;">↗</a>` : '';
+          ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="advbox" rel="noopener" style="font-size:10px;padding:1px 4px;">↗</a>` : '';
         // Checkbox de seleção pra cobrança ASAAS em inadimplentes E pendentes
         // (pendentes = adiantar cobrança antes de vencer).
         const selectable = (st === 'inadimplente' || st === 'pendente') && isInc && valor > 0;
@@ -7251,7 +7251,7 @@
         ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : null;
       col.innerHTML = items.map(r => {
-        const href  = r.id ? `href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener"` : '';
+        const href  = r.id ? `href="https://app.advbox.com.br/lawsuits/${r.id}" target="advbox" rel="noopener"` : '';
         const link  = r.id ? `<a class="reg-link" ${href} style="font-size:10px;padding:3px 8px;">Ver ↗</a>` : '';
         const tag   = showCampanha && r.campanha
           ? `<span class="kanban-tag" title="${r.campanha}">${r.campanha}</span>` : '';
@@ -7328,7 +7328,7 @@
         const fechadoLabel = r.fechadoPor ? ` · Fechado por ${r.fechadoPor}` : (r.responsavel ? ` · ${r.responsavel}` : '');
         const tipoLabel = r.tipo ? ` · ${r.tipo}` : '';
         const link = r.id
-          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener">Ver processo ↗</a>`
+          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="advbox" rel="noopener">Ver processo ↗</a>`
           : '';
         return `
           <div class="reg-item">
@@ -7663,7 +7663,7 @@
       document.getElementById('distCheckAll').checked = false;
       tbody.innerHTML = rows.map(r => {
         const link = r.id
-          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="_blank" rel="noopener" style="font-size:10px;padding:3px 8px;">Ver ↗</a>`
+          ? `<a class="reg-link" href="https://app.advbox.com.br/lawsuits/${r.id}" target="advbox" rel="noopener" style="font-size:10px;padding:3px 8px;">Ver ↗</a>`
           : '';
         return `
           <tr>
@@ -7801,7 +7801,7 @@
         const resp    = l.responsible || '—';
         const valor   = Number(l.fees_money || 0);
         const c       = v => href ? `<a class="cell-link" href="${href}" target="_blank">${v}</a>` : v;
-        const link    = href ? `<a href="${href}" target="_blank" class="advbox-link">↗</a>` : '';
+        const link    = href ? `<a href="${href}" target="advbox" rel="noopener" class="advbox-link">↗</a>` : '';
         return `<tr class="${href ? 'clickable-row' : ''}">
           <td style="max-width:220px;white-space:normal">${c(cliente)}</td>
           <td>${c(etapa)}</td>
@@ -8634,7 +8634,7 @@
               <b>Fases válidas para ${i.category==='ANALISE'?'EM ANÁLISE':i.category==='EXIGENCIA'?'EM EXIGÊNCIA':'CONCLUÍDO'}:</b><br>
               ${i.fasesSugeridas}
             </div>
-            ${i.advbox?.link ? `<div style="margin-top:7px;"><a href="${i.advbox.link}" target="_blank" style="font-size:12px;color:#1a73e8;">Abrir no AdvBox ↗</a></div>` : ''}
+            ${i.advbox?.link ? `<div style="margin-top:7px;"><a href="${i.advbox.link}" target="advbox" rel="noopener" style="font-size:12px;color:#1a73e8;">Abrir no AdvBox ↗</a></div>` : ''}
           </div>`).join('');
 
       // Não encontrados
@@ -8848,7 +8848,7 @@
           const typeLabel = (typeof finCatLabel === 'function') ? finCatLabel(it.type) : it.type;
           const typeStr   = it.installment ? `${typeLabel} <span style="color:#aaa;font-size:10px;">${it.installment}</span>` : typeLabel;
           const procLink  = it.lawsuit_id
-            ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuit_id}" target="_blank" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>`
+            ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuit_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>`
             : (it.process ? `<span style="font-size:11px;">${it.process}</span>` : '—');
           const respShort = (it.responsible || '').split(' ')[0];
           rows.push(`<tr class="${statusClass}">
@@ -9185,7 +9185,7 @@
       document.getElementById('petDetailCount').textContent = `— ${items.length} registro${items.length !== 1 ? 's' : ''}`;
       document.getElementById('petDetailTbody').innerHTML = items.length ? items.map(it => {
         const nome    = it.lawsuit_name || (it.lawsuits_id ? `Processo #${it.lawsuits_id}` : '—');
-        const link    = it.lawsuits_id ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuits_id}" target="_blank" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>` : '';
+        const link    = it.lawsuits_id ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuits_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>` : '';
         const dt      = it.created_at ? it.created_at.slice(0, 16).replace('T',' ') : '—';
         const task    = it.task || '—';
         return `<tr>
@@ -9407,7 +9407,7 @@
           ${body}
           <div class="es-card-foot">
             <span>${it.responsible || ''}</span>
-            <a href="${it.advboxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">AdvBox ↗</a>
+            <a href="${it.advboxUrl}" target="advbox" rel="noopener" onclick="event.stopPropagation()">AdvBox ↗</a>
           </div>
         </div>`;
     }
@@ -9849,7 +9849,7 @@
       return items.map(it => `
         <div class="ov-row-item">
           <span title="${it.cliente}">${it.cliente}</span>
-          <a href="${it.advboxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>
+          <a href="${it.advboxUrl}" target="advbox" rel="noopener" onclick="event.stopPropagation()">↗</a>
         </div>`).join('');
     }
 
@@ -10307,7 +10307,7 @@
               ${c.processos.map(p => `
                 <tr class="ctrl-row" data-lawsuit="${p.lawsuit_id}">
                   <td class="ctrl-th-center">${p.responsible_id ? `<input type="checkbox" class="ctrl-chk" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox || '')}" data-stage="${(p.stage || '').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onchange="controllerUpdateBulkBar()">` : ''}</td>
-                  <td class="ctrl-cell-nome"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="_blank">${auuEscapeHtml(p.cliente || '(s/cliente)')}</a></td>
+                  <td class="ctrl-cell-nome"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="advbox" rel="noopener">${auuEscapeHtml(p.cliente || '(s/cliente)')}</a></td>
                   <td class="ctrl-cell-sec">${auuEscapeHtml(p.cpf || '')}</td>
                   <td class="ctrl-cell-sec">${auuEscapeHtml(p.tipo || '')}</td>
                   <td class="ctrl-cell-sec">${auuEscapeHtml(p.stage || '')}</td>
