@@ -6299,6 +6299,37 @@
 
     // ── Cobrança ASAAS em lote ─────────────────────────────────────────────
     const _finSelectedTxs = new Set();
+    // Mapa externalReference ('tx_<id>') → { payment_id, status, invoice_url, due_date }
+    // Preenchido por loadAsaasCharges() ao abrir o Financeiro. Usado pra mostrar
+    // badge "📨 Cobrança gerada" e alertar duplicação no modal.
+    const _asaasChargesByTx = new Map();
+
+    async function loadAsaasCharges() {
+      try {
+        // Pega até 100 cobranças PENDING/RECEIVED/OVERDUE/CONFIRMED — não inclui DELETED/REFUNDED
+        const r = await fetch('/api/asaas/charges?limit=100', { credentials: 'include' });
+        if (!r.ok) {
+          // 503 = ASAAS_TOKEN não configurado — silencia
+          _asaasChargesByTx.clear();
+          return;
+        }
+        const data = await r.json();
+        _asaasChargesByTx.clear();
+        (data.data || []).forEach(p => {
+          if (!p.externalReference) return;
+          if (p.status === 'DELETED' || p.status === 'REFUNDED' || p.status === 'CHARGEBACK_REQUESTED') return;
+          _asaasChargesByTx.set(p.externalReference, {
+            payment_id:  p.id,
+            status:      p.status,
+            invoice_url: p.invoiceUrl,
+            due_date:    p.dueDate,
+            value:       p.value,
+          });
+        });
+      } catch (err) {
+        console.warn('loadAsaasCharges falhou:', err);
+      }
+    }
 
     function _refreshCobrarBtn() {
       const btn = document.getElementById('btnCobrarLote');
@@ -6317,28 +6348,63 @@
       _refreshCobrarBtn();
     }
 
-    function selectAllInadimplentes() {
-      const inadList = (transData || []).filter(t => {
-        const due = t.date_due ? new Date(t.date_due) : null;
-        return t.entry_type === 'income' && Number(t.amount || 0) > 0
-          && !t.date_payment && due && due < new Date();
+    /** Marca/desmarca todos os cobráveis VISÍVEIS na coluna alvo ('inadimplente'|'pendente'). */
+    function selectAllCobraveis(colStatus) {
+      const list = (transData || []).filter(t => {
+        if (t.entry_type !== 'income' || !(Number(t.amount || 0) > 0)) return false;
+        if (t.date_payment) return false;
+        if (!t.date_due) return false;
+        const due = new Date(t.date_due);
+        const hoje = new Date();
+        if (colStatus === 'inadimplente') return due < hoje;
+        if (colStatus === 'pendente')     return due >= hoje;
+        return false;
       });
-      const todosMarcados = inadList.every(t => _finSelectedTxs.has(t.id));
-      if (todosMarcados) inadList.forEach(t => _finSelectedTxs.delete(t.id));
-      else inadList.forEach(t => _finSelectedTxs.add(t.id));
+      if (list.length === 0) return;
+      const todosMarcados = list.every(t => _finSelectedTxs.has(t.id));
+      if (todosMarcados) list.forEach(t => _finSelectedTxs.delete(t.id));
+      else list.forEach(t => _finSelectedTxs.add(t.id));
       renderFinanceiro();
       _refreshCobrarBtn();
     }
+    // Backward-compat: nome antigo continua funcionando
+    const selectAllInadimplentes = () => selectAllCobraveis('inadimplente');
 
     function abrirCobrancaLote() {
       if (_finSelectedTxs.size === 0) return;
       const items = (transData || []).filter(t => _finSelectedTxs.has(t.id));
+
+      // Detecta selecionados que já têm cobrança ativa no ASAAS — confirma com
+      // o usuário antes de prosseguir, pra evitar duplicidade acidental.
+      const jaCobrados = items.filter(t => _asaasChargesByTx.has('tx_' + t.id));
+      if (jaCobrados.length > 0) {
+        const lista = jaCobrados.map(t => {
+          const c = _asaasChargesByTx.get('tx_' + t.id);
+          return `  • ${t.name || '(sem nome)'} — cobrança ${c.status}, vence ${c.due_date}`;
+        }).join('\n');
+        const ok = confirm(
+          `⚠️ ${jaCobrados.length} cliente(s) selecionado(s) JÁ tem cobrança ativa no ASAAS:\n\n${lista}\n\n` +
+          `Gerar OUTRA cobrança vai criar boleto/PIX duplicado. Tens certeza?\n\n` +
+          `OK = criar mesmo assim\nCancelar = desmarcar os já cobrados`
+        );
+        if (!ok) {
+          jaCobrados.forEach(t => _finSelectedTxs.delete(t.id));
+          renderFinanceiro();
+          _refreshCobrarBtn();
+          return;
+        }
+      }
+
       const tbody = document.getElementById('cobrItemsBody');
       const hoje = new Date();
       const venc = new Date(hoje.getTime() + 5 * 86400000).toISOString().slice(0, 10); // +5d
-      tbody.innerHTML = items.map((t, i) => `
-        <tr data-tx-id="${t.id}">
-          <td style="padding:6px;font-size:12px;">${t.name || '—'}</td>
+      tbody.innerHTML = items.map((t, i) => {
+        const cobr = _asaasChargesByTx.get('tx_' + t.id);
+        const flagDup = cobr
+          ? `<div style="font-size:10px;color:#c75c00;font-weight:600;margin-top:2px;">⚠️ DUPLICADA (${cobr.status})</div>` : '';
+        return `
+        <tr data-tx-id="${t.id}" ${cobr ? 'style="background:#fff8ec;"' : ''}>
+          <td style="padding:6px;font-size:12px;">${t.name || '—'}${flagDup}</td>
           <td style="padding:6px;font-size:12px;">
             <input type="text" data-field="cpf" value="${t.identification || ''}" placeholder="000.000.000-00"
               style="width:130px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
@@ -6356,7 +6422,7 @@
               style="width:200px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
       document.getElementById('cobrCount').textContent = items.length;
       document.getElementById('cobrResultArea').style.display = 'none';
       document.getElementById('cobrFormArea').style.display = 'block';
@@ -6445,12 +6511,11 @@
         `${(data.success || []).length} criadas · ${(data.errors || []).length} erros · total ${data.total}`;
       document.getElementById('cobrFormArea').style.display = 'none';
       wrap.style.display = 'block';
-      // Limpa seleção após sucesso (mantém erros pra retry)
-      (data.success || []).forEach(s => {
-        const txId = String(s.idx); // idx é o índice do array enviado; vou achar pelo externalReference
-      });
       _finSelectedTxs.clear();
       _refreshCobrarBtn();
+      // Recarrega mapa de cobranças no ASAAS pra os cards mostrarem o badge
+      // "📨 Cobrança gerada" imediatamente, sem precisar reload manual.
+      loadAsaasCharges().then(() => renderFinanceiro());
     }
 
     function copyText(text) {
@@ -6643,16 +6708,23 @@
           : (t.date_due ? 'Venc. ' + formatDate(t.date_due) : '—');
         const link = t.lawsuit_id
           ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 4px;">↗</a>` : '';
-        // Checkbox de seleção pra cobrança ASAAS só nos inadimplentes (income vencido)
-        const selectable = st === 'inadimplente' && isInc && valor > 0;
+        // Checkbox de seleção pra cobrança ASAAS em inadimplentes E pendentes
+        // (pendentes = adiantar cobrança antes de vencer).
+        const selectable = (st === 'inadimplente' || st === 'pendente') && isInc && valor > 0;
         const checked = selectable && _finSelectedTxs.has(t.id) ? 'checked' : '';
         const chkbox = selectable
           ? `<input type="checkbox" class="kb-chk" data-tx-id="${t.id}" ${checked} onclick="event.stopPropagation();toggleTxSelection(${JSON.stringify(t.id)});" title="Selecionar pra cobrar" style="cursor:pointer;margin-right:4px;">`
+          : '';
+        // Badge "📨 Já cobrado" se essa transaction já gerou boleto ASAAS antes
+        const existingCharge = _asaasChargesByTx.get('tx_' + t.id);
+        const cobradoBadge = existingCharge
+          ? `<a href="${existingCharge.invoice_url || '#'}" target="_blank" rel="noopener" title="Cobrança ${existingCharge.status} criada em ${existingCharge.due_date} — clique pra abrir" style="margin-left:auto;font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:1px 6px;border-radius:8px;text-decoration:none;font-weight:600;">📨 Cobrança gerada</a>`
           : '';
         return `<div class="kb-card">
           <div class="kb-card-top">
             ${chkbox}<span class="fin-badge ${cls}">${badge}</span>
             <span class="kb-cat">${cat}</span>
+            ${cobradoBadge}
           </div>
           <div class="kb-client">${client}${link}</div>
           <div class="kb-card-bot">
@@ -6684,6 +6756,10 @@
               <span>Pendente</span>
               <span class="kb-col-total">${formatMoney(colTotal(pendentes))} · ${pendentes.length}</span>
             </div>
+            <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
+              <button onclick="selectAllCobraveis('pendente')" class="btn-link" style="font-size:10.5px;padding:3px 6px;" title="Marcar/desmarcar todos pendentes">☑ Todos</button>
+              <span style="font-size:10.5px;color:#888;">adiantar cobrança</span>
+            </div>
             <div class="kb-cards">${pendentes.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
           </div>
           <div class="kb-col">
@@ -6692,7 +6768,7 @@
               <span class="kb-col-total">${formatMoney(colTotal(inadimplentes))} · ${inadimplentes.length}</span>
             </div>
             <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
-              <button onclick="selectAllInadimplentes()" class="btn-link" style="font-size:10.5px;padding:3px 6px;" title="Marcar/desmarcar todos">☑ Todos</button>
+              <button onclick="selectAllCobraveis('inadimplente')" class="btn-link" style="font-size:10.5px;padding:3px 6px;" title="Marcar/desmarcar todos inadimplentes">☑ Todos</button>
               <button onclick="abrirCobrancaLote()" id="btnCobrarLote" disabled style="font-size:11px;padding:5px 10px;background:#2C7A4D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;opacity:.4;">
                 💰 Cobrar selecionados <span id="cobrarCount">(0)</span>
               </button>
@@ -6720,7 +6796,12 @@
         // Inicializa no mês atual
         const now = new Date();
         finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+
+        // Carrega cobranças ASAAS já existentes (silencioso se ASAAS_TOKEN faltar).
+        // Re-renderiza depois pra exibir badges "📨 Cobrança gerada".
+        await loadAsaasCharges();
         renderFinanceiro();
+
         loadInadimplencia(); // calcula o índice de inadimplência ao carregar
         loadPlacarSentencas(); // placar procedente / improcedente / parcial
 
