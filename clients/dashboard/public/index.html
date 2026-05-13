@@ -2121,6 +2121,7 @@
           <button class="nav-item tab admin-tab" onclick="showTab('auditresp', event)">Por responsável</button>
           <button class="nav-item tab admin-tab" onclick="showTab('inssConf', event)">Conferência INSS</button>
           <button class="nav-item tab" onclick="showTab('auditusage', event)">📊 Auditoria de uso</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('controller', event); controllerLoad();">🎛️ Controller</button>
         </div>
       </div>
 
@@ -3062,6 +3063,27 @@
 
     <!-- TOAST -->
     <div id="auuToast" style="display:none;position:fixed;bottom:24px;right:24px;background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);font-size:13px;z-index:9999;"></div>
+
+    <!-- ABA: CONTROLLER -->
+    <div id="controller" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🎛️ Controller — Esteira</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="ctrlMeta">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="controllerLoad(true)" style="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;font-size:13px;">🔄 Recarregar</button>
+        </div>
+      </div>
+
+      <div id="ctrlCards" style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;"></div>
+
+      <div style="margin-bottom:12px;">
+        <input id="ctrlBusca" placeholder="🔎 Filtrar por cliente, CPF, lawsuit, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:360px;font-size:14px;">
+      </div>
+
+      <div id="ctrlSections"></div>
+    </div>
 
         <!-- ABA 10: FLUXO -->
     <div id="fluxo" class="tab-content">
@@ -10145,6 +10167,88 @@
       }
     }
     // ── FIM AUDITORIA DE USO ─────────────────────────────────────────────────
+
+    // ── CONTROLLER (esteira) ─────────────────────────────────────────────────
+    let CTRL_DATA = null;
+
+    async function controllerLoad(force = false) {
+      const meta = document.getElementById('ctrlMeta');
+      const cards = document.getElementById('ctrlCards');
+      const sections = document.getElementById('ctrlSections');
+      meta.textContent = 'Carregando...';
+      cards.innerHTML = '';
+      sections.innerHTML = '';
+      try {
+        const url = '/api/controller/overview' + (force ? '?force=1' : '');
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        CTRL_DATA = await r.json();
+        controllerRender();
+      } catch (e) {
+        meta.textContent = 'Erro: ' + e.message;
+      }
+    }
+
+    function controllerRender() {
+      const d = CTRL_DATA;
+      if (!d) return;
+      const meta = document.getElementById('ctrlMeta');
+      meta.textContent = `${d.totalNoController} processos pendentes de ação · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
+
+      const cards = document.getElementById('ctrlCards');
+      cards.innerHTML = d.categorias.map(c => `
+        <a href="#ctrl-${c.id}" style="padding:14px 18px;border-radius:10px;min-width:170px;background:${c.estourados ? '#fef3c7' : '#f3f4f6'};text-decoration:none;color:#222;display:flex;flex-direction:column;gap:4px;border:1px solid ${c.estourados ? '#fbbf24' : '#e5e7eb'}">
+          <span style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.3px">${c.responsavel || 'sem resp.'}</span>
+          <strong style="font-size:28px;line-height:1;color:#1d4ed8">${c.total}</strong>
+          <span style="font-size:13px;font-weight:600">${c.titulo}</span>
+          ${c.estourados ? `<span style="font-size:11px;color:#92400e">⚠️ ${c.estourados} fora do SLA (${c.slaDias}d)</span>` : `<span style="font-size:11px;color:#999">SLA: ${c.slaDias} dias</span>`}
+        </a>
+      `).join('');
+
+      const sections = document.getElementById('ctrlSections');
+      sections.innerHTML = d.categorias.map(c => `
+        <section id="ctrl-${c.id}" style="margin-top:24px;border-left:4px solid ${c.estourados ? '#dc2626' : '#3b82f6'};padding-left:14px;">
+          <h3 style="margin:0 0 4px 0;font-size:17px;">${c.titulo} <span style="color:#999;font-weight:normal;font-size:14px">(${c.total})</span></h3>
+          <div style="color:#666;font-size:12px;margin-bottom:8px;">${c.descricao} · responsável: ${c.responsavel || '—'} · SLA ${c.slaDias} dias</div>
+          ${c.total === 0 ? '<div style="color:#999;font-style:italic;padding:8px 0;">Nenhum processo nessa categoria 🎉</div>' : `
+          <table style="border-collapse:collapse;width:100%;font-size:13px;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Cliente</th>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">CPF</th>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Tipo</th>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Fase</th>
+                <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Dias parado</th>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Responsável AdvBox</th>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${c.processos.map(p => `
+                <tr class="ctrl-row">
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="_blank" style="color:#1d4ed8;text-decoration:none;">${p.cliente || '(s/cliente)'}</a></td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.cpf || ''}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#666;">${p.tipo || ''}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.stage || ''}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:${p.estourouSla ? '#dc2626' : '#666'}">${p.diasParado}d</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.responsavel_advbox || '—'}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:11px;color:#666;max-width:340px;">${(p.notes || '').replace(/</g,'&lt;')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`}
+        </section>
+      `).join('');
+    }
+
+    function controllerFiltrar() {
+      const q = (document.getElementById('ctrlBusca').value || '').toLowerCase().trim();
+      document.querySelectorAll('.ctrl-row').forEach(tr => {
+        const txt = tr.textContent.toLowerCase();
+        tr.style.display = !q || txt.includes(q) ? '' : 'none';
+      });
+    }
+    // ── FIM CONTROLLER ───────────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->
