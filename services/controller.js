@@ -39,14 +39,6 @@ const CATEGORIAS = [
     slaDias: 5,
   },
   {
-    id: 'nao_distribuido',
-    titulo: '📥 Não distribuído',
-    descricao: 'Cliente analisado, falta atribuir advogado',
-    fases: ['ANALISADO E NÃO DISTRIBUÍDO', 'ANALISADO E NAO DISTRIBUIDO'],
-    responsavel: null,
-    slaDias: 3,
-  },
-  {
     id: 'peticao_inicial',
     titulo: '⚖️ Elaborar petição inicial',
     descricao: 'Caso judicial pronto, falta peticionar',
