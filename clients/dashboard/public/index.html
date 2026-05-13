@@ -4357,7 +4357,7 @@
       modal.innerHTML = `
         <div class="hoje-modal">
           <div class="hoje-modal-header">
-            <div class="hoje-modal-title">${userName}</div>
+            <div class="hoje-modal-title">${auuEscapeHtml(userName)}</div>
             <button class="dist-panel-close" onclick="document.getElementById('hojeModalBg').remove()">×</button>
           </div>
           <div class="hoje-modal-body">${body}</div>
@@ -4378,7 +4378,7 @@
         const at = new Date(metaRawData.fetchedAt);
         document.getElementById('metaUpdatedAt').textContent = 'Atualizado em ' + at.toLocaleString('pt-BR');
       } catch(e) {
-        document.getElementById('metaTbody').innerHTML = `<tr><td colspan="12" style="text-align:center;padding:32px;color:#c00;">Erro ao carregar dados do Meta Ads: ${e.message}</td></tr>`;
+        document.getElementById('metaTbody').innerHTML = `<tr><td colspan="12" style="text-align:center;padding:32px;color:#c00;">Erro ao carregar dados do Meta Ads: ${auuEscapeHtml(e.message)}</td></tr>`;
       }
     }
 
@@ -5606,7 +5606,7 @@
             ${cobHtml}
           </div>`;
       } catch (e) {
-        el.innerHTML = `<div class="audr-hist-empty">Erro ao carregar histórico: ${e.message}</div>`;
+        el.innerHTML = `<div class="audr-hist-empty">Erro ao carregar histórico: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -6324,7 +6324,7 @@
       } catch (e) {
         taxaEl.textContent = '—';
         estadoEl.textContent = 'erro';
-        topEl.innerHTML = `<div class="empty" style="padding:16px;font-size:12px;color:#b02020;">Erro: ${e.message}</div>`;
+        topEl.innerHTML = `<div class="empty" style="padding:16px;font-size:12px;color:#b02020;">Erro: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -7866,7 +7866,7 @@
         document.getElementById('leadsUpdatedAt').textContent =
           data.total + ' lead(s) · atualizado ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--danger);">Erro: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--danger);">Erro: ${auuEscapeHtml(e.message)}</td></tr>`;
       }
     }
 
@@ -8096,7 +8096,7 @@
 
         footer.textContent = `Última checagem: ${new Date(data.checked_at).toLocaleString('pt-BR')}`;
       } catch (e) {
-        jobsEl.innerHTML = `<div style="padding:14px;color:#B02020;">Erro: ${e.message}</div>`;
+        jobsEl.innerHTML = `<div style="padding:14px;color:#B02020;">Erro: ${auuEscapeHtml(e.message)}</div>`;
         secEl.innerHTML = '';
       }
     }
@@ -8127,7 +8127,7 @@
           </tr>`).join('')}</tbody>
         </table>`;
       } catch (e) {
-        el.innerHTML = `<div class="empty">Erro: ${e.message}</div>`;
+        el.innerHTML = `<div class="empty">Erro: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -8666,7 +8666,7 @@
           </div>`;
         }).join('');
       } catch(e) {
-        el.innerHTML = `<div style="color:#c0392b;font-size:13px;">Erro ao carregar histórico: ${e.message}</div>`;
+        el.innerHTML = `<div style="color:#c0392b;font-size:13px;">Erro ao carregar histórico: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -9171,7 +9171,7 @@
         populateEsteiraResp();
         renderEsteira();
       } catch (e) {
-        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro ao carregar esteira: ${e.message}</div>`;
+        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro ao carregar esteira: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -9434,7 +9434,7 @@
         _fcData = await r.json();
         renderFinCalendar();
       } catch (e) {
-        el.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro: ${e.message}</div>`;
+        el.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
@@ -9777,7 +9777,7 @@
         _ovData = await r.json();
         renderOverview();
       } catch (e) {
-        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro: ${e.message}</div>`;
+        board.innerHTML = `<div class="empty" style="padding:40px;color:var(--danger)">Erro: ${auuEscapeHtml(e.message)}</div>`;
       }
     }
 
