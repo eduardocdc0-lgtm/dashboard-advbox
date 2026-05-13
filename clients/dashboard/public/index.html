@@ -6630,12 +6630,19 @@
         return d && d.getMonth() + 1 === mm && d.getFullYear() === yyyy;
       };
       const competenceIsMonth = t => t.competence === finMesAtual;
+      // Fallback por date_due: lançamentos sem competência no mês mas com vencimento
+      // neste mês também aparecem no Kanban (evita sumir processo parcelado com
+      // competência de mês diferente do vencimento).
+      const dueInMonth = t => {
+        const d = _toDate(t.date_due);
+        return d && d.getMonth() + 1 === mm && d.getFullYear() === yyyy;
+      };
 
       // Regime de CAIXA:
-      // Receitas do mes = pagas em <mes> (entrou) OU competencia=<mes> e nao paga (a receber)
+      // Receitas do mes = pagas em <mes> (entrou) OU (competencia=<mes> OU vence em <mes>) e nao paga
       // Despesas do mes = pagas em <mes> (saiu)
       const income = transData.filter(t =>
-        t.entry_type === 'income' && (paidInMonth(t) || (competenceIsMonth(t) && !t.date_payment))
+        t.entry_type === 'income' && (paidInMonth(t) || (!t.date_payment && (competenceIsMonth(t) || dueInMonth(t))))
       );
       const expense = transData.filter(t =>
         t.entry_type === 'expense' && paidInMonth(t)
