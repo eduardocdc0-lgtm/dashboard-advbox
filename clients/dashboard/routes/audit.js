@@ -7,6 +7,7 @@ const { sendWhatsApp } = require('../../../services/chatguru-sender');
 const { runAudit } = require('../../../services/auditor');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
 const { config } = require('../../../config');
+const { dateInMes } = require('../../../services/date-utils');
 
 const router = Router();
 
@@ -84,15 +85,7 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
       // (Antes filtrava por t.competence === mes, gerando falsos críticos quando
       // a parcela tinha competência de outro mês mas foi paga/vence no mês alvo.)
       const [mm, yyyy] = mes.split('/').map(Number);
-      const matchesMes = (dateStr) => {
-        if (!dateStr) return false;
-        const s = String(dateStr);
-        let m, y;
-        if (/^\d{4}-\d{2}-\d{2}/.test(s))      { y = +s.slice(0,4); m = +s.slice(5,7); }
-        else if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) { const p = s.split('/'); m = +p[1]; y = +p[2]; }
-        else return false;
-        return m === mm && y === yyyy;
-      };
+      const matchesMes = (dateStr) => dateInMes(dateStr, mm, yyyy);
       const txDoMes = transactions.filter(t =>
         t.entry_type === 'income' && (matchesMes(t.date_payment) || matchesMes(t.date_due))
       );
@@ -228,15 +221,7 @@ router.post('/audit/cobrar-cau-whatsapp', requireAdmin, async (req, res, next) =
     const data = await cache.getOrFetch(cacheKey, async () => {
       const [lawsuits, transactions] = await Promise.all([fetchLawsuits(), fetchTransactions()]);
       const [mm, yyyy] = mes.split('/').map(Number);
-      const matchesMes = (s) => {
-        if (!s) return false;
-        const str = String(s);
-        let m, y;
-        if (/^\d{4}-\d{2}-\d{2}/.test(str))      { y = +str.slice(0,4); m = +str.slice(5,7); }
-        else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); m = +p[1]; y = +p[2]; }
-        else return false;
-        return m === mm && y === yyyy;
-      };
+      const matchesMes = (s) => dateInMes(s, mm, yyyy);
       const txDoMes = transactions.filter(t =>
         t.entry_type === 'income' && (matchesMes(t.date_payment) || matchesMes(t.date_due))
       );

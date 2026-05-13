@@ -15,6 +15,7 @@ const { requireAuth } = require('../../../middleware/auth');
 const { query: dbQuery } = require('../../../services/db');
 const { client } = require('../../../services/data');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
+const { dateInMes } = require('../../../services/date-utils');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
 const ADVBOX_UA   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -234,13 +235,7 @@ router.get('/audit/_debug/explain-critical', requireAuth, async (req, res) => {
   if (!law) return res.json({ error: 'lawsuit não encontrado' });
 
   const [mm, yyyy] = mes.split('/').map(Number);
-  const matchMes = s => {
-    if (!s) return false;
-    const str = String(s);
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return +str.slice(0,4) === yyyy && +str.slice(5,7) === mm;
-    if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); return +p[1] === mm && +p[2] === yyyy; }
-    return false;
-  };
+  const matchMes = s => dateInMes(s, mm, yyyy);
 
   // Transações vinculadas ao lawsuit (lógica primária)
   const direct = transactions.filter(t =>
@@ -380,13 +375,7 @@ router.get('/audit/_debug/inspect-financial', requireAuth, async (req, res) => {
   let doMesAlvo = null;
   if (mes) {
     const [mm, yyyy] = mes.split('/').map(Number);
-    const matchMes = s => {
-      if (!s) return false;
-      const str = String(s);
-      if (/^\d{4}-\d{2}-\d{2}/.test(str)) return +str.slice(0,4) === yyyy && +str.slice(5,7) === mm;
-      if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); return +p[1] === mm && +p[2] === yyyy; }
-      return false;
-    };
+    const matchMes = s => dateInMes(s, mm, yyyy);
     doMesAlvo = transactions.filter(t =>
       (matchMes(t.date_payment) || matchMes(t.date_due) || (t.competence === mes)) &&
       t.entry_type === 'income'

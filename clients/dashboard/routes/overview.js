@@ -3,6 +3,7 @@ const { requireAdmin } = require('../../../middleware/auth');
 const { fetchLawsuits, fetchTransactions, fetchAllPosts } = require('../../../services/data');
 const cache = require('../../../cache');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
+const { dateInMes } = require('../../../services/date-utils');
 
 const router = Router();
 
@@ -20,15 +21,6 @@ function pickClientName(customers) {
     && !((c.identification || '').match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)));
   if (real) return real.name;
   return (customers.find(c => c.name) || {}).name || null;
-}
-function dateInMes(s, mm, yyyy) {
-  if (!s) return false;
-  const str = String(s);
-  let m, y;
-  if (/^\d{4}-\d{2}-\d{2}/.test(str))      { y = +str.slice(0,4); m = +str.slice(5,7); }
-  else if (/^\d{2}\/\d{2}\/\d{4}/.test(str)) { const p = str.split('/'); m = +p[1]; y = +p[2]; }
-  else return false;
-  return m === mm && y === yyyy;
 }
 function buildLawsuitItem(l) {
   return {

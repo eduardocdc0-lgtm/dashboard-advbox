@@ -349,11 +349,16 @@ function auditarWorkflow(processos, tarefas, usuarios) {
  * Caches via services/data.js (cache embutido).
  */
 async function runAudit({ force = false } = {}) {
+  const withTimeout = (p, ms, label) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout ${label} (${ms}ms)`)), ms)),
+  ]);
+
   const [settings, clientesRaw, lawsuitsRaw, posts] = await Promise.all([
-    client.getSettings(),
-    fetchCustomers(force),
-    fetchLawsuits(force),
-    fetchAllPosts(),
+    withTimeout(client.getSettings(),         10_000, 'getSettings'),
+    withTimeout(fetchCustomers(force),        15_000, 'fetchCustomers'),
+    withTimeout(fetchLawsuits(force),         15_000, 'fetchLawsuits'),
+    withTimeout(fetchAllPosts(500,4,600,force), 30_000, 'fetchAllPosts'),
   ]);
 
   const usuarios = (settings && settings.users) || [];

@@ -25,7 +25,7 @@ async function fetchTransactions(force = false) {
   return cache.getOrFetch('transactions', () => client.getAllTransactions(), force);
 }
 
-async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 600) {
+async function fetchAllPosts(limitPerPage = 500, maxPages = 4, delayMs = 600, force = false) {
   const all = [];
   for (let page = 0; page < maxPages; page++) {
     const offset = page * limitPerPage;

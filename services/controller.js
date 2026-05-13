@@ -116,7 +116,7 @@ async function buildOverview({ force = false } = {}) {
     const cat = FASE_TO_CATEGORIA.get(stage);
     if (!cat) continue;
 
-    const diasParado = diasDesde(l.status_closure) ?? diasDesde(l.created_at) ?? 0;
+    const diasParado = diasDesde(l.status_closure) ?? diasDesde(l.created_at) ?? diasDesde(new Date().toISOString()) ?? 0;
     buckets.get(cat.id).push({
       lawsuit_id: l.id,
       stage: l.stage,
