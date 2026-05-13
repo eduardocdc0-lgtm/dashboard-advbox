@@ -2234,6 +2234,82 @@
           </article>
         </div>
       </section>
+
+      <!-- ── Placar de Sentenças (Visão Geral) ── -->
+      <section class="card" id="placarBlock" aria-labelledby="placarTitle" style="margin-top:14px;margin-bottom:14px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">Resultados</div>
+            <h2 id="placarTitle" style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Placar de Sentenças</h2>
+            <div id="placarSub" style="font-size:11.5px;color:#999;margin-top:2px;">Processos que viraram procedentes / improcedentes / parciais no período</div>
+          </div>
+          <div style="text-align:right;">
+            <div id="placarTotalAno" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;color:#999;">sentenças no ano</div>
+          </div>
+        </header>
+
+        <!-- 3 colunas: HOJE / MÊS / ANO -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+          <div class="placar-col" data-periodo="hoje" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Hoje</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+              <div>
+                <div id="placarHojeProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+              </div>
+              <div>
+                <div id="placarHojeImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+              </div>
+              <div>
+                <div id="placarHojeParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="placar-col" data-periodo="mes" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Mês</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+              <div>
+                <div id="placarMesProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+              </div>
+              <div>
+                <div id="placarMesImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+              </div>
+              <div>
+                <div id="placarMesParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="placar-col" data-periodo="ano" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
+            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Ano</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+              <div>
+                <div id="placarAnoProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+              </div>
+              <div>
+                <div id="placarAnoImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+              </div>
+              <div>
+                <div id="placarAnoParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="placarHint" style="margin-top:12px;font-size:10.5px;color:#999;line-height:1.4;">
+          ⚠️ Limitação: o AdvBox só guarda a data da fase <em>atual</em>. Se um processo saiu de "Procedente" pra outra fase, não aparece aqui.
+        </div>
+      </section>
     </div>
 
     <!-- ABA 2: PROCESSOS -->
@@ -2411,83 +2487,6 @@
           <div class="metric-value" id="finResultado">-</div>
         </div>
       </div>
-      <!-- ── Placar de Sentenças ── -->
-      <section class="card" id="placarBlock" aria-labelledby="placarTitle" style="margin-top:14px;margin-bottom:14px;">
-        <header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
-          <div>
-            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">Resultados</div>
-            <h2 id="placarTitle" style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Placar de Sentenças</h2>
-            <div id="placarSub" style="font-size:11.5px;color:#999;margin-top:2px;">Processos que viraram procedentes / improcedentes / parciais no período</div>
-          </div>
-          <div style="text-align:right;">
-            <div id="placarTotalAno" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
-            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;color:#999;">sentenças no ano</div>
-          </div>
-        </header>
-
-        <!-- 3 colunas: HOJE / MÊS / ANO -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
-          <div class="placar-col" data-periodo="hoje" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
-            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Hoje</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-              <div>
-                <div id="placarHojeProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
-              </div>
-              <div>
-                <div id="placarHojeImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
-              </div>
-              <div>
-                <div id="placarHojeParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="placar-col" data-periodo="mes" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
-            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Mês</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-              <div>
-                <div id="placarMesProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
-              </div>
-              <div>
-                <div id="placarMesImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
-              </div>
-              <div>
-                <div id="placarMesParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="placar-col" data-periodo="ano" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--bg-soft,#fafafa);">
-            <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Ano</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-              <div>
-                <div id="placarAnoProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
-              </div>
-              <div>
-                <div id="placarAnoImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
-              </div>
-              <div>
-                <div id="placarAnoParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="placarHint" style="margin-top:12px;font-size:10.5px;color:#999;line-height:1.4;">
-          ⚠️ Limitação: o AdvBox só guarda a data da fase <em>atual</em>. Se um processo saiu de "Procedente" pra outra fase, não aparece aqui.
-          Pra histórico completo, ative o snapshot diário.
-        </div>
-      </section>
-
       <!-- ── Índice de Inadimplência ── -->
       <section class="card" id="inadBlock" aria-labelledby="inadTitle" style="margin-top:14px;margin-bottom:14px;">
         <header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
