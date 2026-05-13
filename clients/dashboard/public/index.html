@@ -3078,8 +3078,13 @@
 
       <div id="ctrlCards" style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;"></div>
 
-      <div style="margin-bottom:12px;">
+      <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <input id="ctrlBusca" placeholder="🔎 Filtrar por cliente, CPF, lawsuit, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:360px;font-size:14px;">
+        <div id="ctrlBulkBar" style="display:none;align-items:center;gap:10px;padding:8px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;">
+          <span style="font-weight:600;color:#3730a3;font-size:13px;"><span id="ctrlBulkCount">0</span> selecionado(s)</span>
+          <button onclick="controllerCobrarSelecionados()" id="ctrlBulkBtn" style="padding:6px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📢 Cobrar selecionados</button>
+          <button onclick="controllerClearSelecao()" style="padding:6px 10px;background:white;color:#666;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">Limpar</button>
+        </div>
       </div>
 
       <div id="ctrlSections"></div>
@@ -10214,6 +10219,7 @@
           <table style="border-collapse:collapse;width:100%;font-size:13px;">
             <thead>
               <tr style="background:#f9fafb;">
+                <th style="text-align:center;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;width:30px;"><input type="checkbox" onchange="controllerToggleCategoria(this, '${c.id}')" title="Selecionar todos visíveis da categoria"></th>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Cliente</th>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">CPF</th>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Tipo</th>
@@ -10227,6 +10233,7 @@
             <tbody>
               ${c.processos.map(p => `
                 <tr class="ctrl-row" data-lawsuit="${p.lawsuit_id}">
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;text-align:center;">${p.responsible_id ? `<input type="checkbox" class="ctrl-chk" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${p.responsavel_advbox || ''}" data-stage="${(p.stage || '').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onchange="controllerUpdateBulkBar()">` : ''}</td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="_blank" style="color:#1d4ed8;text-decoration:none;">${p.cliente || '(s/cliente)'}</a></td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.cpf || ''}</td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#666;">${p.tipo || ''}</td>
@@ -10251,6 +10258,95 @@
         const txt = tr.textContent.toLowerCase();
         tr.style.display = !q || txt.includes(q) ? '' : 'none';
       });
+    }
+
+    function controllerToggleCategoria(checkbox, catId) {
+      const section = document.getElementById('ctrl-' + catId);
+      if (!section) return;
+      section.querySelectorAll('.ctrl-chk').forEach(chk => {
+        const tr = chk.closest('tr');
+        if (tr && tr.style.display === 'none') return; // só visíveis
+        chk.checked = checkbox.checked;
+      });
+      controllerUpdateBulkBar();
+    }
+
+    function controllerUpdateBulkBar() {
+      const n = document.querySelectorAll('.ctrl-chk:checked').length;
+      const bar = document.getElementById('ctrlBulkBar');
+      const count = document.getElementById('ctrlBulkCount');
+      count.textContent = n;
+      bar.style.display = n > 0 ? 'flex' : 'none';
+    }
+
+    function controllerClearSelecao() {
+      document.querySelectorAll('.ctrl-chk').forEach(c => c.checked = false);
+      document.querySelectorAll('thead input[type=checkbox]').forEach(c => c.checked = false);
+      controllerUpdateBulkBar();
+    }
+
+    async function controllerCobrarSelecionados() {
+      const chks = [...document.querySelectorAll('.ctrl-chk:checked')];
+      if (!chks.length) return;
+      if (!confirm(`Vai criar ${chks.length} task(s) no AdvBox. Cooldown de 60min por processo. Continuar?`)) return;
+
+      const btn = document.getElementById('ctrlBulkBtn');
+      btn.disabled = true;
+      const labelOriginal = btn.textContent;
+      btn.textContent = `⏳ Disparando ${chks.length}...`;
+
+      // Map cat id → categoria object (pra descrição)
+      const catMap = new Map((CTRL_DATA?.categorias || []).map(c => [c.id, c]));
+
+      const items = chks.map(chk => {
+        const cat = catMap.get(chk.dataset.cat);
+        const titulo = cat?.titulo || chk.dataset.cat;
+        return {
+          lawsuit_id: Number(chk.dataset.lawsuit),
+          user_id: Number(chk.dataset.user),
+          descricao: `${titulo} — fase "${chk.dataset.stage}" há ${chk.dataset.dias} dias`,
+          problema_id: `ctrl-${chk.dataset.cat}-${chk.dataset.lawsuit}`,
+          categoriaId: chk.dataset.cat,
+        };
+      });
+
+      try {
+        const r = await fetch('/api/controller/cobrar-lote', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          ctrlToast('Erro: ' + (data.error || 'HTTP ' + r.status), 'erro');
+          btn.disabled = false; btn.textContent = labelOriginal;
+          return;
+        }
+        // Marca visualmente as linhas
+        const byLaw = new Map((data.resultados || []).map(r => [String(r.lawsuit_id), r]));
+        chks.forEach(chk => {
+          const tr = chk.closest('tr');
+          const res = byLaw.get(chk.dataset.lawsuit);
+          if (!tr || !res) return;
+          if (res.ok) {
+            tr.style.background = '#dcfce7';
+            chk.checked = false;
+            chk.disabled = true;
+          } else if (res.status === 429) {
+            tr.style.background = '#fef3c7';
+          } else {
+            tr.style.background = '#fee2e2';
+            tr.title = res.error || '';
+          }
+        });
+        ctrlToast(`✓ ${data.sucesso} criadas · ${data.cooldown} em cooldown · ${data.erro} erro`, data.erro ? 'aviso' : 'ok');
+        btn.textContent = `Concluído (${data.sucesso}/${data.total})`;
+        setTimeout(() => { btn.disabled = false; btn.textContent = labelOriginal; controllerUpdateBulkBar(); }, 4000);
+      } catch (e) {
+        ctrlToast('Erro de rede: ' + e.message, 'erro');
+        btn.disabled = false; btn.textContent = labelOriginal;
+      }
     }
 
     function ctrlToast(msg, tipo = 'ok') {
