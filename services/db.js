@@ -167,6 +167,56 @@ async function migrate() {
         FOR EACH ROW EXECUTE FUNCTION update_updated_at();
     `);
 
+    // ── ASAAS — override de pagador + histórico de pagamentos ──
+    // payer_overrides: pra casos onde o cliente do processo é menor de idade
+    // (criança em ação previdenciária) e quem paga é o responsável legal.
+    // Indexado preferencialmente por lawsuit_id (todas as parcelas do mesmo
+    // processo usam o mesmo pagador). Fallback por transaction_id quando
+    // a transação não tem lawsuit vinculado.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS asaas_payer_overrides (
+        id              SERIAL PRIMARY KEY,
+        lawsuit_id      BIGINT,
+        transaction_id  BIGINT,
+        payer_name      VARCHAR(500) NOT NULL,
+        payer_cpf_cnpj  VARCHAR(20)  NOT NULL,
+        payer_email     VARCHAR(255),
+        payer_phone     VARCHAR(50),
+        created_at      TIMESTAMP DEFAULT NOW(),
+        updated_at      TIMESTAMP DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_apo_lawsuit
+        ON asaas_payer_overrides(lawsuit_id)
+        WHERE lawsuit_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_apo_tx
+        ON asaas_payer_overrides(transaction_id)
+        WHERE lawsuit_id IS NULL AND transaction_id IS NOT NULL;
+
+      DROP TRIGGER IF EXISTS apo_updated_at ON asaas_payer_overrides;
+      CREATE TRIGGER apo_updated_at
+        BEFORE UPDATE ON asaas_payer_overrides
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+      CREATE TABLE IF NOT EXISTS asaas_payment_history (
+        id                  SERIAL PRIMARY KEY,
+        asaas_payment_id    VARCHAR(50) UNIQUE NOT NULL,
+        external_reference  VARCHAR(255),
+        event               VARCHAR(50) NOT NULL,
+        status              VARCHAR(50) NOT NULL,
+        value               NUMERIC(12,2),
+        net_value           NUMERIC(12,2),
+        customer_id         VARCHAR(50),
+        paid_at             TIMESTAMP,
+        raw_payload         JSONB,
+        advbox_synced       BOOLEAN DEFAULT FALSE,
+        advbox_sync_error   TEXT,
+        created_at          TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_aph_ext_ref ON asaas_payment_history(external_reference);
+      CREATE INDEX IF NOT EXISTS idx_aph_created ON asaas_payment_history(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_aph_status  ON asaas_payment_history(status);
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);

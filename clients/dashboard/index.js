@@ -35,6 +35,42 @@ const { startBirthdayCron } = require('./cron/birthday');
 const { startAutoWorkflowCron } = require('./cron/auto-workflow');
 const { startDiscordSchedulerCron } = require('./cron/discord-scheduler');
 const { startBriefingCron } = require('./cron/discord-briefing');
+const { AsaasClient }       = require('../../services/asaas-client');
+
+// ── Auto-register de webhook ASAAS no boot ──────────────────────────────────
+// Idempotente: se a URL já estiver registrada na conta ASAAS, não duplica.
+// Roda só quando ASAAS_TOKEN está setado. Em dev (localhost) pula porque
+// ASAAS não consegue bater em endpoint não-público.
+async function ensureAsaasWebhookRegistered({ logger }) {
+  if (!process.env.ASAAS_TOKEN) {
+    logger.info('[ASAAS] ASAAS_TOKEN não configurado — pulando auto-register de webhook');
+    return;
+  }
+  const publicUrl = process.env.APP_PUBLIC_URL || 'https://advbox-dashboard.replit.app';
+  if (publicUrl.includes('localhost') || publicUrl.includes('127.0.0.1')) {
+    logger.info('[ASAAS] URL pública é localhost — pulando auto-register de webhook');
+    return;
+  }
+  const client = new AsaasClient(process.env.ASAAS_TOKEN);
+  const webhookUrl = publicUrl.replace(/\/+$/, '') + '/api/asaas/webhook';
+  const result = await client.ensureWebhook({
+    url:   webhookUrl,
+    email: process.env.ASAAS_WEBHOOK_EMAIL || undefined,
+    events: [
+      'PAYMENT_RECEIVED',
+      'PAYMENT_CONFIRMED',
+      'PAYMENT_RECEIVED_IN_CASH',
+      'PAYMENT_OVERDUE',
+      'PAYMENT_REFUNDED',
+      'PAYMENT_DELETED',
+    ],
+  });
+  if (result.created) {
+    logger.info({ url: webhookUrl, sandbox: client.isSandbox }, '[ASAAS] webhook registrado');
+  } else {
+    logger.info({ url: webhookUrl, sandbox: client.isSandbox }, '[ASAAS] webhook já estava registrado');
+  }
+}
 
 const app = express();
 app.set('trust proxy', 1);    // necessário em PaaS (Replit/Heroku) pra rate-limit ler IP correto
@@ -173,6 +209,11 @@ migrate()
       startAutoWorkflowCron({ logger });
       startDiscordSchedulerCron({ logger });
       startBriefingCron({ logger });
+      // Auto-registra webhook ASAAS na conta do escritório, se token estiver
+      // configurado. Idempotente (se já existir, não duplica). Falha silenciosa.
+      ensureAsaasWebhookRegistered({ logger }).catch(err =>
+        logger.warn({ err: err.message }, '[ASAAS] auto-register webhook falhou')
+      );
     });
   });
 

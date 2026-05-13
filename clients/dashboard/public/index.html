@@ -6303,6 +6303,36 @@
     // Preenchido por loadAsaasCharges() ao abrir o Financeiro. Usado pra mostrar
     // badge "📨 Cobrança gerada" e alertar duplicação no modal.
     const _asaasChargesByTx = new Map();
+    // Mapa "law_<id>" e "tx_<id>" → { name, cpfCnpj, email, phone }
+    // Override de pagador (mãe/responsável legal de cliente menor de idade).
+    let _payerOverrides = {};
+    // Mapa external_reference ('tx_<id>') → { status, paid_at, value }
+    // Pagamentos recebidos via webhook ASAAS. Marca badge "✅ PAGO" no card.
+    let _asaasPaymentsReceived = {};
+
+    function _payerOverrideFor(tx) {
+      if (tx.lawsuit_id && _payerOverrides['law_' + tx.lawsuit_id]) return _payerOverrides['law_' + tx.lawsuit_id];
+      if (_payerOverrides['tx_' + tx.id]) return _payerOverrides['tx_' + tx.id];
+      return null;
+    }
+
+    async function loadAsaasOverrides() {
+      try {
+        const r = await fetch('/api/asaas/payer-overrides', { credentials: 'include' });
+        if (!r.ok) return;
+        const data = await r.json();
+        _payerOverrides = data.overrides || {};
+      } catch (e) { console.warn('loadAsaasOverrides:', e); }
+    }
+
+    async function loadAsaasPaymentsReceived() {
+      try {
+        const r = await fetch('/api/asaas/payments-received', { credentials: 'include' });
+        if (!r.ok) return;
+        const data = await r.json();
+        _asaasPaymentsReceived = data.payments || {};
+      } catch (e) { console.warn('loadAsaasPaymentsReceived:', e); }
+    }
 
     async function loadAsaasCharges() {
       try {
@@ -6402,11 +6432,28 @@
         const cobr = _asaasChargesByTx.get('tx_' + t.id);
         const flagDup = cobr
           ? `<div style="font-size:10px;color:#c75c00;font-weight:600;margin-top:2px;">⚠️ DUPLICADA (${cobr.status})</div>` : '';
+
+        // Override de pagador (criança → responsável legal). Pega por
+        // lawsuit primeiro, depois transaction como fallback.
+        const override = _payerOverrideFor(t);
+        const initialName = override ? override.name : (t.name || '');
+        const initialCpf  = override ? override.cpfCnpj : (t.identification || '');
+        const overrideBadge = override
+          ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;">👤 Pagador salvo (responsável legal)</div>`
+          : '';
+        const procName = (t.name && override) ? `<div style="font-size:9.5px;color:#999;margin-top:2px;">cliente: ${t.name}</div>` : '';
+
         return `
-        <tr data-tx-id="${t.id}" ${cobr ? 'style="background:#fff8ec;"' : ''}>
-          <td style="padding:6px;font-size:12px;">${t.name || '—'}${flagDup}</td>
+        <tr data-tx-id="${t.id}" data-lawsuit-id="${t.lawsuit_id || ''}" ${cobr ? 'style="background:#fff8ec;"' : ''}>
           <td style="padding:6px;font-size:12px;">
-            <input type="text" data-field="cpf" value="${t.identification || ''}" placeholder="000.000.000-00"
+            <input type="text" data-field="name" value="${initialName.replace(/"/g, '&quot;')}" placeholder="Nome do pagador"
+              style="width:200px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+            ${overrideBadge}
+            ${procName}
+            ${flagDup}
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="cpf" value="${initialCpf}" placeholder="000.000.000-00"
               style="width:130px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
           </td>
           <td style="padding:6px;font-size:12px;">
@@ -6436,24 +6483,40 @@
 
       const rows = document.querySelectorAll('#cobrItemsBody tr');
       const items = [];
+      const overridesToSave = [];   // pra persistir nome+CPF custom (responsável legal)
       let invalidos = 0;
       rows.forEach(tr => {
         const txId = tr.dataset.txId;
+        const lawsuitId = tr.dataset.lawsuitId ? Number(tr.dataset.lawsuitId) : null;
         const t = (transData || []).find(x => String(x.id) === String(txId));
+        const name = tr.querySelector('input[data-field="name"]').value.trim();
         const cpf = tr.querySelector('input[data-field="cpf"]').value.replace(/\D/g, '');
         const value = Number(tr.querySelector('input[data-field="value"]').value);
         const dueDate = tr.querySelector('input[data-field="due"]').value;
         const desc = tr.querySelector('input[data-field="desc"]').value.trim();
+        if (!name) { invalidos++; tr.style.background = '#fee'; return; }
         if (!cpf || cpf.length < 11) { invalidos++; tr.style.background = '#fee'; return; }
         if (!(value > 0) || !dueDate) { invalidos++; tr.style.background = '#fee'; return; }
         tr.style.background = '';
         items.push({
-          name:    t?.name || '(sem nome)',
+          name,
           cpfCnpj: cpf,
           value, dueDate,
           description: desc || `Honorários${t?.process_number ? ' — proc. ' + t.process_number : ''}`,
           externalReference: 'tx_' + txId,
         });
+        // Se o usuário digitou um pagador diferente do nome original da transaction,
+        // salva como override (próxima cobrança desse processo virá preenchida).
+        const nomeOriginal = (t?.name || '').trim();
+        const cpfOriginal = String(t?.identification || '').replace(/\D/g, '');
+        if (name !== nomeOriginal || cpf !== cpfOriginal) {
+          overridesToSave.push({
+            lawsuit_id:     lawsuitId,
+            transaction_id: lawsuitId ? null : Number(txId),
+            payer_name:     name,
+            payer_cpf_cnpj: cpf,
+          });
+        }
       });
 
       if (invalidos > 0) {
@@ -6473,6 +6536,24 @@
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+
+        // Salva overrides em paralelo (não bloqueia o resultado). Só persiste
+        // pra cobranças que SUCESSO criaram — evita gravar pagador errado.
+        const refsSucesso = new Set((data.success || []).map(s => 'tx_' + (s.idx != null ? items[s.idx]?.externalReference?.slice(3) : '')));
+        const ovsParaSalvar = overridesToSave.filter(o => {
+          const txId = o.transaction_id || (o.lawsuit_id ? items.find(it => it.externalReference?.endsWith('_' + o.lawsuit_id))?.externalReference?.slice(3) : null);
+          // Se não conseguir parear, salva mesmo assim (lawsuit_id já garante chave)
+          return true;
+        });
+        Promise.allSettled(ovsParaSalvar.map(ov =>
+          fetch('/api/asaas/payer-overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(ov),
+          })
+        )).then(() => loadAsaasOverrides()); // refresh do mapa local
+
         renderCobrancaResult(data);
       } catch (err) {
         alert('Falha: ' + (err.message || err));
@@ -6715,11 +6796,15 @@
         const chkbox = selectable
           ? `<input type="checkbox" class="kb-chk" data-tx-id="${t.id}" ${checked} onclick="event.stopPropagation();toggleTxSelection(${JSON.stringify(t.id)});" title="Selecionar pra cobrar" style="cursor:pointer;margin-right:4px;">`
           : '';
-        // Badge "📨 Já cobrado" se essa transaction já gerou boleto ASAAS antes
+        // Badges ASAAS: "✅ PAGO" tem prioridade > "📨 Cobrança gerada"
+        const paidEvent = _asaasPaymentsReceived['tx_' + t.id];
         const existingCharge = _asaasChargesByTx.get('tx_' + t.id);
-        const cobradoBadge = existingCharge
-          ? `<a href="${existingCharge.invoice_url || '#'}" target="_blank" rel="noopener" title="Cobrança ${existingCharge.status} criada em ${existingCharge.due_date} — clique pra abrir" style="margin-left:auto;font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:1px 6px;border-radius:8px;text-decoration:none;font-weight:600;">📨 Cobrança gerada</a>`
-          : '';
+        let cobradoBadge = '';
+        if (paidEvent) {
+          cobradoBadge = `<span title="Pago em ${paidEvent.paid_at || '—'} via ASAAS — R$ ${Number(paidEvent.value || 0).toFixed(2)}" style="margin-left:auto;font-size:10px;background:#d6f4e0;border:1px solid #98d9b2;color:#1a5e3a;padding:1px 6px;border-radius:8px;font-weight:600;">✅ PAGO</span>`;
+        } else if (existingCharge) {
+          cobradoBadge = `<a href="${existingCharge.invoice_url || '#'}" target="_blank" rel="noopener" title="Cobrança ${existingCharge.status} criada em ${existingCharge.due_date} — clique pra abrir" style="margin-left:auto;font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:1px 6px;border-radius:8px;text-decoration:none;font-weight:600;">📨 Cobrança gerada</a>`;
+        }
         return `<div class="kb-card">
           <div class="kb-card-top">
             ${chkbox}<span class="fin-badge ${cls}">${badge}</span>
@@ -6797,9 +6882,14 @@
         const now = new Date();
         finMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
 
-        // Carrega cobranças ASAAS já existentes (silencioso se ASAAS_TOKEN faltar).
-        // Re-renderiza depois pra exibir badges "📨 Cobrança gerada".
-        await loadAsaasCharges();
+        // Carrega cobranças ASAAS + pagamentos recebidos + overrides de pagador
+        // em paralelo (todos silenciam erros). Re-renderiza depois pra exibir
+        // badges "📨 Cobrança gerada" e "✅ PAGO".
+        await Promise.all([
+          loadAsaasCharges(),
+          loadAsaasPaymentsReceived(),
+          loadAsaasOverrides(),
+        ]);
         renderFinanceiro();
 
         loadInadimplencia(); // calcula o índice de inadimplência ao carregar

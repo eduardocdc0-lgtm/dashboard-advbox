@@ -146,6 +146,45 @@ class AsaasClient {
   async getPaymentPixQrCode(paymentId) {
     return this._request('GET', `/payments/${encodeURIComponent(paymentId)}/pixQrCode`);
   }
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  async listWebhooks() {
+    return this._request('GET', '/webhook');
+  }
+
+  async createWebhook({ url, email, events, authToken }) {
+    const body = {
+      url,
+      email: email || undefined,
+      apiVersion: 3,
+      enabled: true,
+      interrupted: false,
+      authToken: authToken || undefined,
+      events: events && events.length ? events : [
+        'PAYMENT_RECEIVED',
+        'PAYMENT_CONFIRMED',
+        'PAYMENT_RECEIVED_IN_CASH',
+        'PAYMENT_OVERDUE',
+        'PAYMENT_DELETED',
+        'PAYMENT_REFUNDED',
+      ],
+    };
+    return this._request('POST', '/webhook', body);
+  }
+
+  /**
+   * Idempotente: garante que existe um webhook habilitado apontando pra `url`.
+   * Se já houver, faz nada. Se não houver, cria. Usado no boot do servidor.
+   */
+  async ensureWebhook({ url, email, events, authToken }) {
+    const list = await this.listWebhooks();
+    const existing = (list?.data || []).find(w => w.url === url);
+    if (existing) {
+      return { created: false, webhook: existing };
+    }
+    const created = await this.createWebhook({ url, email, events, authToken });
+    return { created: true, webhook: created };
+  }
 }
 
 module.exports = { AsaasClient };
