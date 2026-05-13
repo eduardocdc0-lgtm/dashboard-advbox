@@ -10221,11 +10221,12 @@
                 <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Dias parado</th>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Responsável AdvBox</th>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Notes</th>
+                <th style="text-align:center;padding:6px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12px;">Ação</th>
               </tr>
             </thead>
             <tbody>
               ${c.processos.map(p => `
-                <tr class="ctrl-row">
+                <tr class="ctrl-row" data-lawsuit="${p.lawsuit_id}">
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;"><a href="https://app.advbox.com.br/lawsuits/${p.lawsuit_id}" target="_blank" style="color:#1d4ed8;text-decoration:none;">${p.cliente || '(s/cliente)'}</a></td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.cpf || ''}</td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#666;">${p.tipo || ''}</td>
@@ -10233,6 +10234,9 @@
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:${p.estourouSla ? '#dc2626' : '#666'}">${p.diasParado}d</td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:12px;">${p.responsavel_advbox || '—'}</td>
                   <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-size:11px;color:#666;max-width:340px;">${(p.notes || '').replace(/</g,'&lt;')}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;text-align:center;">
+                    ${p.responsible_id ? `<button class="ctrl-cobrar-btn" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${p.responsavel_advbox || ''}" data-stage="${p.stage || ''}" data-dias="${p.diasParado}" onclick="controllerCobrar(this)" style="padding:5px 10px;border:1px solid #1d4ed8;border-radius:5px;background:white;color:#1d4ed8;cursor:pointer;font-size:11px;white-space:nowrap;">📢 Cobrar</button>` : '<span style="color:#999;font-size:11px;">sem resp.</span>'}
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -10247,6 +10251,79 @@
         const txt = tr.textContent.toLowerCase();
         tr.style.display = !q || txt.includes(q) ? '' : 'none';
       });
+    }
+
+    function ctrlToast(msg, tipo = 'ok') {
+      let t = document.getElementById('ctrlToast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'ctrlToast';
+        t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);font-size:13px;z-index:9999;color:#fff;max-width:480px;';
+        document.body.appendChild(t);
+      }
+      t.style.background = tipo === 'erro' ? '#dc2626' : (tipo === 'aviso' ? '#d97706' : '#16a34a');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = 'none'; }, 6000);
+    }
+
+    async function controllerCobrar(btn) {
+      const lawsuitId = btn.dataset.lawsuit;
+      const userId    = btn.dataset.user;
+      const catId     = btn.dataset.cat;
+      const resp      = btn.dataset.resp;
+      const stage     = btn.dataset.stage;
+      const dias      = btn.dataset.dias;
+      if (!lawsuitId || !userId) { ctrlToast('Faltam dados pra cobrar (lawsuit ou user_id).', 'erro'); return; }
+
+      const cat = (CTRL_DATA?.categorias || []).find(x => x.id === catId);
+      const titulo = cat?.titulo || catId;
+      const descricao = `Controller: ${titulo} — fase "${stage}" há ${dias} dias`;
+
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = '⏳';
+
+      try {
+        const r = await fetch('/api/audit/action/cobrar-responsavel', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            problema_id: `ctrl-${catId}-${lawsuitId}`,
+            problema_tipo: 'workflow',
+            problema_campo: 'gargalo_etapa',
+            lawsuit_id: Number(lawsuitId),
+            user_id: Number(userId),
+            descricao,
+          }),
+        });
+        const body = await r.json().catch(() => ({}));
+        if (r.ok) {
+          ctrlToast(`✓ Task criada pro ${resp || 'responsável'} na lawsuit ${lawsuitId}`, 'ok');
+          btn.textContent = '✓ Cobrado';
+          btn.style.background = '#dcfce7';
+          btn.style.borderColor = '#16a34a';
+          btn.style.color = '#166534';
+        } else if (r.status === 429) {
+          ctrlToast(body.error || 'Cooldown ativo (60min).', 'aviso');
+          btn.disabled = false;
+          btn.textContent = original;
+        } else if (r.status === 403) {
+          ctrlToast(body.error || 'Sem permissão (só admin cobra terceiros).', 'erro');
+          btn.disabled = false;
+          btn.textContent = original;
+        } else {
+          ctrlToast('Erro: ' + (body.error || ('HTTP ' + r.status)), 'erro');
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      } catch (e) {
+        ctrlToast('Erro de rede: ' + e.message, 'erro');
+        btn.disabled = false;
+        btn.textContent = original;
+      }
     }
     // ── FIM CONTROLLER ───────────────────────────────────────────────────────
   </script>
