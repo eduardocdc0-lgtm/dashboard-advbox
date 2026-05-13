@@ -16,6 +16,7 @@
     :root {
       --bg:        #FFFFFF;
       --bg-card:   #FAFAF8;
+      --surface:   #FAFAF8;
       --text:      #000000;
       --text-2:    #6B6B6B;
       --border:    #D4D4D4;
@@ -144,11 +145,14 @@
     /* ── TABS ── */
     .tabs {
       display: flex;
+      align-items: center;
       gap: 0;
       margin-bottom: 32px;
       border-bottom: 1px solid var(--border);
       overflow-x: auto;
+      scrollbar-width: none;
     }
+    .tabs::-webkit-scrollbar { display: none; }
     .tab {
       padding: 10px 18px;
       background: transparent;
@@ -165,6 +169,16 @@
     }
     .tab:hover { color: var(--text); }
     .tab.active { color: var(--text); font-weight: 500; border-bottom-color: var(--text); }
+
+    .tab-sep {
+      display: inline-block;
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      align-self: center;
+      flex-shrink: 0;
+      margin: 0 4px;
+    }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -429,12 +443,37 @@
     }
 
     /* ── STATES ── */
-    .loading {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-2);
-      font-size: 14px;
+    @keyframes skeleton-pulse {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
+    .loading {
+      position: relative;
+      min-height: 88px;
+      overflow: hidden;
+      color: transparent !important;
+      user-select: none;
+      pointer-events: none;
+    }
+    .loading::before,
+    .loading::after,
+    .loading .sk-line {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 0; right: 0;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #ebebeb 25%, #f5f5f5 50%, #ebebeb 75%);
+      background-size: 200% 100%;
+      animation: skeleton-pulse 1.6s ease-in-out infinite;
+    }
+    .loading::before { top: 18px; right: 25%; height: 13px; }
+    .loading::after  { top: 44px; right: 42%; height: 13px; animation-delay: .15s; }
+    /* Variante maior pra áreas de tabela */
+    .loading.loading-lg { min-height: 140px; }
+    .loading.loading-lg::before { top: 18px; right: 10%;  height: 13px; }
+    .loading.loading-lg::after  { top: 44px; right: 20%;  height: 13px; }
+
     .empty {
       text-align: center;
       padding: 40px 20px;
@@ -2120,17 +2159,19 @@
 
     <div class="tabs">
       <button class="tab active admin-tab" onclick="showTab('overview', event)">Visão geral</button>
-      <button class="tab admin-tab" onclick="showTab('auditresp', event)">🔍 Auditoria Resp.</button>
       <button class="tab admin-tab" onclick="showTab('processes', event)">Processos</button>
       <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
       <button class="tab" onclick="showTab('petitions', event)">🧾 Petições</button>
       <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
       <button class="tab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
+      <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
+      <span class="tab-sep"></span>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
       <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
-      <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
+      <span class="tab-sep"></span>
+      <button class="tab admin-tab" onclick="showTab('auditresp', event)">🔍 Auditoria Resp.</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
       <button class="tab admin-tab" onclick="showTab('leads', event)">Leads</button>
