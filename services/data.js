@@ -16,10 +16,7 @@ async function fetchLawsuits(force = false) {
 }
 
 async function fetchCustomers(force = false) {
-  return cache.getOrFetch('customers', async () => {
-    const data = await client.getCustomers(1000);
-    return Array.isArray(data) ? data : (data.data || []);
-  }, force);
+  return cache.getOrFetch('customers', () => client.getAllCustomers(), force);
 }
 
 async function fetchTransactions(force = false) {

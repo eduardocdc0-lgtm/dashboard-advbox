@@ -30,21 +30,22 @@ router.get('/audit/usage', requireAuth, async (req, res, next) => {
 
     const data = await cache.getOrFetch('audit_usage', () => runAudit({ force }), force);
 
-    const advboxUserId = advboxUserIdFromSession(req.session.user);
-    const isAdmin      = req.session.user.role === 'admin';
+    const advboxUserId    = advboxUserIdFromSession(req.session.user);
+    const advboxUserIdNum = advboxUserId ? Number(advboxUserId) : null;
+    const isAdmin         = req.session.user.role === 'admin';
 
     // Filtra problemas
     let problemas = data.problemas;
-    if (!isAdmin && advboxUserId) {
-      problemas = problemas.filter(p => p.user_id === advboxUserId);
+    if (!isAdmin && advboxUserIdNum) {
+      problemas = problemas.filter(p => Number(p.user_id) === advboxUserIdNum);
     }
     if (tipo)  problemas = problemas.filter(p => p.tipo === tipo);
     if (nivel) problemas = problemas.filter(p => p.nivel === nivel);
 
     // Filtra resumo por usuário
     let porUsuario = data.porUsuario;
-    if (!isAdmin && advboxUserId) {
-      porUsuario = porUsuario.filter(u => u.user_id === advboxUserId);
+    if (!isAdmin && advboxUserIdNum) {
+      porUsuario = porUsuario.filter(u => Number(u.user_id) === advboxUserIdNum);
     }
 
     res.json({

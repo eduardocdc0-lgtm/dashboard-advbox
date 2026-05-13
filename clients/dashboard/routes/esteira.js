@@ -118,12 +118,13 @@ router.get('/esteira', async (req, res, next) => {
     const lArr = Array.isArray(lawsuits) ? lawsuits : (lawsuits.data || []);
     const tArr = Array.isArray(transactions) ? transactions : (transactions.data || []);
 
-    // Index transactions por lawsuit_id
+    // Index transactions por lawsuit_id (AdvBox usa lawsuits_id ou lawsuit_id conforme versão)
     const txByLawsuit = {};
     for (const t of tArr) {
-      if (!t.lawsuit_id) continue;
+      const lid = t.lawsuits_id || t.lawsuit_id;
+      if (!lid) continue;
       if (t.entry_type !== 'income') continue;
-      (txByLawsuit[t.lawsuit_id] = txByLawsuit[t.lawsuit_id] || []).push(t);
+      (txByLawsuit[lid] = txByLawsuit[lid] || []).push(t);
     }
 
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);

@@ -113,6 +113,19 @@ class AdvBoxClient {
   }
 
   getCustomers(limit = 1000)    { return this.request(`/customers?limit=${limit}`); }
+
+  async getAllCustomers(pageSize = 1000, maxPages = 20) {
+    const all = [];
+    for (let page = 0; page < maxPages; page++) {
+      const data = await this.request(`/customers?limit=${pageSize}&offset=${page * pageSize}`);
+      const arr  = Array.isArray(data) ? data : (data.data || []);
+      if (!arr.length) break;
+      all.push(...arr);
+      this.logger.info(`[AdvBox] Customers p${page + 1}: ${arr.length} (total: ${all.length})`);
+      if (arr.length < pageSize) break;
+    }
+    return all;
+  }
   getBirthdays()                { return this.request('/customers/birthdays'); }
   getLastMovements(limit = 500) { return this.request(`/last_movements?limit=${limit}`); }
   getSettings()                 { return this.request('/settings'); }
