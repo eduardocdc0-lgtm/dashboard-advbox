@@ -6297,6 +6297,173 @@
       return map[cat] || (cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : 'Outros');
     }
 
+    // ── Cobrança ASAAS em lote ─────────────────────────────────────────────
+    const _finSelectedTxs = new Set();
+
+    function _refreshCobrarBtn() {
+      const btn = document.getElementById('btnCobrarLote');
+      const cnt = document.getElementById('cobrarCount');
+      if (!btn || !cnt) return;
+      const n = _finSelectedTxs.size;
+      cnt.textContent = '(' + n + ')';
+      btn.disabled = (n === 0);
+      btn.style.opacity = n === 0 ? '.4' : '1';
+      btn.style.cursor = n === 0 ? 'default' : 'pointer';
+    }
+
+    function toggleTxSelection(id) {
+      if (_finSelectedTxs.has(id)) _finSelectedTxs.delete(id);
+      else _finSelectedTxs.add(id);
+      _refreshCobrarBtn();
+    }
+
+    function selectAllInadimplentes() {
+      const inadList = (transData || []).filter(t => {
+        const due = t.date_due ? new Date(t.date_due) : null;
+        return t.entry_type === 'income' && Number(t.amount || 0) > 0
+          && !t.date_payment && due && due < new Date();
+      });
+      const todosMarcados = inadList.every(t => _finSelectedTxs.has(t.id));
+      if (todosMarcados) inadList.forEach(t => _finSelectedTxs.delete(t.id));
+      else inadList.forEach(t => _finSelectedTxs.add(t.id));
+      renderFinanceiro();
+      _refreshCobrarBtn();
+    }
+
+    function abrirCobrancaLote() {
+      if (_finSelectedTxs.size === 0) return;
+      const items = (transData || []).filter(t => _finSelectedTxs.has(t.id));
+      const tbody = document.getElementById('cobrItemsBody');
+      const hoje = new Date();
+      const venc = new Date(hoje.getTime() + 5 * 86400000).toISOString().slice(0, 10); // +5d
+      tbody.innerHTML = items.map((t, i) => `
+        <tr data-tx-id="${t.id}">
+          <td style="padding:6px;font-size:12px;">${t.name || '—'}</td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="cpf" value="${t.identification || ''}" placeholder="000.000.000-00"
+              style="width:130px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="number" step="0.01" data-field="value" value="${Number(t.amount || 0).toFixed(2)}"
+              style="width:90px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:right;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="date" data-field="due" value="${venc}"
+              style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="desc" value="${(t.description || '').slice(0,60)}" placeholder="Descrição"
+              style="width:200px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('cobrCount').textContent = items.length;
+      document.getElementById('cobrResultArea').style.display = 'none';
+      document.getElementById('cobrFormArea').style.display = 'block';
+      document.getElementById('cobrancaLoteModal').style.display = 'flex';
+    }
+
+    async function enviarCobrancas() {
+      const billingType = document.getElementById('cobrBillingType').value;
+      const interestPercent = Number(document.getElementById('cobrJuros').value || 0);
+      const finePercent = Number(document.getElementById('cobrMulta').value || 0);
+
+      const rows = document.querySelectorAll('#cobrItemsBody tr');
+      const items = [];
+      let invalidos = 0;
+      rows.forEach(tr => {
+        const txId = tr.dataset.txId;
+        const t = (transData || []).find(x => String(x.id) === String(txId));
+        const cpf = tr.querySelector('input[data-field="cpf"]').value.replace(/\D/g, '');
+        const value = Number(tr.querySelector('input[data-field="value"]').value);
+        const dueDate = tr.querySelector('input[data-field="due"]').value;
+        const desc = tr.querySelector('input[data-field="desc"]').value.trim();
+        if (!cpf || cpf.length < 11) { invalidos++; tr.style.background = '#fee'; return; }
+        if (!(value > 0) || !dueDate) { invalidos++; tr.style.background = '#fee'; return; }
+        tr.style.background = '';
+        items.push({
+          name:    t?.name || '(sem nome)',
+          cpfCnpj: cpf,
+          value, dueDate,
+          description: desc || `Honorários${t?.process_number ? ' — proc. ' + t.process_number : ''}`,
+          externalReference: 'tx_' + txId,
+        });
+      });
+
+      if (invalidos > 0) {
+        alert(invalidos + ' linha(s) com dado inválido (marcadas em vermelho). Corrige antes de enviar.');
+        return;
+      }
+      if (items.length === 0) { alert('Nada pra enviar.'); return; }
+
+      const btn = document.getElementById('cobrEnviarBtn');
+      btn.disabled = true; btn.textContent = '⏳ Enviando...';
+      try {
+        const r = await fetch('/api/asaas/charge-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ items, billingType, interestPercent, finePercent }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        renderCobrancaResult(data);
+      } catch (err) {
+        alert('Falha: ' + (err.message || err));
+      } finally {
+        btn.disabled = false; btn.textContent = '✉️ Gerar cobranças';
+      }
+    }
+
+    function renderCobrancaResult(data) {
+      const wrap = document.getElementById('cobrResultArea');
+      const list = document.getElementById('cobrResultList');
+      list.innerHTML = '';
+      (data.success || []).forEach(s => {
+        const li = document.createElement('div');
+        li.style.cssText = 'padding:8px;border:1px solid #cfe7d8;background:#f4fbf6;border-radius:6px;margin-bottom:6px;';
+        li.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:12.5px;">✅ ${s.name} — R$ ${Number(s.value).toFixed(2)}</div>
+              <div style="font-size:10.5px;color:#666;">Vence ${s.due_date} · payment ${s.payment_id}</div>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button onclick="copyText('${s.invoice_url}');" style="font-size:11px;padding:4px 8px;background:#2C7A4D;color:#fff;border:none;border-radius:4px;cursor:pointer;">📋 Copiar link</button>
+              <a href="${s.invoice_url}" target="_blank" rel="noopener" style="font-size:11px;padding:4px 8px;background:#fff;border:1px solid var(--border);border-radius:4px;color:var(--text);text-decoration:none;">↗ Abrir</a>
+            </div>
+          </div>`;
+        list.appendChild(li);
+      });
+      (data.errors || []).forEach(e => {
+        const li = document.createElement('div');
+        li.style.cssText = 'padding:8px;border:1px solid #f3c2c2;background:#fdf4f4;border-radius:6px;margin-bottom:6px;';
+        li.innerHTML = `<div style="font-size:12px;"><strong>❌ ${e.name}</strong> — ${e.error}</div>`;
+        list.appendChild(li);
+      });
+      document.getElementById('cobrResultStats').textContent =
+        `${(data.success || []).length} criadas · ${(data.errors || []).length} erros · total ${data.total}`;
+      document.getElementById('cobrFormArea').style.display = 'none';
+      wrap.style.display = 'block';
+      // Limpa seleção após sucesso (mantém erros pra retry)
+      (data.success || []).forEach(s => {
+        const txId = String(s.idx); // idx é o índice do array enviado; vou achar pelo externalReference
+      });
+      _finSelectedTxs.clear();
+      _refreshCobrarBtn();
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // toast simples
+        const t = document.createElement('div');
+        t.textContent = '✓ Copiado';
+        t.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#222;color:#fff;padding:10px 18px;border-radius:6px;z-index:99999;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1500);
+      });
+    }
+
     function renderFinanceiro() {
       const [mm, yyyy] = finMesAtual.split('/').map(Number);
       document.getElementById('finMesLabel').textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
@@ -6476,9 +6643,15 @@
           : (t.date_due ? 'Venc. ' + formatDate(t.date_due) : '—');
         const link = t.lawsuit_id
           ? ` <a class="reg-link" href="https://app.advbox.com.br/lawsuits/${t.lawsuit_id}" target="_blank" rel="noopener" style="font-size:10px;padding:1px 4px;">↗</a>` : '';
+        // Checkbox de seleção pra cobrança ASAAS só nos inadimplentes (income vencido)
+        const selectable = st === 'inadimplente' && isInc && valor > 0;
+        const checked = selectable && _finSelectedTxs.has(t.id) ? 'checked' : '';
+        const chkbox = selectable
+          ? `<input type="checkbox" class="kb-chk" data-tx-id="${t.id}" ${checked} onclick="event.stopPropagation();toggleTxSelection(${JSON.stringify(t.id)});" title="Selecionar pra cobrar" style="cursor:pointer;margin-right:4px;">`
+          : '';
         return `<div class="kb-card">
           <div class="kb-card-top">
-            <span class="fin-badge ${cls}">${badge}</span>
+            ${chkbox}<span class="fin-badge ${cls}">${badge}</span>
             <span class="kb-cat">${cat}</span>
           </div>
           <div class="kb-client">${client}${link}</div>
@@ -6517,6 +6690,12 @@
             <div class="kb-col-hdr kb-hdr-inad">
               <span>Inadimplente</span>
               <span class="kb-col-total">${formatMoney(colTotal(inadimplentes))} · ${inadimplentes.length}</span>
+            </div>
+            <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
+              <button onclick="selectAllInadimplentes()" class="btn-link" style="font-size:10.5px;padding:3px 6px;" title="Marcar/desmarcar todos">☑ Todos</button>
+              <button onclick="abrirCobrancaLote()" id="btnCobrarLote" disabled style="font-size:11px;padding:5px 10px;background:#2C7A4D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;opacity:.4;">
+                💰 Cobrar selecionados <span id="cobrarCount">(0)</span>
+              </button>
             </div>
             <div class="kb-cards">${inadimplentes.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
           </div>
@@ -9818,6 +9997,73 @@
       </div>
       <div id="stagesModalBody" style="padding:8px 22px 22px;max-height:60vh;overflow-y:auto;">
         <div style="text-align:center;padding:32px;color:#aaa;">Carregando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Cobrança ASAAS em lote ─────────────────────────────────── -->
+  <div id="cobrancaLoteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px;"
+       onclick="if(event.target===this)document.getElementById('cobrancaLoteModal').style.display='none'">
+    <div style="background:#fff;border-radius:10px;width:min(960px,100%);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">ASAAS · sandbox</div>
+          <h2 style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;margin:0;line-height:1.1;">Cobrança em lote</h2>
+          <div style="font-size:11.5px;color:#888;margin-top:2px;"><span id="cobrCount">0</span> inadimplente(s) selecionado(s)</div>
+        </div>
+        <button onclick="document.getElementById('cobrancaLoteModal').style.display='none'" style="background:none;border:none;font-size:24px;cursor:pointer;color:#aaa;">×</button>
+      </div>
+
+      <!-- Form -->
+      <div id="cobrFormArea" style="padding:18px 22px;overflow-y:auto;flex:1;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;padding:10px;background:#f7f7f7;border-radius:7px;">
+          <div>
+            <label style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;display:block;margin-bottom:3px;">Forma</label>
+            <select id="cobrBillingType" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:5px;font-size:12px;">
+              <option value="UNDEFINED">Cliente escolhe (PIX + Boleto + Cartão)</option>
+              <option value="PIX">Só PIX</option>
+              <option value="BOLETO">Só Boleto</option>
+              <option value="CREDIT_CARD">Só Cartão</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;display:block;margin-bottom:3px;">Juros %/mês</label>
+            <input id="cobrJuros" type="number" step="0.1" value="1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:5px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;display:block;margin-bottom:3px;">Multa %</label>
+            <input id="cobrMulta" type="number" step="0.1" value="2" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:5px;font-size:12px;">
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">⚠️ Linhas em vermelho = falta CPF ou dado inválido. Preenche antes de enviar.</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#f0f0f0;text-align:left;">
+              <th style="padding:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;">Cliente</th>
+              <th style="padding:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;">CPF *</th>
+              <th style="padding:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;">Valor</th>
+              <th style="padding:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;">Vence</th>
+              <th style="padding:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#666;">Descrição</th>
+            </tr>
+          </thead>
+          <tbody id="cobrItemsBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Resultado -->
+      <div id="cobrResultArea" style="display:none;padding:18px 22px;overflow-y:auto;flex:1;">
+        <div id="cobrResultStats" style="font-size:13px;font-weight:600;margin-bottom:12px;color:#444;"></div>
+        <div id="cobrResultList"></div>
+      </div>
+
+      <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="document.getElementById('cobrancaLoteModal').style.display='none'"
+          style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12.5px;">Fechar</button>
+        <button id="cobrEnviarBtn" onclick="enviarCobrancas()"
+          style="padding:8px 18px;background:#2C7A4D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600;">
+          ✉️ Gerar cobranças
+        </button>
       </div>
     </div>
   </div>

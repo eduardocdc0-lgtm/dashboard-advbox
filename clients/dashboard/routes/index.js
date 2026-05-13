@@ -25,5 +25,6 @@ router.use(require('./overview'));
 router.use(require('./discord'));
 router.use(require('./admin'));
 router.use(require('./sentencas'));
+router.use(require('./asaas'));
 
 module.exports = router;
