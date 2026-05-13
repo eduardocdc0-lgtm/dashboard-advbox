@@ -11,6 +11,7 @@
 'use strict';
 
 const { Router } = require('express');
+const fetch = require('node-fetch');
 const { AsaasClient } = require('../../../services/asaas-client');
 const { createBatch } = require('../../../services/asaas-batch');
 const { requireAdmin } = require('../../../middleware/auth');
@@ -219,6 +220,17 @@ router.get('/asaas/payments-received', requireAdmin, async (req, res, next) => {
 // CONFIRMED, tenta marcar como paga no AdvBox via /transactions; se a API
 // não permitir, mantém o registro local pro front exibir badge "PAGO".
 router.post('/asaas/webhook', async (req, res) => {
+  // Verificação de token — Asaas envia header asaas-access-token em todo webhook.
+  // Configura ASAAS_WEBHOOK_TOKEN no Replit Secrets e no painel Asaas (Config → Webhook → Token).
+  // Se a env não estiver setada, aceita tudo (modo sem verificação — menos seguro).
+  const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
+  if (webhookToken && req.headers['asaas-access-token'] !== webhookToken) {
+    console.warn('[ASAAS webhook] token inválido — possível chamada não autorizada', {
+      ip: req.ip, token_recebido: String(req.headers['asaas-access-token'] || '').slice(0, 8) + '...',
+    });
+    return res.status(200).json({ ok: false, error: 'token inválido' });
+  }
+
   try {
     const body    = req.body || {};
     const event   = body.event;
@@ -250,7 +262,6 @@ router.post('/asaas/webhook', async (req, res) => {
       const txId = Number(payment.externalReference.slice(3));
       if (txId && process.env.ADVBOX_TOKEN) {
         try {
-          const fetch = require('node-fetch');
           const r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
             method: 'PATCH',
             headers: {

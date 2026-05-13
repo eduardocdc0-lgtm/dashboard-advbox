@@ -65,17 +65,25 @@ function classificar(stage) {
 }
 
 /**
- * Calcula timestamps de início pra cada janela.
- * Usa fuso America/Recife (-03:00) — escritório fica em Carpina/PE.
+ * Calcula timestamps de início pra cada janela em America/Recife (-03:00).
+ * Extrai y/m/d via Intl no fuso do escritório (servidor Replit roda em UTC —
+ * sem isso "hoje" começaria à meia-noite UTC = 21h do dia anterior em Recife).
  */
-function rangesFromNow(now = new Date()) {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
+function rangesFromNow() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Recife', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const y = Number(parts.find(p => p.type === 'year').value);
+  const m = Number(parts.find(p => p.type === 'month').value) - 1;
+  const d = Number(parts.find(p => p.type === 'day').value);
+  // America/Recife = UTC-3 fixo (sem DST). ISO com offset explícito converte
+  // corretamente pra UTC ms sem depender do fuso do servidor.
+  const midnight = (yr, mo, da) =>
+    new Date(`${yr}-${String(mo + 1).padStart(2, '0')}-${String(da).padStart(2, '0')}T00:00:00-03:00`).getTime();
   return {
-    hoje: new Date(y, m, d, 0, 0, 0, 0).getTime(),
-    mes:  new Date(y, m, 1, 0, 0, 0, 0).getTime(),
-    ano:  new Date(y, 0, 1, 0, 0, 0, 0).getTime(),
+    hoje: midnight(y, m, d),
+    mes:  midnight(y, m, 1),
+    ano:  midnight(y, 0, 1),
   };
 }
 
