@@ -30,9 +30,9 @@ const CATEGORIAS = [
   },
   {
     id: 'dar_entrada',
-    titulo: '⚠️ Protocolar / Re-protocolar ADM',
-    descricao: 'Processo pronto OU cancelado pelo INSS — precisa protocolar/re-protocolar',
-    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA', 'CANCELADO REQUERIMENTO'],
+    titulo: '⚠️ Protocolar ADM',
+    descricao: 'Processo pronto, falta protocolar no INSS',
+    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA'],
     responsavel: 'MARILIA',
     slaDias: 5,
   },
