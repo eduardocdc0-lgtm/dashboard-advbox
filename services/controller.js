@@ -376,4 +376,114 @@ async function cobrarLote({ actor, items, throttleMs = 1200 }) {
   return { total: items.length, sucesso, cooldown, erro, resultados };
 }
 
-module.exports = { buildOverview, CATEGORIAS, cobrarLawsuit, cobrarLote };
+// ── Snapshot diário (cron 23h) ───────────────────────────────────────────────
+
+/**
+ * Grava a foto atual do Controller no Postgres pra tendência/produtividade.
+ * Roda 1x por dia via cron. Idempotente — re-rodar no mesmo dia atualiza
+ * a linha existente (UPSERT).
+ *
+ * Aproveita o pipeline do buildOverview pra usar exatamente a mesma lógica
+ * que o dashboard mostra ao vivo.
+ */
+async function saveSnapshot({ force = true } = {}) {
+  const overview = await buildOverview({ force });
+
+  // Mapeia categoria → setor (pra facilitar query por setor depois)
+  const catToSetor = new Map();
+  for (const setor of SETORES) {
+    for (const catId of setor.categorias) catToSetor.set(catId, setor.id);
+  }
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  let saved = 0;
+  for (const cat of overview.categorias) {
+    const diasMedios = cat.processos.length
+      ? cat.processos.reduce((s, p) => s + p.diasParado, 0) / cat.processos.length
+      : 0;
+    const slaPct = cat.total > 0
+      ? Math.round(((cat.total - cat.estourados) / cat.total) * 100)
+      : 100;
+
+    try {
+      await dbQuery(
+        `INSERT INTO controller_snapshots
+           (snapshot_date, categoria_id, setor_id, total, estourados, dias_medios, sla_pct)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (snapshot_date, categoria_id) DO UPDATE SET
+           setor_id    = EXCLUDED.setor_id,
+           total       = EXCLUDED.total,
+           estourados  = EXCLUDED.estourados,
+           dias_medios = EXCLUDED.dias_medios,
+           sla_pct     = EXCLUDED.sla_pct`,
+        [today, cat.id, catToSetor.get(cat.id) || null, cat.total, cat.estourados, diasMedios.toFixed(2), slaPct]
+      );
+      saved++;
+    } catch (err) {
+      console.error(`[controller-snapshot] cat ${cat.id}: ${err.message}`);
+    }
+  }
+  console.log(`[controller-snapshot] ${saved}/${overview.categorias.length} categorias salvas em ${today}`);
+  return { date: today, saved, total: overview.categorias.length };
+}
+
+/**
+ * Lê últimos N dias do histórico e calcula:
+ *  - série temporal por categoria (total + estourados por dia)
+ *  - delta vs ontem (subiu/desceu)
+ *  - volume entregue (estimativa: redução no total = processos que saíram da fila)
+ */
+async function getTendencia({ dias = 7 } = {}) {
+  const { rows } = await dbQuery(
+    `SELECT snapshot_date::text AS date, categoria_id, setor_id, total, estourados, dias_medios, sla_pct
+     FROM controller_snapshots
+     WHERE snapshot_date >= CURRENT_DATE - $1::INT
+     ORDER BY snapshot_date ASC, categoria_id ASC`,
+    [dias]
+  );
+
+  // Agrupa por categoria → série
+  const porCategoria = new Map();
+  for (const r of rows) {
+    if (!porCategoria.has(r.categoria_id)) porCategoria.set(r.categoria_id, []);
+    porCategoria.get(r.categoria_id).push({
+      date: r.date,
+      total: r.total,
+      estourados: r.estourados,
+      diasMedios: Number(r.dias_medios),
+      slaPct: r.sla_pct,
+    });
+  }
+
+  // Calcula delta (último ponto vs penúltimo)
+  const deltas = {};
+  for (const [catId, serie] of porCategoria) {
+    if (serie.length < 2) { deltas[catId] = null; continue; }
+    const atual = serie[serie.length - 1];
+    const ontem = serie[serie.length - 2];
+    deltas[catId] = {
+      totalDelta: atual.total - ontem.total,
+      // Volume entregue ≈ se total caiu, processos saíram da fila
+      entregues: Math.max(0, ontem.total - atual.total),
+      // Volume entrante: se subiu, entraram novos
+      novos: Math.max(0, atual.total - ontem.total),
+      slaDelta: atual.slaPct - ontem.slaPct,
+    };
+  }
+
+  return {
+    series: Object.fromEntries(porCategoria),
+    deltas,
+    diasNoHistorico: porCategoria.size > 0 ? Math.max(...[...porCategoria.values()].map(s => s.length)) : 0,
+  };
+}
+
+module.exports = {
+  buildOverview,
+  CATEGORIAS,
+  SETORES,
+  cobrarLawsuit,
+  cobrarLote,
+  saveSnapshot,
+  getTendencia,
+};

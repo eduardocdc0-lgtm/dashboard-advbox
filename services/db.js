@@ -217,6 +217,29 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_aph_status  ON asaas_payment_history(status);
     `);
 
+    // ── CONTROLLER — snapshots diários pra tendência/produtividade ──
+    // Uma linha por (snapshot_date, categoria_id). Cron 23h America/Recife
+    // grava a foto antes de virar o dia. Daí dá pra calcular:
+    //   - delta vs ontem (subiu/desceu)
+    //   - volume entregue (linhas que saíram da categoria entre ontem e hoje)
+    //   - tendência semanal (gráfico)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS controller_snapshots (
+        id              SERIAL PRIMARY KEY,
+        snapshot_date   DATE NOT NULL,
+        categoria_id    VARCHAR(64) NOT NULL,
+        setor_id        VARCHAR(64),
+        total           INT NOT NULL DEFAULT 0,
+        estourados      INT NOT NULL DEFAULT 0,
+        dias_medios     NUMERIC(6,2) DEFAULT 0,
+        sla_pct         INT DEFAULT 0,
+        created_at      TIMESTAMP DEFAULT NOW(),
+        CONSTRAINT uniq_cs_date_cat UNIQUE (snapshot_date, categoria_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cs_date  ON controller_snapshots(snapshot_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_cs_setor ON controller_snapshots(setor_id, snapshot_date DESC);
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);

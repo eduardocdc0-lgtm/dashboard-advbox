@@ -6,7 +6,7 @@
 
 const { Router } = require('express');
 const { requireAuth, requireAdmin } = require('../../../middleware/auth');
-const { buildOverview, cobrarLote } = require('../../../services/controller');
+const { buildOverview, cobrarLote, saveSnapshot, getTendencia } = require('../../../services/controller');
 const { client } = require('../../../services/data');
 const cache = require('../../../cache');
 
@@ -62,6 +62,30 @@ router.post('/controller/move-stage', requireAdmin, async (req, res, next) => {
     await client.updateLawsuit(Number(lawsuit_id), { stage: target_stage });
     cache.invalidate('lawsuits');
     res.json({ ok: true, lawsuit_id, target_stage });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/controller/tendencia?dias=7
+// Retorna série temporal dos últimos N dias + deltas vs ontem.
+router.get('/controller/tendencia', requireAuth, async (req, res, next) => {
+  try {
+    const dias = Math.min(90, Math.max(1, parseInt(req.query.dias, 10) || 7));
+    const data = await getTendencia({ dias });
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/controller/snapshot
+// Roda o snapshot manualmente (admin). Útil pra popular o histórico hoje
+// sem esperar o cron das 23h.
+router.post('/controller/snapshot', requireAdmin, async (req, res, next) => {
+  try {
+    const r = await saveSnapshot({ force: true });
+    res.json({ ok: true, ...r });
   } catch (err) {
     next(err);
   }

@@ -1227,6 +1227,13 @@
     .ctrl-ranking-card .rk-stats { display:flex; gap:var(--space-4); margin-top:var(--space-3); font-size:var(--text-xs); color:var(--text-secondary); }
     .ctrl-ranking-card .rk-stats b { display:block; font-size:var(--text-base); color:var(--text-primary); font-weight:600; }
     .ctrl-ranking-card .rk-resp { font-size:var(--text-xs); color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-top:var(--space-2); }
+    .ctrl-ranking-card .rk-delta {
+      position:absolute; bottom:var(--space-3); right:var(--space-4);
+      font-size:var(--text-xs); font-weight:600; padding:2px 8px; border-radius:999px;
+    }
+    .ctrl-ranking-card .rk-delta--down { background:#dcfce7; color:#15803d; } /* fila caiu = bom */
+    .ctrl-ranking-card .rk-delta--up   { background:#fee2e2; color:#b91c1c; } /* fila subiu = ruim */
+    .ctrl-ranking-card .rk-delta--flat { background:#f3f4f6; color:#6b7280; }
     .ctrl-card {
       display:flex;flex-direction:column;gap:var(--space-1);padding:14px 18px;
       border-radius:var(--radius-lg);min-width:160px;text-decoration:none;color:var(--text);
@@ -3298,6 +3305,7 @@
             <button class="ctrl-view-btn" id="ctrlBtnList"   onclick="ctrlSetView('list')">☰ Lista</button>
           </div>
           <button onclick="controllerLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
+          <button onclick="controllerSnapshotNow()" class="btn btn-secondary btn-sm admin-only" title="Salva snapshot do Controller agora pro histórico/ranking">📸 Snapshot</button>
         </div>
       </div>
 
@@ -10402,6 +10410,7 @@
 
     // ── CONTROLLER (esteira) ─────────────────────────────────────────────────
     let CTRL_DATA = null;
+    let CTRL_TENDENCIA = null;
     let ctrlViewMode = 'kanban'; // padrão: kanban
 
     // Grupos do Kanban — cada um vira um quadro com header colorido
@@ -10457,19 +10466,22 @@
       meta.textContent = 'Carregando...';
       cards.innerHTML = '';
       sections.innerHTML = '';
-      // Garante estado visual inicial do toggle
       const btnK = document.getElementById('ctrlBtnKanban');
       const btnL = document.getElementById('ctrlBtnList');
       if (btnK) { btnK.classList.toggle('active', ctrlViewMode === 'kanban'); }
       if (btnL) { btnL.classList.toggle('active', ctrlViewMode === 'list'); }
       try {
         const url = '/api/controller/overview' + (force ? '?force=1' : '');
-        const r = await fetch(url, { credentials: 'same-origin' });
+        const [r, rt] = await Promise.all([
+          fetch(url, { credentials: 'same-origin' }),
+          fetch('/api/controller/tendencia?dias=7', { credentials: 'same-origin' }).catch(() => null),
+        ]);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         CTRL_DATA = await r.json();
+        CTRL_TENDENCIA = (rt && rt.ok) ? await rt.json() : null;
         controllerRender();
       } catch (e) {
-        meta.textContent = 'Erro: ' + e.message;
+        meta.textContent = 'Erro: ' + auuEscapeHtml(e.message);
       }
     }
 
@@ -10510,7 +10522,40 @@
       if (!el) return;
       if (!Array.isArray(ranking) || !ranking.length) { el.innerHTML = ''; return; }
       const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-      el.innerHTML = ranking.map(s => `
+
+      // Mapeia categoria -> setor pra agregar deltas vindos da tendência
+      const setorPorCategoria = {
+        comercial:   ['sem_laudo_prevdoc'],
+        operacional: ['dar_entrada', 'protocolado_adm_velho', 'reprotocolar'],
+        juridico:    ['peticao_inicial', 'com_prazo'],
+      };
+      const deltas = (CTRL_TENDENCIA && CTRL_TENDENCIA.deltas) || {};
+      function deltaSetor(setorId) {
+        const cats = setorPorCategoria[setorId] || [];
+        let totalDelta = 0, entregues = 0, novos = 0, valid = false;
+        for (const c of cats) {
+          if (deltas[c]) {
+            valid = true;
+            totalDelta += deltas[c].totalDelta || 0;
+            entregues  += deltas[c].entregues  || 0;
+            novos      += deltas[c].novos      || 0;
+          }
+        }
+        return valid ? { totalDelta, entregues, novos } : null;
+      }
+
+      el.innerHTML = ranking.map(s => {
+        const d = deltaSetor(s.id);
+        let deltaHtml = '';
+        if (d) {
+          const cls = d.totalDelta < 0 ? 'rk-delta--down'
+                    : d.totalDelta > 0 ? 'rk-delta--up'
+                    : 'rk-delta--flat';
+          const seta = d.totalDelta < 0 ? '▼' : d.totalDelta > 0 ? '▲' : '–';
+          const tip = `Ontem vs hoje: ${d.entregues} saíram da fila, ${d.novos} entraram`;
+          deltaHtml = `<div class="rk-delta ${cls}" title="${auuEscapeHtml(tip)}">${seta} ${Math.abs(d.totalDelta)}</div>`;
+        }
+        return `
         <div class="ctrl-ranking-card" style="--rk-color: ${s.cor}">
           <div class="rk-bar"></div>
           <div class="rk-medal">${medals[s.posicao] || ''}</div>
@@ -10523,8 +10568,28 @@
             <div><b>${s.slaPct}%</b>no prazo</div>
           </div>
           <div class="rk-resp">resp.: ${auuEscapeHtml((s.responsaveis || []).join(', ') || '—')}</div>
+          ${deltaHtml}
         </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    // Roda snapshot manualmente (admin). Útil pra popular o histórico hoje.
+    async function controllerSnapshotNow() {
+      if (!confirm('Salvar snapshot do Controller agora? (admin only)')) return;
+      try {
+        const r = await fetch('/api/controller/snapshot', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const j = await r.json();
+        if (!r.ok) { ctrlToast('Erro: ' + auuEscapeHtml(j.error || ('HTTP ' + r.status)), 'erro'); return; }
+        ctrlToast(`✓ Snapshot ${j.date}: ${j.saved}/${j.total} categorias salvas`, 'ok');
+        controllerLoad(true);
+      } catch (e) {
+        ctrlToast('Erro: ' + auuEscapeHtml(e.message), 'erro');
+      }
     }
 
     // ── Vista: Kanban ─────────────────────────────────────────────────────────
