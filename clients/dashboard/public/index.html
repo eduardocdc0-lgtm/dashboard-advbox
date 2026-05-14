@@ -10674,7 +10674,7 @@
                     <div class="ctrl-kb-col-count" id="ctrl-kb-cnt-${c.id}" style="color:${grp.color};">${c.total}</div>
                     ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠️ ${c.estourados} fora do SLA</div>` : ''}
                     ${c.semWorkflow ? `<div class="ctrl-kb-col-sem-wf">🚫 ${c.semWorkflow} sem workflow</div>` : ''}
-                    ${c.semWorkflow > 0 ? `<button class="btn btn-secondary btn-sm admin-only" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="controllerAplicarWorkflowCategoria('${c.id}')" title="Cria a primeira tarefa do workflow nos ${c.semWorkflow} processos sem workflow ativo">🚀 Disparar workflow (${c.semWorkflow})</button>` : ''}
+                    ${c.semWorkflow > 0 && c.temWorkflowMapeado ? `<button class="btn btn-secondary btn-sm admin-only" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="controllerAplicarWorkflowCategoria('${c.id}')" title="Cria a primeira tarefa do workflow nos ${c.semWorkflow} processos sem workflow ativo">🚀 Disparar workflow (${c.semWorkflow})</button>` : ''}
                   </div>
                   <div class="ctrl-kb-col-body" id="ctrl-kb-body-${c.id}">${
                     c.processos.length === 0

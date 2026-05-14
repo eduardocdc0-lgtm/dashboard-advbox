@@ -38,11 +38,19 @@ const CATEGORIAS = [
   },
   {
     id: 'dar_entrada',
-    titulo: '⚠️ Falta dar entrada',
+    titulo: '⚠️ Falta protocolar ADM',
     descricao: 'Processo pronto, falta protocolar no INSS',
-    fases: ['PARA DAR ENTRADA'],
+    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA'],
     responsavel: 'MARILIA',
     slaDias: 5,
+  },
+  {
+    id: 'em_exigencia',
+    titulo: '❗ Em Exigência',
+    descricao: 'INSS pediu mais documentos/info — escritório precisa responder',
+    fases: ['EM EXIGENCIA', 'EM EXIGÊNCIA'],
+    responsavel: 'MARILIA',
+    slaDias: 7,
   },
   {
     id: 'peticao_inicial',
@@ -59,14 +67,6 @@ const CATEGORIAS = [
     fases: ['COM PRAZO'],
     responsavel: 'LETICIA_OU_ALICE',
     slaDias: 5,
-  },
-  {
-    id: 'protocolado_adm_velho',
-    titulo: '🔄 Protocolado ADM antigo',
-    descricao: 'Protocolado, esperando INSS — revisar se passou de 30 dias',
-    fases: ['PROTOCOLADO ADM'],
-    responsavel: 'MARILIA',
-    slaDias: 30,
   },
 ];
 
@@ -121,7 +121,7 @@ const SETORES = [
     titulo: '⚙️ Operacional',
     cor: '#f97316',
     responsaveis: ['MARILIA'],
-    categorias: ['dar_entrada', 'protocolado_adm_velho', 'reprotocolar'],
+    categorias: ['dar_entrada', 'em_exigencia', 'reprotocolar'],
   },
   {
     id: 'juridico',
@@ -231,6 +231,7 @@ async function buildOverview({ force = false } = {}) {
       total: items.length,
       estourados: items.filter(i => i.estourouSla).length,
       semWorkflow: items.filter(i => i.semWorkflow).length,
+      temWorkflowMapeado: Boolean(WORKFLOWS_POR_CATEGORIA[cat.id]),
       processos: items,
     };
   });
