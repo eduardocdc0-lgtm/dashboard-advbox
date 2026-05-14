@@ -6,7 +6,7 @@
 
 const { Router } = require('express');
 const { requireAuth, requireAdmin } = require('../../../middleware/auth');
-const { buildOverview, cobrarLote, saveSnapshot, getTendencia } = require('../../../services/controller');
+const { buildOverview, cobrarLote, saveSnapshot, getTendencia, aplicarWorkflowLote, WORKFLOWS_POR_CATEGORIA } = require('../../../services/controller');
 const { client } = require('../../../services/data');
 const cache = require('../../../cache');
 
@@ -74,6 +74,31 @@ router.get('/controller/tendencia', requireAuth, async (req, res, next) => {
     const dias = Math.min(90, Math.max(1, parseInt(req.query.dias, 10) || 7));
     const data = await getTendencia({ dias });
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/controller/aplicar-workflow-lote
+// Body: { categoriaId, lawsuitIds: [int] }
+// Apenas admin — dispara workflow em N processos com throttle 1.5s.
+router.post('/controller/aplicar-workflow-lote', requireAdmin, async (req, res, next) => {
+  try {
+    const session = req.session.user;
+    const { categoriaId, lawsuitIds } = req.body || {};
+    if (!categoriaId || !Array.isArray(lawsuitIds) || !lawsuitIds.length) {
+      return res.status(400).json({ error: 'categoriaId e lawsuitIds[] obrigatórios' });
+    }
+    if (lawsuitIds.length > 100) return res.status(400).json({ error: 'máximo 100 por lote' });
+    if (!WORKFLOWS_POR_CATEGORIA[categoriaId]) {
+      return res.status(400).json({ error: `Categoria "${categoriaId}" não tem workflow mapeado` });
+    }
+    const result = await aplicarWorkflowLote({
+      actor: { username: session.username, advboxUserId: session.advboxUserId, role: session.role },
+      categoriaId,
+      lawsuitIds: lawsuitIds.map(Number),
+    });
+    res.json(result);
   } catch (err) {
     next(err);
   }

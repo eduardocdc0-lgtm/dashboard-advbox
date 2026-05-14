@@ -76,6 +76,37 @@ for (const cat of CATEGORIAS) {
   for (const fase of cat.fases) FASE_TO_CATEGORIA.set(fase.toUpperCase(), cat);
 }
 
+// ── Workflows por categoria ──────────────────────────────────────────────────
+// Mapeia cada categoria do Controller à PRIMEIRA TAREFA do workflow que
+// deveria estar rodando nela. Usado pelo botão "🚀 Aplicar workflow em lote".
+//
+// Cobre só categorias com workflow oficial mapeado. Pra adicionar:
+//   1. Pega task_id em GET /settings → tasks[].id (procura pelo nome)
+//   2. Pega responsavelId em team-users.js (Marília 213554, Tammyres 267371,
+//      Letícia 214014, Alice 252099, Eduardo 198347)
+//   3. prazoDias = "Tempo médio (dias)" cadastrado no workflow
+const WORKFLOWS_POR_CATEGORIA = {
+  dar_entrada: {
+    workflowNome: '1. PROCESSO ADM PRONTO',
+    primeiraTarefa: 'PROTOCOLAR ADM',
+    taskId: 8882369,
+    responsavelId: 213554, // Ana Marília
+    prazoDias: 10,
+  },
+  sem_laudo_prevdoc: {
+    workflowNome: '3. PROCESSO SEM LAUDO',
+    primeiraTarefa: 'ACIONAR CLINICA PARCEIRA',
+    taskId: 9065976,
+    responsavelId: 267371, // Tammyres
+    prazoDias: 5,
+  },
+  // Adicionar:
+  // reprotocolar:        workflow específico de re-protocolar
+  // peticao_inicial:     2. PROCESSO JUDICIAL PRONTO → ELABORAR PETIÇÃO INICIAL (id 6357906?)
+  // com_prazo:           sem workflow padrão (cada um tem natureza própria)
+  // protocolado_adm_velho: revisão manual
+};
+
 // ── Setores (agrupam categorias pra ranking de eficiência) ───────────────────
 const SETORES = [
   {
@@ -388,6 +419,122 @@ async function cobrarLawsuit({ actor, lawsuit_id, user_id, descricao, problema_i
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /**
+ * Aplica a PRIMEIRA TAREFA de um workflow num único processo.
+ * Reusa POST /posts (mesma rota da cobrança), mas com o nome/task_id/prazo
+ * vindos do mapeamento WORKFLOWS_POR_CATEGORIA.
+ *
+ * O resto do workflow (tarefa 2 em diante) é responsabilidade do AdvBox:
+ * conforme a equipe conclui cada tarefa e a "Alteração de Etapa" move o
+ * processo, o próprio AdvBox sugere/dispara as próximas.
+ *
+ * Retorna { ok, status, error?, cooldown_until? }
+ */
+async function aplicarWorkflow({ actor, lawsuit_id, categoriaId }) {
+  const cfg = WORKFLOWS_POR_CATEGORIA[categoriaId];
+  if (!cfg) return { ok: false, status: 400, error: `Categoria ${categoriaId} sem workflow mapeado` };
+  if (!lawsuit_id) return { ok: false, status: 400, error: 'lawsuit_id obrigatório' };
+
+  const actionType = `aplicar-workflow-${categoriaId}`;
+
+  // Cooldown — evita duplicar (compartilha tabela audit_actions)
+  try {
+    const { rows } = await dbQuery(
+      `SELECT created_at FROM audit_actions
+       WHERE action_type = $1 AND target_lawsuit_id = $2 AND success = TRUE
+         AND created_at > NOW() - INTERVAL '${COOLDOWN_MIN} minutes'
+       ORDER BY created_at DESC LIMIT 1`,
+      [actionType, Number(lawsuit_id)]
+    );
+    if (rows.length) {
+      const ageMin = Math.floor((Date.now() - new Date(rows[0].created_at).getTime()) / 60000);
+      return { ok: false, status: 429, error: `Cooldown: workflow já disparado há ${ageMin}min` };
+    }
+  } catch (err) {
+    console.error('[controller] cooldown check:', err.message);
+  }
+
+  const fromUserId = actor?.advboxUserId || 198347;
+  const payload = {
+    tasks_id: cfg.taskId,
+    notes: `[Controller] Workflow "${cfg.workflowNome}" — primeira tarefa.`,
+    start_date: ymd(new Date()),
+    date_deadline: ymd(addBusinessDays(new Date(), cfg.prazoDias || 5)),
+    from: fromUserId,
+    lawsuits_id: Number(lawsuit_id),
+    guests: [Number(cfg.responsavelId)],
+  };
+
+  let advboxResponse = null, success = false, errorMessage = null;
+  try {
+    const r = await advboxPostRaw('/posts', payload);
+    advboxResponse = r.body;
+    success = r.ok;
+    if (!success) {
+      const detail = r.body?.errors || r.body?.message || r.body?.error || r.body?.raw;
+      errorMessage = `${r.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+    }
+  } catch (err) {
+    errorMessage = err.message || String(err);
+  }
+
+  try {
+    await dbQuery(
+      `INSERT INTO audit_actions
+         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
+          problema_payload, advbox_response, success, error_message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        actor?.username || 'controller-workflow-lote',
+        actor?.advboxUserId || null,
+        actionType,
+        Number(lawsuit_id),
+        Number(cfg.responsavelId),
+        JSON.stringify({ categoriaId, workflowNome: cfg.workflowNome, primeiraTarefa: cfg.primeiraTarefa, payload, source: 'controller-workflow-lote' }),
+        advboxResponse ? JSON.stringify(advboxResponse) : null,
+        success,
+        errorMessage,
+      ]
+    );
+  } catch (logErr) {
+    console.error('[controller] audit log workflow:', logErr.message);
+  }
+
+  if (!success) return { ok: false, status: 502, error: errorMessage };
+  return { ok: true, cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString() };
+}
+
+/**
+ * Aplica workflow em vários processos da mesma categoria com throttle.
+ */
+async function aplicarWorkflowLote({ actor, categoriaId, lawsuitIds, throttleMs = 1500 }) {
+  const cfg = WORKFLOWS_POR_CATEGORIA[categoriaId];
+  if (!cfg) {
+    return { error: `Categoria ${categoriaId} sem workflow mapeado`, total: 0, sucesso: 0, cooldown: 0, erro: 0, resultados: [] };
+  }
+  const resultados = [];
+  for (let i = 0; i < lawsuitIds.length; i++) {
+    const id = lawsuitIds[i];
+    try {
+      const r = await aplicarWorkflow({ actor, lawsuit_id: id, categoriaId });
+      resultados.push({ lawsuit_id: id, ...r });
+    } catch (e) {
+      resultados.push({ lawsuit_id: id, ok: false, error: e.message });
+    }
+    if (i < lawsuitIds.length - 1) await sleep(throttleMs);
+  }
+  const sucesso = resultados.filter(r => r.ok).length;
+  const cooldown = resultados.filter(r => r.status === 429).length;
+  const erro = resultados.length - sucesso - cooldown;
+  return {
+    workflowNome: cfg.workflowNome,
+    primeiraTarefa: cfg.primeiraTarefa,
+    total: lawsuitIds.length,
+    sucesso, cooldown, erro,
+    resultados,
+  };
+}
+
+/**
  * Cobra vários processos em sequência com throttle.
  * items: [{ lawsuit_id, user_id, descricao, problema_id, categoriaId }]
  * Throttle padrão 1.2s entre requisições (~50 req/min, respeita rate do AdvBox).
@@ -516,8 +663,11 @@ module.exports = {
   buildOverview,
   CATEGORIAS,
   SETORES,
+  WORKFLOWS_POR_CATEGORIA,
   cobrarLawsuit,
   cobrarLote,
+  aplicarWorkflow,
+  aplicarWorkflowLote,
   saveSnapshot,
   getTendencia,
 };

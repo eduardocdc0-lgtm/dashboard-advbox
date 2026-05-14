@@ -10585,6 +10585,48 @@
       }).join('');
     }
 
+    // Dispara workflow em lote pra todos os processos "sem workflow ativo" da categoria.
+    // Cria a primeira tarefa do workflow correspondente; resto cascateia no AdvBox
+    // conforme equipe conclui (com "Alteração de Etapa" configurada).
+    async function controllerAplicarWorkflowCategoria(catId) {
+      const cat = (CTRL_DATA?.categorias || []).find(c => c.id === catId);
+      if (!cat) return;
+      const semWf = cat.processos.filter(p => p.semWorkflow);
+      if (!semWf.length) { ctrlToast('Nenhum processo sem workflow nesta categoria', 'aviso'); return; }
+
+      if (!confirm(
+        `Vai criar a primeira tarefa do workflow em ${semWf.length} processo(s) sem workflow ativo de "${cat.titulo}".\n\n` +
+        `Cada task será atribuída ao responsável padrão do workflow no AdvBox.\n` +
+        `Throttle: ~1.5s por processo (~${Math.ceil(semWf.length * 1.5)}s no total).\n\n` +
+        `Continuar?`
+      )) return;
+
+      const ids = semWf.map(p => p.lawsuit_id);
+      ctrlToast(`Disparando ${ids.length} workflow(s)...`, 'ok');
+
+      try {
+        const r = await fetch('/api/controller/aplicar-workflow-lote', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoriaId: catId, lawsuitIds: ids }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          ctrlToast('Erro: ' + auuEscapeHtml(data.error || ('HTTP ' + r.status)), 'erro');
+          return;
+        }
+        ctrlToast(
+          `✓ ${data.sucesso} workflow(s) iniciado(s) · ${data.cooldown} em cooldown · ${data.erro} erro`,
+          data.erro ? 'aviso' : 'ok'
+        );
+        // Recarrega depois de uns segundos pra refletir as novas tarefas
+        setTimeout(() => controllerLoad(true), 3000);
+      } catch (e) {
+        ctrlToast('Erro de rede: ' + auuEscapeHtml(e.message), 'erro');
+      }
+    }
+
     // Roda snapshot manualmente (admin). Útil pra popular o histórico hoje.
     async function controllerSnapshotNow() {
       if (!confirm('Salvar snapshot do Controller agora? (admin only)')) return;
@@ -10632,6 +10674,7 @@
                     <div class="ctrl-kb-col-count" id="ctrl-kb-cnt-${c.id}" style="color:${grp.color};">${c.total}</div>
                     ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠️ ${c.estourados} fora do SLA</div>` : ''}
                     ${c.semWorkflow ? `<div class="ctrl-kb-col-sem-wf">🚫 ${c.semWorkflow} sem workflow</div>` : ''}
+                    ${c.semWorkflow > 0 ? `<button class="btn btn-secondary btn-sm admin-only" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="controllerAplicarWorkflowCategoria('${c.id}')" title="Cria a primeira tarefa do workflow nos ${c.semWorkflow} processos sem workflow ativo">🚀 Disparar workflow (${c.semWorkflow})</button>` : ''}
                   </div>
                   <div class="ctrl-kb-col-body" id="ctrl-kb-body-${c.id}">${
                     c.processos.length === 0
