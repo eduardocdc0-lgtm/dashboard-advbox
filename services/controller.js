@@ -30,9 +30,9 @@ const CATEGORIAS = [
   },
   {
     id: 'sem_laudo_prevdoc',
-    titulo: '📋 Falta laudo PrevDoc',
+    titulo: '📋 Processo sem laudo',
     descricao: 'Cliente precisa fazer/enviar laudo médico',
-    fases: ['FALTA LAUDO - FAZER PREVDOC', 'FALTA LAUDO', 'PREVDOC', 'PROCESSOS SEM LAUDOS'],
+    fases: ['PROCESSO SEM LAUDO', 'FALTA LAUDO - FAZER PREVDOC', 'FALTA LAUDO', 'PREVDOC', 'PROCESSOS SEM LAUDOS'],
     responsavel: 'TAMMYRES',
     slaDias: 7,
   },
