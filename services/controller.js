@@ -21,14 +21,6 @@ const COOLDOWN_MIN = 60;
 // Ordem = prioridade na UI. Cada categoria tem fases que dispara nela.
 const CATEGORIAS = [
   {
-    id: 'reprotocolar',
-    titulo: '🔁 Re-protocolar',
-    descricao: 'Requerimento cancelado pelo INSS, escritório precisa entrar novamente',
-    fases: ['CANCELADO REQUERIMENTO'],
-    responsavel: 'MARILIA',
-    slaDias: 10,
-  },
-  {
     id: 'sem_laudo_prevdoc',
     titulo: '📋 Processo sem laudo',
     descricao: 'Cliente precisa fazer/enviar laudo médico',
@@ -38,9 +30,9 @@ const CATEGORIAS = [
   },
   {
     id: 'dar_entrada',
-    titulo: '⚠️ Falta protocolar ADM',
-    descricao: 'Processo pronto, falta protocolar no INSS',
-    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA'],
+    titulo: '⚠️ Protocolar / Re-protocolar ADM',
+    descricao: 'Processo pronto OU cancelado pelo INSS — precisa protocolar/re-protocolar',
+    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA', 'CANCELADO REQUERIMENTO'],
     responsavel: 'MARILIA',
     slaDias: 5,
   },
@@ -127,7 +119,7 @@ const SETORES = [
     titulo: '⚙️ Operacional',
     cor: '#f97316',
     responsaveis: ['MARILIA'],
-    categorias: ['dar_entrada', 'em_exigencia', 'reprotocolar'],
+    categorias: ['dar_entrada', 'em_exigencia'],
   },
   {
     id: 'juridico',
