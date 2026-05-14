@@ -17,7 +17,13 @@ cache.define('registrations', 20 * 60 * 1000);
 // ── Constantes de domínio ─────────────────────────────────────────────────────
 const RESP_VALIDOS = ['THIAGO', 'MARILIA', 'LETICIA', 'EDUARDO', 'TAMMYRES'];
 const BPC_TRIGGERS = ['BPC', 'BENEFICIO ASSISTENCIAL', 'AUXILIO DOENCA', 'AUXÍLIO DOENÇA', 'BENEFÍCIO ASSISTENCIAL'];
-const LAUDO_OPCOES = ['COM LAUDO', 'SEM LAUDO', 'LAUDO OK', 'FAZER LAUDO', 'AGUARDANDO LAUDO'];
+// Frases que sinalizam status de laudo. Comparadas após norm() (uppercase + sem acentos).
+// Eduardo escolheu manter "LAUDO PELO ESCRITORIO" como variação aceita (campanha de
+// laudo feito internamente). Inclui variações comuns pra não exigir digitação exata.
+const LAUDO_OPCOES = [
+  'COM LAUDO', 'SEM LAUDO', 'LAUDO OK', 'FAZER LAUDO', 'AGUARDANDO LAUDO',
+  'LAUDO PELO ESCRITORIO', 'LAUDO DO ESCRITORIO', 'LAUDO ESCRITORIO',
+];
 const ORIGEM_ORGANICA = ['ORGANICO', 'PARCERIA', 'PARCEIRO', 'PARCEIRA', 'ESCRITORIO', 'INDICACAO', 'INDICAÇÃO', 'ORGÂNICO', 'ESCRITÓRIO'];
 const CAMPANHAS = ['LAUDO DO SUS'];
 const ENTIDADES_NAO_PESSOAIS = /INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i;
