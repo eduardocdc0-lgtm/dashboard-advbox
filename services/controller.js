@@ -10,7 +10,7 @@
 'use strict';
 
 const fetch = require('node-fetch');
-const { fetchLawsuits } = require('./data');
+const { fetchLawsuits, fetchAllPosts } = require('./data');
 const { query: dbQuery } = require('./db');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
@@ -130,8 +130,37 @@ function pickClientCpf(lawsuit) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Indexa tasks pendentes por lawsuit_id pra detectar "sem workflow ativo".
+ * Uma task é pendente quando ninguém marcou completed=true. Se a task tá
+ * só atribuída sem conclusão e sem prazo passado, ainda conta como "ativa".
+ */
+function indexTasksPendentes(posts) {
+  const idx = new Map();
+  for (const p of posts || []) {
+    if (!p.lawsuits_id) continue;
+    const users = Array.isArray(p.users) ? p.users : [];
+    const algumPendente = users.some(u => u && (u.completed === null || u.completed === false));
+    if (!algumPendente) continue;
+    if (!idx.has(p.lawsuits_id)) idx.set(p.lawsuits_id, 0);
+    idx.set(p.lawsuits_id, idx.get(p.lawsuits_id) + 1);
+  }
+  return idx;
+}
+
 async function buildOverview({ force = false } = {}) {
   const lawsuits = await fetchLawsuits(force);
+
+  // Posts em paralelo — pra detectar quem tá sem task ativa.
+  // Falha resiliente: se /posts der erro/rate-limit, o detector fica off
+  // mas o resto do Controller continua funcionando.
+  let tasksIdx = new Map();
+  try {
+    const posts = await fetchAllPosts(500, 4, 600, force);
+    tasksIdx = indexTasksPendentes(posts);
+  } catch (e) {
+    console.error('[controller] sem-workflow detector off: ' + e.message);
+  }
 
   const buckets = new Map();
   for (const cat of CATEGORIAS) buckets.set(cat.id, []);
@@ -142,6 +171,7 @@ async function buildOverview({ force = false } = {}) {
     if (!cat) continue;
 
     const diasParado = diasDesde(l.status_closure) ?? diasDesde(l.created_at) ?? diasDesde(new Date().toISOString()) ?? 0;
+    const tasksPendentes = tasksIdx.get(l.id) || 0;
     buckets.get(cat.id).push({
       lawsuit_id: l.id,
       stage: l.stage,
@@ -157,6 +187,8 @@ async function buildOverview({ force = false } = {}) {
       notes: (l.notes || '').slice(0, 300),
       diasParado,
       estourouSla: diasParado > cat.slaDias,
+      tasksPendentes,
+      semWorkflow: tasksPendentes === 0,
     });
   }
 
@@ -167,6 +199,7 @@ async function buildOverview({ force = false } = {}) {
       ...cat,
       total: items.length,
       estourados: items.filter(i => i.estourouSla).length,
+      semWorkflow: items.filter(i => i.semWorkflow).length,
       processos: items,
     };
   });
@@ -177,6 +210,7 @@ async function buildOverview({ force = false } = {}) {
     geradoEm: new Date().toISOString(),
     totalAtivos: lawsuits.length,
     totalNoController: categorias.reduce((s, c) => s + c.total, 0),
+    totalSemWorkflow: categorias.reduce((s, c) => s + c.semWorkflow, 0),
     categorias,
     ranking,
   };

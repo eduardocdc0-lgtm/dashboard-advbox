@@ -1334,6 +1334,7 @@
     .ctrl-kb-col-title { font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2; }
     .ctrl-kb-col-count { font-family:'DM Serif Display',serif;font-size:26px;line-height:1;margin-top:4px; }
     .ctrl-kb-col-sla-warn { font-size:var(--text-sm);color:var(--danger);font-weight:600;margin-top:2px; }
+    .ctrl-kb-col-sem-wf { font-size:var(--text-sm);color:#9a3412;font-weight:600;margin-top:2px; }
     .ctrl-kb-col--urgent { border-top:3px solid var(--danger); }
     .ctrl-kb-col--warn   { border-top:3px solid var(--warning); }
     .ctrl-kb-col-body {
@@ -1351,6 +1352,12 @@
     .ctrl-kb-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.09);border-color:#b8b8b8; }
     .ctrl-kb-card.dragging { opacity:.35;pointer-events:none; }
     .ctrl-kb-card--sla { border-left:3px solid var(--danger); }
+    .ctrl-kb-card--sem-wf { background:#fff7ed; }
+    .ctrl-kb-card--sem-wf.ctrl-kb-card--sla { background:#fef2f2; }
+    .ctrl-kb-semwf {
+      font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px;
+      background:#fed7aa; color:#9a3412; display:inline-flex; align-items:center; gap:3px;
+    }
     .ctrl-kb-card-name { font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px; }
     .ctrl-kb-card-name a { color:inherit;text-decoration:none; }
     .ctrl-kb-card-name a:hover { color:var(--accent);text-decoration:underline; }
@@ -10489,8 +10496,12 @@
       const d = CTRL_DATA;
       if (!d) return;
 
-      document.getElementById('ctrlMeta').textContent =
-        `${d.totalNoController} processos pendentes · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
+      {
+        const meta = document.getElementById('ctrlMeta');
+        const semWf = d.totalSemWorkflow || 0;
+        meta.innerHTML = `${d.totalNoController} processos pendentes · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}` +
+          (semWf > 0 ? ` · <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:999px;font-weight:600">🚫 ${semWf} sem workflow</span>` : '');
+      }
 
       // Ranking de setor (pódio)
       ctrlRankingRender(d.ranking || []);
@@ -10620,6 +10631,7 @@
                     <div class="ctrl-kb-col-title">${auuEscapeHtml(c.titulo)}</div>
                     <div class="ctrl-kb-col-count" id="ctrl-kb-cnt-${c.id}" style="color:${grp.color};">${c.total}</div>
                     ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠️ ${c.estourados} fora do SLA</div>` : ''}
+                    ${c.semWorkflow ? `<div class="ctrl-kb-col-sem-wf">🚫 ${c.semWorkflow} sem workflow</div>` : ''}
                   </div>
                   <div class="ctrl-kb-col-body" id="ctrl-kb-body-${c.id}">${
                     c.processos.length === 0
@@ -10636,10 +10648,11 @@
 
     function ctrlKbCardHtml(p, catId) {
       const slaClass = p.estourouSla ? ' ctrl-kb-card--sla' : '';
+      const semWfClass = p.semWorkflow ? ' ctrl-kb-card--sem-wf' : '';
       const diasClass = p.estourouSla ? ' ctrl-kb-dias--crit' : '';
       const safeResp = auuEscapeHtml(p.responsavel_advbox || '');
       const safeStage = (p.stage || '').replace(/"/g, '&quot;');
-      return `<div class="ctrl-kb-card${slaClass}"
+      return `<div class="ctrl-kb-card${slaClass}${semWfClass}"
            draggable="true"
            data-lawsuit="${p.lawsuit_id}"
            data-user="${p.responsible_id || ''}"
@@ -10655,6 +10668,7 @@
         <div class="ctrl-kb-card-tipo">${auuEscapeHtml(p.tipo || '')}${p.cpf ? ' · ' + auuEscapeHtml(p.cpf) : ''}</div>
         <div class="ctrl-kb-card-footer">
           <span class="ctrl-kb-dias${diasClass}">${p.diasParado}d</span>
+          ${p.semWorkflow ? '<span class="ctrl-kb-semwf" title="Sem task pendente — workflow não está rodando neste processo">🚫 sem workflow</span>' : ''}
           ${safeResp ? `<span class="ctrl-kb-resp">${safeResp}</span>` : ''}
           ${p.responsible_id
             ? `<button class="ctrl-cobrar-btn"
