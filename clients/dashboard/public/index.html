@@ -1198,6 +1198,35 @@
 
     /* ── CONTROLLER ── */
     .ctrl-cards-row { display:flex;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-6); }
+    .ctrl-ranking {
+      display:flex; gap:var(--space-3); margin-bottom:var(--space-6); flex-wrap:wrap;
+    }
+    .ctrl-ranking-card {
+      flex:1; min-width:240px; padding:var(--space-4) var(--space-5);
+      border-radius:var(--radius-lg); background:var(--bg-card);
+      border:1px solid var(--border); position:relative; overflow:hidden;
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .ctrl-ranking-card:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.06); }
+    .ctrl-ranking-card .rk-bar {
+      position:absolute; top:0; left:0; right:0; height:4px; background:var(--rk-color, #888);
+    }
+    .ctrl-ranking-card .rk-medal {
+      position:absolute; top:var(--space-3); right:var(--space-3);
+      font-size:24px; line-height:1;
+    }
+    .ctrl-ranking-card .rk-titulo {
+      font-family:'DM Serif Display', serif; font-size:var(--text-xl);
+      color:var(--rk-color, var(--text-primary)); margin-bottom:var(--space-2);
+    }
+    .ctrl-ranking-card .rk-score {
+      font-size:var(--text-3xl); font-weight:700; line-height:1;
+      color:var(--rk-color, var(--text-primary)); margin-bottom:var(--space-1);
+    }
+    .ctrl-ranking-card .rk-score small { font-size:var(--text-sm); font-weight:400; color:var(--text-secondary); }
+    .ctrl-ranking-card .rk-stats { display:flex; gap:var(--space-4); margin-top:var(--space-3); font-size:var(--text-xs); color:var(--text-secondary); }
+    .ctrl-ranking-card .rk-stats b { display:block; font-size:var(--text-base); color:var(--text-primary); font-weight:600; }
+    .ctrl-ranking-card .rk-resp { font-size:var(--text-xs); color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-top:var(--space-2); }
     .ctrl-card {
       display:flex;flex-direction:column;gap:var(--space-1);padding:14px 18px;
       border-radius:var(--radius-lg);min-width:160px;text-decoration:none;color:var(--text);
@@ -3271,6 +3300,8 @@
           <button onclick="controllerLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
         </div>
       </div>
+
+      <div id="ctrlRanking" class="ctrl-ranking"></div>
 
       <div id="ctrlCards" class="ctrl-cards-row"></div>
 
@@ -10449,6 +10480,9 @@
       document.getElementById('ctrlMeta').textContent =
         `${d.totalNoController} processos pendentes · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
 
+      // Ranking de setor (pódio)
+      ctrlRankingRender(d.ranking || []);
+
       // Cards de resumo no topo (linkam para a seção/coluna)
       const cards = document.getElementById('ctrlCards');
       cards.innerHTML = d.categorias.map(c => `
@@ -10468,6 +10502,29 @@
       } else {
         ctrlListRender(sections, d);
       }
+    }
+
+    // ── Pódio de eficiência por setor ─────────────────────────────────────────
+    function ctrlRankingRender(ranking) {
+      const el = document.getElementById('ctrlRanking');
+      if (!el) return;
+      if (!Array.isArray(ranking) || !ranking.length) { el.innerHTML = ''; return; }
+      const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+      el.innerHTML = ranking.map(s => `
+        <div class="ctrl-ranking-card" style="--rk-color: ${s.cor}">
+          <div class="rk-bar"></div>
+          <div class="rk-medal">${medals[s.posicao] || ''}</div>
+          <div class="rk-titulo">${auuEscapeHtml(s.titulo)}</div>
+          <div class="rk-score">${s.score}<small> /100</small></div>
+          <div class="rk-stats">
+            <div><b>${s.totalProc}</b>na fila</div>
+            <div><b>${s.totalEstourados}</b>fora do SLA</div>
+            <div><b>${s.diasMedios}d</b>tempo médio</div>
+            <div><b>${s.slaPct}%</b>no prazo</div>
+          </div>
+          <div class="rk-resp">resp.: ${auuEscapeHtml((s.responsaveis || []).join(', ') || '—')}</div>
+        </div>
+      `).join('');
     }
 
     // ── Vista: Kanban ─────────────────────────────────────────────────────────

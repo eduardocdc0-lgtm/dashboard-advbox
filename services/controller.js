@@ -76,6 +76,31 @@ for (const cat of CATEGORIAS) {
   for (const fase of cat.fases) FASE_TO_CATEGORIA.set(fase.toUpperCase(), cat);
 }
 
+// ── Setores (agrupam categorias pra ranking de eficiência) ───────────────────
+const SETORES = [
+  {
+    id: 'comercial',
+    titulo: '💼 Comercial',
+    cor: '#8b5cf6',
+    responsaveis: ['TAMMYRES'],
+    categorias: ['sem_laudo_prevdoc'],
+  },
+  {
+    id: 'operacional',
+    titulo: '⚙️ Operacional',
+    cor: '#f97316',
+    responsaveis: ['MARILIA'],
+    categorias: ['dar_entrada', 'protocolado_adm_velho', 'reprotocolar'],
+  },
+  {
+    id: 'juridico',
+    titulo: '⚖️ Jurídico',
+    cor: '#14b8a6',
+    responsaveis: ['LETICIA_OU_ALICE'],
+    categorias: ['peticao_inicial', 'com_prazo'],
+  },
+];
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function diasDesde(dateStr) {
@@ -146,12 +171,63 @@ async function buildOverview({ force = false } = {}) {
     };
   });
 
+  const ranking = computeRanking(categorias);
+
   return {
     geradoEm: new Date().toISOString(),
     totalAtivos: lawsuits.length,
     totalNoController: categorias.reduce((s, c) => s + c.total, 0),
     categorias,
+    ranking,
   };
+}
+
+/**
+ * Calcula score 0-100 por setor com base na foto atual:
+ *  - 60%  % de processos dentro do SLA (qualidade da fila)
+ *  - 40%  proximidade de zero do tempo médio parado (velocidade)
+ *
+ * Score alto = setor entregando dentro do prazo e com fila curta.
+ * Quando o setor tem 0 processos pendentes → score 100 (esteira limpa).
+ *
+ * Limitação: usa só o estado atual. Sem histórico de stages, não dá pra
+ * medir "volume entregue por dia". Esse dado vem quando o cron diário
+ * de snapshot começar a popular controller_snapshots.
+ */
+function computeRanking(categorias) {
+  const setores = SETORES.map(setor => {
+    const cats = categorias.filter(c => setor.categorias.includes(c.id));
+    const totalProc = cats.reduce((s, c) => s + c.total, 0);
+    const totalEstourados = cats.reduce((s, c) => s + c.estourados, 0);
+    const allProcs = cats.flatMap(c => c.processos);
+    const diasMedios = allProcs.length
+      ? allProcs.reduce((s, p) => s + p.diasParado, 0) / allProcs.length
+      : 0;
+    const maxSla = Math.max(...cats.map(c => c.slaDias), 1);
+
+    let score = 100;
+    if (totalProc > 0) {
+      const slaPct = ((totalProc - totalEstourados) / totalProc) * 100;
+      const velocidade = Math.max(0, 100 - (diasMedios / maxSla) * 100);
+      score = Math.round(slaPct * 0.6 + velocidade * 0.4);
+    }
+
+    return {
+      id: setor.id,
+      titulo: setor.titulo,
+      cor: setor.cor,
+      responsaveis: setor.responsaveis,
+      totalProc,
+      totalEstourados,
+      diasMedios: Math.round(diasMedios * 10) / 10,
+      slaPct: totalProc > 0 ? Math.round(((totalProc - totalEstourados) / totalProc) * 100) : 100,
+      score,
+    };
+  });
+
+  setores.sort((a, b) => b.score - a.score);
+  setores.forEach((s, i) => { s.posicao = i + 1; });
+  return setores;
 }
 
 // ── Cobrança em lote ─────────────────────────────────────────────────────────
