@@ -100,11 +100,17 @@ const WORKFLOWS_POR_CATEGORIA = {
     responsavelId: 267371, // Tammyres
     prazoDias: 5,
   },
+  peticao_inicial: {
+    workflowNome: '2. PROCESSO JUDICIAL PRONTO',
+    primeiraTarefa: 'ELABORAR PETIÇÃO INICIAL',
+    taskId: 9389476,
+    responsavelId: 214014, // Letícia Stephany
+    prazoDias: 10,
+  },
   // Adicionar:
-  // reprotocolar:        workflow específico de re-protocolar
-  // peticao_inicial:     2. PROCESSO JUDICIAL PRONTO → ELABORAR PETIÇÃO INICIAL (id 6357906?)
-  // com_prazo:           sem workflow padrão (cada um tem natureza própria)
-  // protocolado_adm_velho: revisão manual
+  // reprotocolar:  workflow específico de re-protocolar (qual usar?)
+  // em_exigencia:  workflow específico de responder exigência (qual usar?)
+  // com_prazo:     sem workflow padrão (cada prazo tem natureza própria)
 };
 
 // ── Setores (agrupam categorias pra ranking de eficiência) ───────────────────
