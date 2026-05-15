@@ -14,7 +14,7 @@ const { Router } = require('express');
 const fetch = require('node-fetch');
 const { AsaasClient } = require('../../../services/asaas-client');
 const { createBatch } = require('../../../services/asaas-batch');
-const { requireAdmin } = require('../../../middleware/auth');
+const { requireFinance } = require('../../../middleware/auth');
 const { query } = require('../../../services/db');
 
 const router = Router();
@@ -33,7 +33,7 @@ function getClient() {
 
 // ── GET /api/asaas/status ─────────────────────────────────────────────────
 // Diagnóstico rápido — usado pela aba Diagnóstico do dashboard.
-router.get('/asaas/status', requireAdmin, (req, res) => {
+router.get('/asaas/status', requireFinance, (req, res) => {
   const client = getClient();
   if (!client) {
     return res.json({
@@ -54,7 +54,7 @@ router.get('/asaas/status', requireAdmin, (req, res) => {
 //   billingType?: 'BOLETO'|'PIX'|'UNDEFINED',
 //   interestPercent?: number, finePercent?: number,
 // }
-router.post('/asaas/charge-batch', requireAdmin, async (req, res, next) => {
+router.post('/asaas/charge-batch', requireFinance, async (req, res, next) => {
   try {
     const client = getClient();
     if (!client) {
@@ -78,7 +78,7 @@ router.post('/asaas/charge-batch', requireAdmin, async (req, res, next) => {
 
 // ── GET /api/asaas/charges ────────────────────────────────────────────────
 // Lista cobranças no ASAAS (passthrough simples)
-router.get('/asaas/charges', requireAdmin, async (req, res, next) => {
+router.get('/asaas/charges', requireFinance, async (req, res, next) => {
   try {
     const client = getClient();
     if (!client) return res.status(503).json({ error: 'ASAAS_TOKEN não configurado' });
@@ -94,7 +94,7 @@ router.get('/asaas/charges', requireAdmin, async (req, res, next) => {
 
 // ── GET /api/asaas/pix-qr/:id ─────────────────────────────────────────────
 // Proxy pro QR PIX (base64 + copia-cola). Evita expor token no frontend.
-router.get('/asaas/pix-qr/:id', requireAdmin, async (req, res, next) => {
+router.get('/asaas/pix-qr/:id', requireFinance, async (req, res, next) => {
   try {
     const client = getClient();
     if (!client) return res.status(503).json({ error: 'ASAAS_TOKEN não configurado' });
@@ -110,7 +110,7 @@ router.get('/asaas/pix-qr/:id', requireAdmin, async (req, res, next) => {
 // ── GET /api/asaas/payer-overrides ───────────────────────────────────────
 // Retorna mapa indexado por chaves "law_<id>" e "tx_<id>", pra o front
 // resolver na hora de hidratar o modal sem fazer N requests.
-router.get('/asaas/payer-overrides', requireAdmin, async (req, res, next) => {
+router.get('/asaas/payer-overrides', requireFinance, async (req, res, next) => {
   try {
     const r = await query(
       `SELECT lawsuit_id, transaction_id, payer_name, payer_cpf_cnpj, payer_email, payer_phone
@@ -134,7 +134,7 @@ router.get('/asaas/payer-overrides', requireAdmin, async (req, res, next) => {
 // ── POST /api/asaas/payer-overrides ──────────────────────────────────────
 // Body: { lawsuit_id?, transaction_id?, payer_name, payer_cpf_cnpj, payer_email?, payer_phone? }
 // Upsert: usa lawsuit_id se presente, senão transaction_id. Exige pelo menos 1.
-router.post('/asaas/payer-overrides', requireAdmin, async (req, res, next) => {
+router.post('/asaas/payer-overrides', requireFinance, async (req, res, next) => {
   try {
     const b = req.body || {};
     const lawsuit_id     = b.lawsuit_id ? Number(b.lawsuit_id) : null;
@@ -176,7 +176,7 @@ router.post('/asaas/payer-overrides', requireAdmin, async (req, res, next) => {
 
 // ── DELETE /api/asaas/payer-overrides/:key ───────────────────────────────
 // key formato: "law_123" ou "tx_456"
-router.delete('/asaas/payer-overrides/:key', requireAdmin, async (req, res, next) => {
+router.delete('/asaas/payer-overrides/:key', requireFinance, async (req, res, next) => {
   try {
     const key = String(req.params.key);
     const [kind, idStr] = key.split('_');
@@ -192,7 +192,7 @@ router.delete('/asaas/payer-overrides/:key', requireAdmin, async (req, res, next
 // ── GET /api/asaas/payments-received ─────────────────────────────────────
 // Lista pagamentos que o webhook ASAAS já processou — usado pelo front pra
 // marcar cards com "✅ PAGO via ASAAS" sem precisar bater na API do ASAAS.
-router.get('/asaas/payments-received', requireAdmin, async (req, res, next) => {
+router.get('/asaas/payments-received', requireFinance, async (req, res, next) => {
   try {
     const r = await query(`
       SELECT asaas_payment_id, external_reference, status, value, net_value, paid_at, event, advbox_synced

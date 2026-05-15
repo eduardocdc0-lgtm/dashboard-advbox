@@ -9,4 +9,10 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+function requireFinance(req, res, next) {
+  if (!req.session?.user) return res.status(401).json({ error: 'Não autenticado.' });
+  if (!['admin', 'finance'].includes(req.session.user.role)) return res.status(403).json({ error: 'Acesso restrito ao financeiro.' });
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinance };

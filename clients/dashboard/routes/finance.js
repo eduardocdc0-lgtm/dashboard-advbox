@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const crypto = require('crypto');
 const { query } = require('../../../services/db');
-const { requireAdmin } = require('../../../middleware/auth');
+const { requireFinance } = require('../../../middleware/auth');
 const { fetchTransactions } = require('../../../services/data');
 const { getInadimplentes } = require('../../../services/inadimplentes');
 const cache = require('../../../cache');
@@ -86,7 +86,7 @@ function calcInadimplenciaMes(transactions, mm, yyyy) {
 
 // ── GET /api/finance/inadimplencia?mes=MM/YYYY ───────────────────────────────
 // Calcula índice de inadimplência do mês + trend 6 meses + top devedores.
-router.get('/finance/inadimplencia', requireAdmin, async (req, res, next) => {
+router.get('/finance/inadimplencia', requireFinance, async (req, res, next) => {
   try {
     const today = new Date();
     const defMes = String(today.getMonth() + 1).padStart(2, '0') + '/' + today.getFullYear();
@@ -133,7 +133,7 @@ router.get('/finance/inadimplencia', requireAdmin, async (req, res, next) => {
 // não filtra por mês). Classifica em "crítico recente" vs "acumulado" pela
 // regra acordada (≤60d e 1 parcela = crítico; >60d OU ≥2 parcelas com soma
 // ≥ R$1.000 = acumulado).
-router.get('/finance/inadimplentes', requireAdmin, async (req, res, next) => {
+router.get('/finance/inadimplentes', requireFinance, async (req, res, next) => {
   try {
     const force = req.query.force === '1';
     const data = await cache.getOrFetch('inadimplentes_full',
@@ -166,7 +166,7 @@ function lastDayOfMonth(yyyy, mm /* 1-12 */) {
 //   client_name, lawsuit_id?, category?, kind: 'a_vista'|'parcelado',
 //   total_value?, parcela_value, total_parcelas, first_due_date, day_of_month?, notes?
 // }
-router.post('/finance/entries', requireAdmin, async (req, res, next) => {
+router.post('/finance/entries', requireFinance, async (req, res, next) => {
   try {
     const {
       client_name, lawsuit_id, category,
@@ -242,7 +242,7 @@ router.post('/finance/entries', requireAdmin, async (req, res, next) => {
 
 // ── GET /api/finance/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD ──────────────────
 // Lista parcelas no período, agrupadas por mês.
-router.get('/finance/calendar', requireAdmin, async (req, res, next) => {
+router.get('/finance/calendar', requireFinance, async (req, res, next) => {
   try {
     const today = new Date().toISOString().slice(0, 10);
     let { from, to } = req.query;
@@ -279,7 +279,7 @@ router.get('/finance/calendar', requireAdmin, async (req, res, next) => {
 
 // ── PATCH /api/finance/parcela/:id ───────────────────────────────────────────
 // Atualiza status (paga/cancelada), data de pagamento, valor pago, etc.
-router.patch('/finance/parcela/:id', requireAdmin, async (req, res, next) => {
+router.patch('/finance/parcela/:id', requireFinance, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id inválido' });
@@ -332,7 +332,7 @@ router.patch('/finance/parcela/:id', requireAdmin, async (req, res, next) => {
 
 // ── DELETE /api/finance/parcela/:id ──────────────────────────────────────────
 // Remove uma parcela específica (não desfaz o lançamento inteiro).
-router.delete('/finance/parcela/:id', requireAdmin, async (req, res, next) => {
+router.delete('/finance/parcela/:id', requireFinance, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id inválido' });
@@ -344,7 +344,7 @@ router.delete('/finance/parcela/:id', requireAdmin, async (req, res, next) => {
 
 // ── DELETE /api/finance/group/:groupId ───────────────────────────────────────
 // Remove TODAS as parcelas de um lançamento (undo).
-router.delete('/finance/group/:groupId', requireAdmin, async (req, res, next) => {
+router.delete('/finance/group/:groupId', requireFinance, async (req, res, next) => {
   try {
     const r = await query(`DELETE FROM financial_parcelas WHERE group_id = $1 RETURNING id`, [req.params.groupId]);
     res.json({ ok: true, removed: r.rows.length });
@@ -354,7 +354,7 @@ router.delete('/finance/group/:groupId', requireAdmin, async (req, res, next) =>
 // ── PATCH /api/finance/group/:groupId/end-after ──────────────────────────────
 // "Encerra" um lançamento parcelado a partir de uma parcela específica:
 // remove todas as parcelas com num > X.
-router.patch('/finance/group/:groupId/end-after', requireAdmin, async (req, res, next) => {
+router.patch('/finance/group/:groupId/end-after', requireFinance, async (req, res, next) => {
   try {
     const { parcela_num } = req.body || {};
     const n = parseInt(parcela_num, 10);

@@ -22,7 +22,7 @@ const TEAM_USERS = [
   { username: 'marilia',  password: process.env.ADV_USER_MARILIA,  advboxUserId: 213554, role: 'team',  name: 'Ana Marília' },
   { username: 'leticia',  password: process.env.ADV_USER_LETICIA,  advboxUserId: 214014, role: 'team',  name: 'Letícia Stephany' },
   { username: 'alice',    password: process.env.ADV_USER_ALICE,    advboxUserId: 252099, role: 'team',  name: 'Maria Alice' },
-  { username: 'cau',      password: process.env.ADV_USER_CAU,      advboxUserId: 236523, role: 'team',  name: 'Claudiana' },
+  { username: 'cau',      password: process.env.ADV_USER_CAU,      advboxUserId: 236523, role: 'finance', name: 'Claudiana' },
   { username: 'tammyres', password: process.env.ADV_USER_TAMMYRES, advboxUserId: 267371, role: 'team',  name: 'Tammyres' },
   { username: 'thiago',   password: process.env.ADV_USER_THIAGO,   advboxUserId: 224040, role: 'team',  name: 'Thiago Tavares' },
 ];
