@@ -3,11 +3,13 @@ const crypto = require('crypto');
 const { query } = require('../../../services/db');
 const { requireAdmin } = require('../../../middleware/auth');
 const { fetchTransactions } = require('../../../services/data');
+const { getInadimplentes } = require('../../../services/inadimplentes');
 const cache = require('../../../cache');
 
 const router = Router();
 
 cache.define('inadimplencia', 30 * 60 * 1000); // 30 min
+cache.define('inadimplentes_full', 30 * 60 * 1000); // 30 min
 
 // ── Helper: filtra parcelas válidas (descarta lixo) ──────────────────────────
 function isParcelaValida(t) {
@@ -122,6 +124,20 @@ router.get('/finance/inadimplencia', requireAdmin, async (req, res, next) => {
       };
     }, req.query.force === '1');
 
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/finance/inadimplentes ───────────────────────────────────────────
+// Relatório agregado de TODOS os inadimplentes (todas as parcelas atrasadas,
+// não filtra por mês). Classifica em "crítico recente" vs "acumulado" pela
+// regra acordada (≤60d e 1 parcela = crítico; >60d OU ≥2 parcelas com soma
+// ≥ R$1.000 = acumulado).
+router.get('/finance/inadimplentes', requireAdmin, async (req, res, next) => {
+  try {
+    const force = req.query.force === '1';
+    const data = await cache.getOrFetch('inadimplentes_full',
+      () => getInadimplentes({ force }), force);
     res.json(data);
   } catch (err) { next(err); }
 });

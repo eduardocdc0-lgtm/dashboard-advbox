@@ -1201,6 +1201,31 @@
     .ctrl-ranking {
       display:flex; gap:var(--space-3); margin-bottom:var(--space-6); flex-wrap:wrap;
     }
+    /* Inadimplentes */
+    .inad-card {
+      flex:1; min-width:200px; padding:var(--space-4) var(--space-5);
+      border-radius:var(--radius-lg); background:var(--bg-card);
+      border:1px solid var(--border);
+    }
+    .inad-card-label { font-size:var(--text-xs); color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; }
+    .inad-card-num { font-family:'DM Serif Display', serif; font-size:32px; font-weight:400; margin:6px 0 2px; line-height:1; }
+    .inad-card-val { font-size:var(--text-sm); color:var(--text-secondary); }
+    .inad-card--crit .inad-card-num { color:#d97706; }
+    .inad-card--acum .inad-card-num { color:#dc2626; }
+    .inad-fbtn {
+      padding:6px 12px; border:none; border-radius:6px; background:transparent;
+      font-size:13px; cursor:pointer; color:var(--text-secondary); font-family:'DM Sans',sans-serif;
+    }
+    .inad-fbtn--active { background:var(--surface-2); color:var(--text-primary); font-weight:600; }
+    .inad-tabela { border-collapse:collapse; width:100%; font-size:13px; }
+    .inad-tabela th { background:#f3f4f6; color:#374151; font-weight:600; font-size:12px; text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); position:sticky; top:0; }
+    .inad-tabela td { padding:8px 10px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+    .inad-tabela tr:hover { background:#fafafa; }
+    .inad-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+    .inad-pill--crit { background:#fef3c7; color:#92400e; }
+    .inad-pill--acum { background:#fee2e2; color:#991b1b; }
+    .inad-dias-crit { color:#dc2626; font-weight:600; }
+    .inad-val { font-variant-numeric: tabular-nums; }
     .ctrl-ranking-card {
       flex:1; min-width:240px; padding:var(--space-4) var(--space-5);
       border-radius:var(--radius-lg); background:var(--bg-card);
@@ -2341,6 +2366,7 @@
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('inadimplentes', event); inadimplentesLoad();">💸 Inadimplentes</button>
         </div>
       </div>
 
@@ -2845,6 +2871,33 @@
         </div>
         <div id="finLancamentos"><div class="loading">Carregando...</div></div>
       </div>
+    </div>
+
+    <!-- ABA INADIMPLENTES -->
+    <div id="inadimplentes" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">💸 Inadimplentes</div>
+          <div style="font-size:12px;color:#888;margin-top:3px;" id="inadMeta">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="inadimplentesExportCSV()" class="btn btn-secondary btn-sm">📥 Exportar CSV</button>
+          <button onclick="inadimplentesLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
+        </div>
+      </div>
+
+      <div id="inadCards" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <div class="inad-filters" style="display:flex;gap:4px;border:1px solid var(--border);border-radius:8px;padding:3px;background:#fff;">
+          <button class="inad-fbtn inad-fbtn--active" data-filter="todos" onclick="inadimplentesSetFilter(this)">Todos</button>
+          <button class="inad-fbtn" data-filter="critico" onclick="inadimplentesSetFilter(this)">🟡 Crítico recente</button>
+          <button class="inad-fbtn" data-filter="acumulado" onclick="inadimplentesSetFilter(this)">🔴 Acumulado</button>
+        </div>
+        <input id="inadBusca" placeholder="🔎 Filtrar por nome, CPF, processo..." oninput="inadimplentesFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:340px;font-size:14px;font-family:'DM Sans',sans-serif;">
+      </div>
+
+      <div id="inadTabelaWrap"></div>
     </div>
 
     <!-- ABA AUDITORIA: CRM × FINANCEIRO -->
@@ -11032,6 +11085,159 @@
       }
     }
     // ── FIM CONTROLLER ───────────────────────────────────────────────────────
+
+    // ── INADIMPLENTES ────────────────────────────────────────────────────────
+    let INAD_DATA = null;
+    let _inadFilter = 'todos';
+
+    async function inadimplentesLoad(force = false) {
+      const meta = document.getElementById('inadMeta');
+      const cards = document.getElementById('inadCards');
+      const wrap  = document.getElementById('inadTabelaWrap');
+      meta.textContent = 'Carregando...';
+      cards.innerHTML = '';
+      wrap.innerHTML = '';
+      try {
+        const r = await fetch('/api/finance/inadimplentes' + (force ? '?force=1' : ''), { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        INAD_DATA = await r.json();
+        inadimplentesRender();
+      } catch (e) {
+        meta.textContent = 'Erro: ' + auuEscapeHtml(e.message);
+      }
+    }
+
+    function fmtMoneyBR(v) {
+      return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function inadimplentesRender() {
+      const d = INAD_DATA;
+      if (!d) return;
+      const t = d.totais;
+
+      document.getElementById('inadMeta').textContent =
+        `${t.totalDevedores} cliente(s) com parcela em atraso · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}`;
+
+      const cards = document.getElementById('inadCards');
+      cards.innerHTML = `
+        <div class="inad-card">
+          <div class="inad-card-label">Total Devedores</div>
+          <div class="inad-card-num">${t.totalDevedores}</div>
+          <div class="inad-card-val">${t.totalParcelasAtrasadas} parcela(s) atrasada(s)</div>
+        </div>
+        <div class="inad-card">
+          <div class="inad-card-label">Total Devido</div>
+          <div class="inad-card-num">${fmtMoneyBR(t.totalDevido)}</div>
+          <div class="inad-card-val">soma de todas as parcelas vencidas</div>
+        </div>
+        <div class="inad-card inad-card--crit">
+          <div class="inad-card-label">🟡 Crítico recente</div>
+          <div class="inad-card-num">${t.qtdCriticos}</div>
+          <div class="inad-card-val">${fmtMoneyBR(t.valorCriticos)} · ≤60d, 1 parcela</div>
+        </div>
+        <div class="inad-card inad-card--acum">
+          <div class="inad-card-label">🔴 Acumulado</div>
+          <div class="inad-card-num">${t.qtdAcumulados}</div>
+          <div class="inad-card-val">${fmtMoneyBR(t.valorAcumulados)} · &gt;60d ou ≥2 e ≥R$1k</div>
+        </div>
+      `;
+
+      inadimplentesRenderTable();
+    }
+
+    function inadimplentesRenderTable() {
+      const wrap = document.getElementById('inadTabelaWrap');
+      if (!INAD_DATA) return;
+      let lista = [];
+      if (_inadFilter === 'todos' || _inadFilter === 'acumulado') lista = lista.concat(INAD_DATA.acumulados || []);
+      if (_inadFilter === 'todos' || _inadFilter === 'critico')   lista = lista.concat(INAD_DATA.criticosRecentes || []);
+      if (!lista.length) {
+        wrap.innerHTML = '<div style="padding:24px;color:#999;font-style:italic;text-align:center;">Nenhum inadimplente nessa categoria 🎉</div>';
+        return;
+      }
+      // Ordena por valor desc dentro do grupo
+      lista.sort((a, b) => b.valorTotal - a.valorTotal);
+
+      const rows = lista.map(c => {
+        const pillCls = c.categoria === 'acumulado' ? 'inad-pill--acum' : 'inad-pill--crit';
+        const pillTxt = c.categoria === 'acumulado' ? '🔴 Acumulado' : '🟡 Recente';
+        const lawCells = (c.lawsuits || []).slice(0, 3).map(l =>
+          `<a href="https://app.advbox.com.br/lawsuits/${l.id}" target="advbox" rel="noopener">${l.process_number || '#'+l.id}</a>`
+        ).join(', ');
+        const lawExtra = c.lawsuits && c.lawsuits.length > 3 ? ` +${c.lawsuits.length - 3}` : '';
+        const diasCls = (c.diasAtraso || 0) > 60 ? ' inad-dias-crit' : '';
+        return `<tr class="inad-row">
+          <td><strong>${auuEscapeHtml(c.cliente)}</strong>${c.cpf ? `<br><small style="color:#666">${auuEscapeHtml(c.cpf)}</small>` : ''}</td>
+          <td><span class="inad-pill ${pillCls}">${pillTxt}</span></td>
+          <td style="text-align:center">${c.parcelas}</td>
+          <td class="inad-val" style="text-align:right;font-weight:600;">${fmtMoneyBR(c.valorTotal)}</td>
+          <td class="${diasCls}" style="text-align:right">${c.diasAtraso || 0}d</td>
+          <td style="font-size:12px;">${c.primeiraAtraso || ''}</td>
+          <td style="font-size:12px;">${lawCells || '—'}${lawExtra}</td>
+        </tr>`;
+      }).join('');
+
+      wrap.innerHTML = `
+        <table class="inad-tabela" id="inadTabela">
+          <thead><tr>
+            <th>Cliente</th>
+            <th>Categoria</th>
+            <th style="text-align:center">Parcelas</th>
+            <th style="text-align:right">Total devido</th>
+            <th style="text-align:right">Atraso</th>
+            <th>Primeira atrasada</th>
+            <th>Processos AdvBox</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      // Reaplica filtro de busca se tiver
+      const q = (document.getElementById('inadBusca').value || '').toLowerCase().trim();
+      if (q) inadimplentesFiltrar();
+    }
+
+    function inadimplentesSetFilter(btn) {
+      _inadFilter = btn.dataset.filter;
+      document.querySelectorAll('.inad-fbtn').forEach(b => b.classList.toggle('inad-fbtn--active', b === btn));
+      inadimplentesRenderTable();
+    }
+
+    function inadimplentesFiltrar() {
+      const q = (document.getElementById('inadBusca').value || '').toLowerCase().trim();
+      document.querySelectorAll('.inad-row').forEach(tr => {
+        const txt = tr.textContent.toLowerCase();
+        tr.style.display = !q || txt.includes(q) ? '' : 'none';
+      });
+    }
+
+    function inadimplentesExportCSV() {
+      if (!INAD_DATA) return;
+      const all = [...(INAD_DATA.acumulados || []), ...(INAD_DATA.criticosRecentes || [])];
+      const header = ['Cliente','CPF','Categoria','Parcelas','Total devido','Dias atraso','Primeira atrasada','Última atrasada','Lawsuits'];
+      const rows = all.map(c => [
+        c.cliente,
+        c.cpf || '',
+        c.categoria,
+        c.parcelas,
+        c.valorTotal.toFixed(2).replace('.', ','),
+        c.diasAtraso || 0,
+        c.primeiraAtraso || '',
+        c.ultimaAtraso || '',
+        (c.lawsuits || []).map(l => l.id).join(';'),
+      ]);
+      const csv = [header, ...rows].map(r => r.map(v => {
+        const s = String(v ?? '');
+        return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(';')).join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `inadimplentes_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    // ── FIM INADIMPLENTES ────────────────────────────────────────────────────
   </script>
 
   <!-- Modal A Receber -->
