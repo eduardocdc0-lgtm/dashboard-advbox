@@ -281,6 +281,9 @@ function audResponsavelErrado(processos) {
     const responsavelAtual = normStr(p.responsible);
     if (!responsavelAtual) continue;
 
+    // Eduardo (dono/admin) supervisiona qualquer fase — nunca é erro.
+    if (responsavelAtual.includes('EDUARDO')) continue;
+
     // Pra cada zona esperada, busca SUAS keywords (ex: zona LETICIA_OU_ALICE
     // aceita "LETICIA" ou "ALICE" no nome real do AdvBox).
     const zonasEsperadas = zonasMulti || [zonaCerta];
