@@ -6082,6 +6082,7 @@
       // Botão "Cobrar Cau (todos)" só aparece quando há críticos
       const cobrarBtn = document.getElementById('auditCobrarTodosBtn');
       if (cobrarBtn) cobrarBtn.style.display = filtCrit.length > 0 ? '' : 'none';
+      window._monDataByLaw = Object.fromEntries(filtMon.map(c => [c.lawsuitId, c]));
       document.getElementById('auditMonCount').textContent  = filtMon.length;
       document.getElementById('auditMonVal').textContent    = filtMon.length ? formatMoney(filtMon.reduce((s,c)=>s+(c.valorFees||0),0)) : '';
       document.getElementById('auditOkCount').textContent   = filtOk.length;
@@ -6197,6 +6198,9 @@
                 : `<span class="audit-mon-row__placeholder">—</span>`}
             </div>
             <a href="${c.linkAdvBox}" target="_blank" rel="noopener" class="audit-mon-row__link" aria-label="Abrir ${c.cliente} no AdvBox">↗</a>
+            ${_asaasChargesByTx.has('law_' + c.lawsuitId)
+              ? `<a href="${(_asaasChargesByTx.get('law_' + c.lawsuitId).invoice_url || '#')}" target="_blank" rel="noopener" title="Cobrança já gerada — clique pra abrir" style="font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:2px 8px;border-radius:8px;text-decoration:none;font-weight:600;align-self:center;">📨 Gerado</a>`
+              : `<button onclick="abrirCobrancaMon('${c.lawsuitId}')" style="font-size:10px;background:#2C7A4D;color:#fff;border:none;border-radius:8px;padding:2px 8px;cursor:pointer;font-weight:600;align-self:center;">💰 Boleto</button>`}
           </article>`;
         }).join('') + '</div>';
       }
@@ -6763,6 +6767,53 @@
     // Backward-compat: nome antigo continua funcionando
     const selectAllInadimplentes = () => selectAllCobraveis('inadimplente');
 
+    function abrirCobrancaMon(lawsuitId) {
+      const c = (window._monDataByLaw || {})[lawsuitId];
+      if (!c) return;
+      const ref = 'law_' + lawsuitId;
+      const existingCharge = _asaasChargesByTx.get(ref);
+      if (existingCharge) {
+        const ok = confirm(`Este processo já tem cobrança no ASAAS (${existingCharge.status}, vence ${existingCharge.due_date}).\nCriar outra vai duplicar. Tens certeza?`);
+        if (!ok) return;
+      }
+      const override = _payerOverrides[ref];
+      const initialName = override ? override.name : (c.cliente || '');
+      const initialCpf  = override ? override.cpfCnpj : (c.cpfCnpj || '');
+      const venc = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+      const desc = `Honorários — ${c.fase}${c.processo ? ' · ' + c.processo : ''}`;
+      const overrideBadge = override ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;">👤 Pagador salvo</div>` : '';
+      const tbody = document.getElementById('cobrItemsBody');
+      tbody.innerHTML = `
+        <tr data-ref="${ref}" data-lawsuit-id="${lawsuitId}">
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="name" value="${initialName.replace(/"/g,'&quot;')}" placeholder="Nome do pagador"
+              style="width:200px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+            ${overrideBadge}
+            <div style="font-size:9.5px;color:#999;margin-top:2px;">${c.fase}</div>
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="cpf" value="${initialCpf}" placeholder="000.000.000-00"
+              style="width:130px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="number" step="0.01" data-field="value" value="${Number(c.valorFees || 0).toFixed(2)}"
+              style="width:90px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:right;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="date" data-field="due" value="${venc}"
+              style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+          <td style="padding:6px;font-size:12px;">
+            <input type="text" data-field="desc" value="${desc.replace(/"/g,'&quot;')}" placeholder="Descrição"
+              style="width:200px;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+          </td>
+        </tr>`;
+      document.getElementById('cobrCount').textContent = '1 processo em monitoramento';
+      document.getElementById('cobrResultArea').style.display = 'none';
+      document.getElementById('cobrFormArea').style.display = 'block';
+      document.getElementById('cobrancaLoteModal').style.display = 'flex';
+    }
+
     function abrirCobrancaLote() {
       if (_finSelectedTxs.size === 0) return;
       const items = (transData || []).filter(t => _finSelectedTxs.has(t.id));
@@ -6851,6 +6902,7 @@
       rows.forEach(tr => {
         const txId = tr.dataset.txId;
         const lawsuitId = tr.dataset.lawsuitId ? Number(tr.dataset.lawsuitId) : null;
+        const ref = tr.dataset.ref || ('tx_' + txId);
         const t = (transData || []).find(x => String(x.id) === String(txId));
         const name = tr.querySelector('input[data-field="name"]').value.trim();
         const cpf = tr.querySelector('input[data-field="cpf"]').value.replace(/\D/g, '');
@@ -6866,7 +6918,7 @@
           cpfCnpj: cpf,
           value, dueDate,
           description: desc || `Honorários${t?.process_number ? ' — proc. ' + t.process_number : ''}`,
-          externalReference: 'tx_' + txId,
+          externalReference: ref,
         });
         // Se o usuário digitou um pagador diferente do nome original da transaction,
         // salva como override (próxima cobrança desse processo virá preenchida).

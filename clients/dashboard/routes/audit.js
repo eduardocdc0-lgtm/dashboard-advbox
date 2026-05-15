@@ -147,8 +147,9 @@ router.get('/audit/kanban-financeiro', async (req, res, next) => {
         // RPV do Mês usa valor uniforme (piso federal). Override via env RPV_VALOR_FIXO_MES.
         const feesValue  = normFase(stage) === 'RPV DO MES' ? config.rpv.valorFixoMes : feesRaw;
         const lawId      = String(l.id || l.lawsuits_id || '');
+        const cpfCnpj    = String(personal?.identification || '').replace(/\D/g, '');
 
-        const entry = { lawsuitId: lawId, cliente, processo: l.process_number || `#${lawId}`, fase: stage, diasNaFase, valorFees: feesValue, responsavel: l.responsible || '', linkAdvBox: `https://app.advbox.com.br/lawsuits/${lawId}` };
+        const entry = { lawsuitId: lawId, cliente, processo: l.process_number || `#${lawId}`, fase: stage, diasNaFase, valorFees: feesValue, responsavel: l.responsible || '', linkAdvBox: `https://app.advbox.com.br/lawsuits/${lawId}`, cpfCnpj };
 
         if (isCobranca) {
           let txMes = txByLaw[lawId] || []; const lTx = lastTx[lawId];
