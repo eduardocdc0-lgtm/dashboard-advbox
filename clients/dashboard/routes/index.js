@@ -2,6 +2,7 @@ const { Router } = require('express');
 
 const router = Router();
 
+router.use(require('./healthz'));        // ← público; antes do resto pra deixar claro
 router.use(require('./settings'));
 router.use(require('./lawsuits'));
 router.use(require('./customers'));
