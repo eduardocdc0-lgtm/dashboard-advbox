@@ -154,7 +154,8 @@ const RESPONSAVEL_POR_FASE_MULTI = {
   'DESENVOLVENDO RECURSO AOS TRIBUNAIS': ['MARILIA', 'LETICIA_OU_ALICE'],
   'RECURSO PROTOCOLADO INICIADO':      ['MARILIA', 'LETICIA_OU_ALICE'],
   'APRESENTADA RESPOSTA A RECURSO':    ['MARILIA', 'LETICIA_OU_ALICE'],
-  'AGUARDANDO JULGAMENTO DO RECURSO':  ['MARILIA', 'LETICIA_OU_ALICE'],
+  // 'AGUARDANDO JULGAMENTO DO RECURSO' — REMOVIDO: espera passiva pelo
+  //   tribunal, ninguém faz nada. Movido pra FASES_IGNORADAS_RESPONSAVEL.
   'RECURSO JULGADO ENTRE EM CONTATO':  ['MARILIA', 'LETICIA_OU_ALICE'],
   'TRANSITO EM JULGADO NAO CABE RECURSO': ['MARILIA', 'LETICIA_OU_ALICE'],
 };
@@ -167,6 +168,8 @@ const FASES_IGNORADAS_RESPONSAVEL = new Set([
   'ARQUIVADO ENCERRADO',
   // INSS cancelou — qualquer responsável é aceitável, cliente que decide
   'CANCELADO REQUERIMENTO',
+  // Espera passiva pelo tribunal — ninguém faz nada
+  'AGUARDANDO JULGAMENTO DO RECURSO',
 ]);
 
 // Fases que indicam processo INATIVO. Usado pra contar "processos ativos".
