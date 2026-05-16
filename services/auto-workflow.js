@@ -14,7 +14,7 @@
 
 const r = require('./audit-rules');
 const { TEMPLATES, daysFromNow } = require('./auto-workflow-templates');
-const { fetchLawsuits, client } = require('./data');
+const { fetchLawsuits, fetchAllPosts, client } = require('./data');
 const { query } = require('./db');
 
 function normStr(s) {
@@ -172,11 +172,52 @@ async function createPost({ lawsuitId, task, userId, deadline }) {
   return body;
 }
 
+// ── Detecção de duplicação ──────────────────────────────────────────────────
+// Antes de criar uma tarefa via POST /posts, checa se já existe uma tarefa
+// equivalente recente naquele lawsuit. Pega 3 fontes de duplicação:
+//   1. Justin-e (IA do AdvBox) que criou tarefa pra mesma intimação
+//   2. Membro da equipe que criou manualmente
+//   3. Auto-workflow anterior que não foi registrado (ex: import manual)
+//
+// Janela default: 72h. Configurável via DEDUP_WINDOW_HOURS (env).
+
+const DEDUP_WINDOW_HOURS = Number(process.env.DEDUP_WINDOW_HOURS) || 72;
+
+/**
+ * Monta índice de tarefas recentes por lawsuit.
+ * Retorna Map<lawsuitId:number, Set<tasksId:number>>.
+ */
+async function buildRecentPostsIndex(logger) {
+  const idx = new Map();
+  try {
+    const posts = await fetchAllPosts();    // usa cache do dashboard
+    const limite = Date.now() - DEDUP_WINDOW_HOURS * 3600 * 1000;
+    for (const p of posts) {
+      const lid = Number(p.lawsuits_id);
+      const tid = Number(p.tasks_id);
+      if (!lid || !tid) continue;
+      const criadaTs = Date.parse(p.created_at || p.start_date || '');
+      if (Number.isNaN(criadaTs) || criadaTs < limite) continue;
+      if (!idx.has(lid)) idx.set(lid, new Set());
+      idx.get(lid).add(tid);
+    }
+    logger.info(`[Auto-Workflow] Índice de duplicação: ${idx.size} lawsuits com posts nas últimas ${DEDUP_WINDOW_HOURS}h`);
+  } catch (e) {
+    logger.warn(`[Auto-Workflow] Falha ao montar índice de duplicação: ${e.message}. Seguindo sem dedup.`);
+  }
+  return idx;
+}
+
+function hasRecentDuplicate(idx, lawsuitId, tasksId) {
+  const set = idx.get(Number(lawsuitId));
+  return Boolean(set && set.has(Number(tasksId)));
+}
+
 // ── Loop principal ──────────────────────────────────────────────────────────
 
 /**
  * Roda 1 ciclo de detecção + dispatch.
- * Retorna { processados, novos, criados, erros }.
+ * Retorna { processados, novos, criados, erros, skippedDuplicates }.
  */
 async function runCycle({ logger = console, dryRun = false, forceRefresh = true, force = false, onlyLawsuitId = null } = {}) {
   await ensureTables();
@@ -185,9 +226,13 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
   if (onlyLawsuitId) lawsuits = lawsuits.filter(l => Number(l.id) === Number(onlyLawsuitId));
   logger.info(`[Auto-Workflow] Analisando ${lawsuits.length} lawsuits${force ? ' (force=1)' : ''}...`);
 
+  // Pré-carrega índice de tarefas recentes (Justino, manual, etc) pra dedup
+  const recentIdx = await buildRecentPostsIndex(logger);
+
   let novos = 0;
   let criados = 0;
   let erros = 0;
+  let skippedDuplicates = 0;
   const detalhes = [];
 
   for (const law of lawsuits) {
@@ -216,11 +261,19 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
         if (dryRun) {
           detalhes.push({ lawId, stage: newStage, workflow: tpl.name, dryRun: true });
         } else {
-          // Cria as tarefas no AdvBox
+          // Cria as tarefas no AdvBox (com dedup contra Justino/manual/etc)
           const created = [];
+          const skipped = [];
           let firstError = null;
           for (const t of tpl.tasks) {
             try {
+              const tasksId = await resolveTaskId(t.task);
+              if (hasRecentDuplicate(recentIdx, lawId, tasksId)) {
+                skipped.push({ task: t.task, tasks_id: tasksId, motivo: 'duplicado_recente' });
+                skippedDuplicates++;
+                logger.info(`[Auto-Workflow] Skip dup lawsuit=${lawId} task='${t.task}' (tasks_id=${tasksId}) — já existe nas últimas ${DEDUP_WINDOW_HOURS}h`);
+                continue;
+              }
               const post = await createPost({
                 lawsuitId: lawId,
                 task: t.task,
@@ -229,6 +282,10 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
               });
               created.push({ task: t.task, post_id: post?.id || null });
               criados++;
+              // Atualiza índice em memória — evita 2 templates do mesmo ciclo
+              // pedirem a mesma task no mesmo lawsuit
+              if (!recentIdx.has(lawId)) recentIdx.set(lawId, new Set());
+              recentIdx.get(lawId).add(tasksId);
               await new Promise(rs => setTimeout(rs, 800));
             } catch (e) {
               erros++;
@@ -238,8 +295,8 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
               break; // para na primeira falha pra não criar workflow parcial
             }
           }
-          await markDispatched(lawId, tpl.name, newStage, created, firstError);
-          detalhes.push({ lawId, stage: newStage, workflow: tpl.name, tasksCreated: created.length, error: firstError });
+          await markDispatched(lawId, tpl.name, newStage, { created, skipped }, firstError);
+          detalhes.push({ lawId, stage: newStage, workflow: tpl.name, tasksCreated: created.length, tasksSkipped: skipped.length, error: firstError });
         }
       }
     }
@@ -250,8 +307,8 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
     if (!dryRun && !dispatchError) await updateSnapshot(lawId, newStage);
   }
 
-  logger.info(`[Auto-Workflow] Ciclo: ${lawsuits.length} processados, ${novos} workflows novos, ${criados} tarefas criadas, ${erros} erros.`);
-  return { processados: lawsuits.length, novos, criados, erros, detalhes, dryRun };
+  logger.info(`[Auto-Workflow] Ciclo: ${lawsuits.length} processados, ${novos} workflows novos, ${criados} tarefas criadas, ${skippedDuplicates} pulados por dedup, ${erros} erros.`);
+  return { processados: lawsuits.length, novos, criados, skippedDuplicates, erros, detalhes, dryRun };
 }
 
 module.exports = { runCycle, ensureTables };

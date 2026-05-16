@@ -2505,6 +2505,7 @@
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab" onclick="showTab('petitions', event)">🧾 Petições</button>
+          <button class="nav-item tab" onclick="showTab('publications', event); publicationsLoad();">📰 Publicações</button>
           <button class="nav-item tab" onclick="showTab('distribuicao', event)">Distribuição</button>
         </div>
       </div>
@@ -2887,6 +2888,66 @@
       </div>
     </div>
     <!-- FIM ABA PETIÇÕES -->
+
+    <!-- ABA PUBLICAÇÕES — radar de intimações/movimentos recentes -->
+    <div id="publications" class="tab-content">
+      <header class="section-header">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Radar</div>
+          <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">📰 Publicações da semana</h2>
+          <div style="font-size:12px;color:var(--text-2);margin-top:3px;">Movimentos processuais capturados dos diários da justiça nos últimos N dias.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="pubDaysSel" onchange="publicationsLoad()" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+            <option value="7" selected>Últimos 7 dias</option>
+            <option value="14">Últimos 14 dias</option>
+            <option value="30">Últimos 30 dias</option>
+          </select>
+          <button class="btn btn--primary btn--sm" onclick="publicationsLoad(true)">↺ Atualizar</button>
+        </div>
+      </header>
+
+      <!-- KPI total -->
+      <div style="text-align:center;margin:8px 0 24px;">
+        <div id="pubTotalNum" style="font-family:'DM Serif Display',serif;font-size:64px;font-weight:400;line-height:1;color:var(--text);">—</div>
+        <div id="pubTotalLbl" style="font-size:13px;color:var(--text-2);margin-top:6px;">publicações no período</div>
+      </div>
+
+      <div id="pubLoading" class="empty" style="display:none;">
+        <div class="empty__icon">⏳</div>
+        <div class="empty__title">Carregando publicações…</div>
+        <div class="empty__desc">Buscando movimentos do AdvBox e cruzando com seus processos.</div>
+      </div>
+
+      <div id="pubError" class="empty empty--error" style="display:none;">
+        <div class="empty__icon">⚠️</div>
+        <div class="empty__title">Erro ao carregar</div>
+        <div class="empty__desc" id="pubErrorMsg">—</div>
+        <button class="btn btn--secondary btn--sm empty__action" onclick="publicationsLoad(true)">Tentar de novo</button>
+      </div>
+
+      <div id="pubEmpty" class="empty empty--success" style="display:none;">
+        <div class="empty__icon">📭</div>
+        <div class="empty__title">Sem publicações no período</div>
+        <div class="empty__desc">Nenhum movimento capturado dos diários nessa janela.</div>
+      </div>
+
+      <div id="pubContent" style="display:none;">
+        <div style="overflow-x:auto;">
+          <table class="fin-table" style="width:100%;min-width:720px;">
+            <thead><tr>
+              <th style="white-space:nowrap;">Data</th>
+              <th>Cliente / Processo</th>
+              <th>Fase atual</th>
+              <th>Movimento</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="pubTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- FIM ABA PUBLICAÇÕES -->
 
     <!-- ABA 4: FINANCEIRO -->
     <div id="financial" class="tab-content">
@@ -9542,6 +9603,91 @@
         document.getElementById('petEmpty').style.display   = '';
         document.getElementById('petEmpty').textContent     = '❌ Erro ao carregar: ' + e.message;
       }
+    }
+
+    // ── PUBLICAÇÕES (radar de movimentos) ─────────────────────────────────
+    let _pubCache = null;
+    let _pubCacheKey = '';
+
+    async function publicationsLoad(force = false) {
+      const days = Number(document.getElementById('pubDaysSel')?.value || 7);
+      const key  = `d${days}`;
+      // Cache local — evita refetch ao alternar pra aba de novo
+      if (_pubCache && _pubCacheKey === key && !force) {
+        pubRender(_pubCache);
+        return;
+      }
+
+      const $loading = document.getElementById('pubLoading');
+      const $error   = document.getElementById('pubError');
+      const $empty   = document.getElementById('pubEmpty');
+      const $content = document.getElementById('pubContent');
+      [$loading, $error, $empty, $content].forEach(el => { if (el) el.style.display = 'none'; });
+      $loading.style.display = '';
+      document.getElementById('pubTotalNum').textContent = '—';
+
+      try {
+        const r = await fetch(`/api/publications/recent?days=${days}${force ? '&force=1' : ''}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        if (data.error) throw new Error(data.error);
+        _pubCache    = data;
+        _pubCacheKey = key;
+        pubRender(data);
+      } catch (e) {
+        $loading.style.display = 'none';
+        $error.style.display   = '';
+        document.getElementById('pubErrorMsg').textContent = e.message || String(e);
+      }
+    }
+
+    function pubFmtDate(s) {
+      if (!s) return '—';
+      const d = new Date(s);
+      if (isNaN(d)) return s;
+      return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function pubEscapeHtml(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function pubRender(data) {
+      const items = data.items || [];
+      const days  = data.days  || 7;
+
+      document.getElementById('pubLoading').style.display = 'none';
+      document.getElementById('pubError').style.display   = 'none';
+      document.getElementById('pubTotalNum').textContent  = items.length;
+      document.getElementById('pubTotalLbl').textContent  =
+        `publicações nos últimos ${days} dias`;
+
+      if (!items.length) {
+        document.getElementById('pubEmpty').style.display = '';
+        document.getElementById('pubContent').style.display = 'none';
+        return;
+      }
+
+      const tbody = document.getElementById('pubTbody');
+      tbody.innerHTML = items.map(it => {
+        const link = it.lawsuit_id
+          ? `<a href="https://app.advbox.com.br/lawsuits/${it.lawsuit_id}" target="_blank" rel="noopener" class="btn btn--link btn--xs">Abrir no AdvBox ↗</a>`
+          : '';
+        const proc = it.lawsuit_number ? `<div style="font-size:11px;color:var(--text-3);font-family:'SF Mono',monospace;margin-top:2px;">${pubEscapeHtml(it.lawsuit_number)}</div>` : '';
+        const stage = it.stage ? `<span style="display:inline-block;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);padding:2px 8px;border:1px solid var(--border);border-radius:10px;">${pubEscapeHtml(it.stage)}</span>` : '<span style="color:var(--text-3);">—</span>';
+        return `<tr>
+          <td style="white-space:nowrap;color:var(--text-2);font-size:12px;vertical-align:top;padding-top:10px;">${pubEscapeHtml(pubFmtDate(it.date))}</td>
+          <td style="vertical-align:top;padding-top:10px;"><div style="font-weight:500;">${pubEscapeHtml(it.cliente || '—')}</div>${proc}</td>
+          <td style="vertical-align:top;padding-top:10px;">${stage}</td>
+          <td style="vertical-align:top;padding-top:10px;font-size:13px;line-height:1.45;">${pubEscapeHtml(it.description || '—')}</td>
+          <td style="text-align:right;white-space:nowrap;vertical-align:top;padding-top:8px;">${link}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('pubEmpty').style.display = 'none';
+      document.getElementById('pubContent').style.display = '';
     }
 
     function petRender() {
