@@ -323,4 +323,114 @@ router.get('/admin/duplicate-tasks', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/admin/team-load ─────────────────────────────────────────────────
+// Carga real do time NO ADVBOX, por pessoa. Pra cruzar com dados de chat
+// (ChatGuru) e ver quem está sobrecarregado vs subutilizado.
+//
+//   GET /api/admin/team-load                     → janela 15 dias pra "concluídas"
+//   GET /api/admin/team-load?recent_days=30      → janela maior pra concluídas
+//
+// Pra cada pessoa, conta tarefas em 3 buckets:
+//   - active:   atribuídas + ainda NÃO concluídas (carga atual)
+//   - overdue:  active + date_deadline < hoje (urgência)
+//   - done_recent: concluídas nos últimos N dias
+//
+// IMPORTANTE: cada post pode ter MÚLTIPLOS users — cada um tem own .completed
+// flag. Então uma tarefa "ativa pra Letícia" pode estar "concluída pra Marília".
+
+router.get('/admin/team-load', requireAdmin, async (req, res, next) => {
+  try {
+    const recentDays = Math.min(60, Math.max(1, Number(req.query.recent_days) || 15));
+    const recentCutoff = Date.now() - recentDays * 86400 * 1000;
+    const todayISO = new Date().toISOString().slice(0, 10);
+
+    const posts = await fetchAllPosts();
+
+    // Heurística de "petição" (igual petitions.js)
+    const PETITION_PREFIXES = [
+      'AJUIZAR', 'PETICIONAR', 'ELABORAR PETICAO', 'ELABORAR RECURSO',
+      'RECURSO DE', 'CONTESTACAO', 'MANIFESTACAO',
+      'CUMPRIMENTO DE SENTENCA', 'IMPUGNACAO', 'EMBARGOS',
+    ];
+    const EXCLUDED_PREFIXES = ['PROTOCOLAR ADM', 'COMENTARIO', 'ANALISAR', 'LIGAR', 'ENVIAR'];
+    const normTask = s => (s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const isPetition = task => {
+      const t = normTask(task);
+      if (EXCLUDED_PREFIXES.some(ex => t.startsWith(ex))) return false;
+      return PETITION_PREFIXES.some(kw => t.startsWith(kw));
+    };
+
+    // Agrega por pessoa
+    const byPerson = new Map();
+    const getBucket = (name) => {
+      if (!byPerson.has(name)) {
+        byPerson.set(name, {
+          name,
+          active: 0,
+          overdue: 0,
+          done_recent: 0,
+          breakdown_active: { peticoes: 0, outras: 0 },
+          breakdown_overdue: { peticoes: 0, outras: 0 },
+          tipos_mais_comuns: {},  // task name → count (só nas ativas)
+        });
+      }
+      return byPerson.get(name);
+    };
+
+    for (const p of posts) {
+      const users = Array.isArray(p.users) ? p.users : [];
+      if (!users.length) continue;
+      const taskName = p.task || '(sem nome)';
+      const isPet = isPetition(taskName);
+
+      for (const u of users) {
+        if (!u.name) continue;
+        const bucket = getBucket(u.name);
+        const completed = u.completed === true || u.completed === 1;
+
+        if (completed) {
+          // Concluída — conta só se foi nos últimos N dias (precisa de data conclusão).
+          // AdvBox às vezes traz date_payment, às vezes não. Best-effort.
+          const doneAt = p.date_payment || p.completed_at || p.updated_at || p.date;
+          const doneTs = doneAt ? Date.parse(String(doneAt).replace(' ', 'T')) : NaN;
+          if (!Number.isNaN(doneTs) && doneTs >= recentCutoff) {
+            bucket.done_recent++;
+          }
+        } else {
+          // Ativa
+          bucket.active++;
+          if (isPet) bucket.breakdown_active.peticoes++;
+          else bucket.breakdown_active.outras++;
+          bucket.tipos_mais_comuns[taskName] = (bucket.tipos_mais_comuns[taskName] || 0) + 1;
+
+          // Atrasada?
+          const deadlineISO = p.date_deadline ? String(p.date_deadline).slice(0, 10) : null;
+          if (deadlineISO && deadlineISO < todayISO) {
+            bucket.overdue++;
+            if (isPet) bucket.breakdown_overdue.peticoes++;
+            else bucket.breakdown_overdue.outras++;
+          }
+        }
+      }
+    }
+
+    // Top 5 tipos por pessoa (resto vira "outras")
+    const result = [...byPerson.values()].map(b => {
+      const sorted = Object.entries(b.tipos_mais_comuns).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      return {
+        ...b,
+        tipos_mais_comuns: sorted.map(([task, count]) => ({ task, count })),
+      };
+    }).sort((a, b) => b.active - a.active);
+
+    res.json({
+      generated_at: new Date().toISOString(),
+      window_done_days: recentDays,
+      total_posts_analyzed: posts.length,
+      by_person: result,
+      hint: 'active = tarefas atribuídas e NÃO concluídas | overdue = active + deadline passou | done_recent = concluídas nos últimos N dias | breakdown distingue petição judicial vs outras',
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
