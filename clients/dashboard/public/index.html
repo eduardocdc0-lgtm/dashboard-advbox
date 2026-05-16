@@ -2651,17 +2651,24 @@
         <div class="loading">Carregando visão geral...</div>
       </section>
 
-      <!-- ── 4 métricas principais ── -->
+      <!-- ── 4 métricas principais (SNAPSHOT — não dependem do mês selecionado) ── -->
+      <header class="ov-section-head" style="margin-top:32px;">
+        <div class="ov-section-head__left">
+          <span class="ov-section-head__eyebrow">Snapshot agora</span>
+          <h2 class="ov-section-head__title">Estado atual do escritório</h2>
+          <span class="ov-section-head__sub">contagens de inventário — independem do mês selecionado acima</span>
+        </div>
+      </header>
       <section class="metrics" aria-label="Métricas principais">
         <article class="metric-card is-neutral">
           <div class="metric-label">Total de processos</div>
           <div class="metric-value" id="totalProcessos">—</div>
-          <div class="metric-sub">ativos no AdvBox</div>
+          <div class="metric-sub">ativos no AdvBox agora</div>
         </article>
         <article class="metric-card is-warning">
           <div class="metric-label">Tarefas pendentes</div>
           <div class="metric-value warning" id="tarefasPendentes">—</div>
-          <div class="metric-sub">aguardando conclusão</div>
+          <div class="metric-sub">aguardando conclusão agora</div>
         </article>
         <article class="metric-card is-success" onclick="openAReceberModal()" title="Clique para ver os processos" aria-label="A receber — abrir detalhes">
           <div class="metric-label">A receber <span class="metric-arrow" aria-hidden="true">↗</span></div>
