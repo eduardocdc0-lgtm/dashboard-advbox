@@ -499,4 +499,124 @@ router.get('/admin/overdue-by-person', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/admin/justino-today ─────────────────────────────────────────────
+// Detecta o que o Justino (IA do AdvBox) fez HOJE, separando do que foi
+// auto-workflow nosso vs criação manual.
+//
+// Heurística de classificação (AdvBox não etiqueta quem criou):
+//   - "JUSTINO_PROVAVEL": notes vazio + tipo intimacional (Avisar, Cumprimento,
+//     Manifestar, Acompanhar)
+//   - "AUTO_WORKFLOW_NOSSO": notes começa com "[Auto-workflow]"
+//   - "MANUAL_PROVAVEL": notes preenchido com texto livre (sem prefixo bot)
+//   - "INDETERMINADO": sem notes mas tipo não-intimacional
+//
+//   GET /api/admin/justino-today                   → tarefas criadas hoje
+//   GET /api/admin/justino-today?days=3            → últimos 3 dias
+router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
+  try {
+    const days = Math.min(30, Math.max(1, Number(req.query.days) || 1));
+    // Recife = UTC-3
+    const nowRecife = new Date(Date.now() - 3 * 3600 * 1000);
+    const cutoffDate = new Date(nowRecife);
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffISO = cutoffDate.toISOString().slice(0, 10);
+
+    const posts = await fetchAllPosts();
+
+    // Tipos típicos de tarefa que o Justino cria (a partir de intimações)
+    const TIPOS_INTIMACIONAIS = [
+      'AVISAR CLIENTE DA PERICIA',
+      'CUMPRIMENTO DE EXIGENCIAS',
+      'MANIFESTAR SOBRE LAUDO',
+      'ACOMPANHAR ANDAMENTO PROCESSUAL',
+      'PERICIA MEDICA MARCADA',
+      'PERICIA SOCIAL JUDICIAL',
+      'ANALISAR INTIMACAO',
+    ];
+    const normTask = s => (s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const isIntimacional = t => {
+      const n = normTask(t);
+      return TIPOS_INTIMACIONAIS.some(tipo => n.includes(tipo));
+    };
+
+    const classificar = p => {
+      const notes = String(p.notes || '').trim();
+      if (notes.startsWith('[Auto-workflow]')) return 'AUTO_WORKFLOW_NOSSO';
+      if (notes.length > 0)                    return 'MANUAL_PROVAVEL';
+      // Sem notes:
+      if (isIntimacional(p.task))              return 'JUSTINO_PROVAVEL';
+      return 'INDETERMINADO';
+    };
+
+    const stats = {
+      JUSTINO_PROVAVEL:    { count: 0, exemplos: [], por_tipo: {} },
+      AUTO_WORKFLOW_NOSSO: { count: 0, exemplos: [] },
+      MANUAL_PROVAVEL:     { count: 0, exemplos: [] },
+      INDETERMINADO:       { count: 0, exemplos: [] },
+    };
+
+    let totalAnalisados = 0;
+
+    for (const p of posts) {
+      const criadoStr = String(p.created_at || '').slice(0, 10);
+      if (!criadoStr || criadoStr < cutoffISO) continue;
+      totalAnalisados++;
+
+      const cat = classificar(p);
+      stats[cat].count++;
+
+      // Pra Justino, agrupa por tipo de tarefa
+      if (cat === 'JUSTINO_PROVAVEL') {
+        const t = p.task || '(sem nome)';
+        stats[cat].por_tipo[t] = (stats[cat].por_tipo[t] || 0) + 1;
+      }
+
+      // Sample dos 5 mais recentes de cada categoria
+      if (stats[cat].exemplos.length < 5) {
+        stats[cat].exemplos.push({
+          id: p.id,
+          task: p.task,
+          created_at: p.created_at,
+          date_deadline: p.date_deadline,
+          lawsuit_id: p.lawsuits_id || null,
+          users: (p.users || []).map(u => u.name).filter(Boolean),
+          notes_preview: (p.notes || '').slice(0, 60),
+          advboxTaskUrl: `https://app.advbox.com.br/0?t=${p.id}`,
+        });
+      }
+    }
+
+    // Top tipos do Justino
+    const topTiposJustino = Object.entries(stats.JUSTINO_PROVAVEL.por_tipo)
+      .sort((a, b) => b[1] - a[1])
+      .map(([task, count]) => ({ task, count }));
+
+    res.json({
+      window_days: days,
+      cutoff_date_recife: cutoffISO,
+      total_posts_analyzed: totalAnalisados,
+      classificacao: {
+        JUSTINO_PROVAVEL: {
+          count: stats.JUSTINO_PROVAVEL.count,
+          top_tipos: topTiposJustino,
+          exemplos: stats.JUSTINO_PROVAVEL.exemplos,
+        },
+        AUTO_WORKFLOW_NOSSO: {
+          count: stats.AUTO_WORKFLOW_NOSSO.count,
+          exemplos: stats.AUTO_WORKFLOW_NOSSO.exemplos,
+        },
+        MANUAL_PROVAVEL: {
+          count: stats.MANUAL_PROVAVEL.count,
+          exemplos: stats.MANUAL_PROVAVEL.exemplos,
+        },
+        INDETERMINADO: {
+          count: stats.INDETERMINADO.count,
+          exemplos: stats.INDETERMINADO.exemplos,
+        },
+      },
+      hint: 'Heurística: notes vazio + tipo intimacional = JUSTINO. Pode haver falso positivo (tarefa criada manual sem notes). Pra precisão real, peça pra equipe escrever notes ao criar manualmente.',
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
