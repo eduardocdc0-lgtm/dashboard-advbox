@@ -62,7 +62,8 @@ const SLA_POR_FASE = {
   'PROCESSOS SEM LAUDOS':                    14,
   'PROCESSO COM GUARDA BPC':                 30,
   // 'PERICIA MARCADA SEM DATA DE AUDIENCIA' — REMOVIDO: espera passiva
-  'CANCELADO REQUERIMENTO':                  10,
+  // 'CANCELADO REQUERIMENTO' — REMOVIDO: Eduardo confirmou que NUNCA é erro
+  //   (INSS cancelou, semi-arquivado, cliente decide o que fazer). Sem SLA.
   // SALARIO MATERNIDADE (todas as fases) — REMOVIDO: Eduardo confirmou que é tudo certo
   // 'SALARIO MATERNIDADE GUIA PAGA' / '5 7 MESES' / '3 5 MESES' / '1 A 3 MESES' / 'SALARIO MATERNIDADE'
 
