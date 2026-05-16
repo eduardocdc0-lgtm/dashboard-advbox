@@ -183,6 +183,82 @@ const FASES_INATIVAS = new Set([
 
 const ZONAS_QUE_PETICIONAM = new Set(['LETICIA_OU_ALICE', 'EDUARDO']);
 
+// ── Labels humanos das zonas (pra exibição) ──────────────────────────────────
+const ZONE_LABELS = {
+  MARILIA:          'Ana Marília',
+  LETICIA_OU_ALICE: 'Letícia ou Alice',
+  CAU:              'Claudiana (Cau)',
+  TAMMYRES:         'Tammyres',
+  EDUARDO:          'Eduardo',
+};
+
+// ── Normalização única de fase ────────────────────────────────────────────────
+// Versão agressiva: NFD + strip acento + upper + non-alphanumeric→espaço.
+// Importante pra bater fases tipo "Procedente em parte - Fazer recurso" contra
+// chaves "PROCEDENTE EM PARTE FAZER RECURSO".
+function normalizeStage(s) {
+  return (s || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Mapas pré-normalizados pra lookup O(1)
+const _RESPONSAVEL_NORMALIZED = {};
+for (const [stage, zone] of Object.entries(RESPONSAVEL_POR_FASE)) {
+  _RESPONSAVEL_NORMALIZED[normalizeStage(stage)] = zone;
+}
+const _MULTI_NORMALIZED = {};
+for (const [stage, zones] of Object.entries(RESPONSAVEL_POR_FASE_MULTI)) {
+  _MULTI_NORMALIZED[normalizeStage(stage)] = zones;
+}
+const _SKIP_NORMALIZED = new Set();
+for (const stage of FASES_IGNORADAS_RESPONSAVEL) {
+  _SKIP_NORMALIZED.add(normalizeStage(stage));
+}
+
+// ── Helpers de zona/responsável ───────────────────────────────────────────────
+// (lookup que aceita variações de pontuação na fase, com fallback de prefixo)
+
+function getResponsavelZone(stage) {
+  const n = normalizeStage(stage);
+  if (_RESPONSAVEL_NORMALIZED[n]) return _RESPONSAVEL_NORMALIZED[n];
+  // Fallback: prefixo (4 primeiras palavras) ou startsWith bidirecional
+  const nW4 = n.split(' ').slice(0, 4).join(' ');
+  for (const [mapped, zone] of Object.entries(_RESPONSAVEL_NORMALIZED)) {
+    const mW4 = mapped.split(' ').slice(0, 4).join(' ');
+    if (nW4 === mW4 && nW4.length > 5) return zone;
+    if (n.startsWith(mapped) || mapped.startsWith(n)) return zone;
+  }
+  return null;
+}
+
+function getResponsavelZonesMulti(stage) {
+  const n = normalizeStage(stage);
+  if (_MULTI_NORMALIZED[n]) return _MULTI_NORMALIZED[n];
+  for (const [mapped, zones] of Object.entries(_MULTI_NORMALIZED)) {
+    if (n.startsWith(mapped) || mapped.startsWith(n)) return zones;
+  }
+  return null;
+}
+
+function isStageSkippedForResponsavel(stage) {
+  return _SKIP_NORMALIZED.has(normalizeStage(stage));
+}
+
+function getZoneForResp(responsibleName) {
+  const n = normalizeStage(responsibleName);
+  if (n.includes('MARILIA'))                        return 'MARILIA';
+  if (n.includes('LETICIA') || n.includes('ALICE')) return 'LETICIA_OU_ALICE';
+  if (n.includes('CLAUDIANA') || n.includes('CAU')) return 'CAU';
+  if (n.includes('TAMMYRES'))                       return 'TAMMYRES';
+  if (n.includes('EDUARDO'))                        return 'EDUARDO';
+  return null;
+}
+
 // Palavras-chave que indicam que um responsável (nome real no AdvBox)
 // pertence a uma zona. Ex: zona LETICIA_OU_ALICE aceita nomes que
 // contenham "LETICIA" ou "ALICE".
@@ -217,6 +293,13 @@ module.exports = {
   FASES_INATIVAS,
   ZONAS_QUE_PETICIONAM,
   ZONA_KEYWORDS,
+  ZONE_LABELS,
   LIMITE_VERDE,
   LIMITE_AMARELO,
+  // Helpers — fonte única pra qualquer consumer (audit.js, auditor.js, etc)
+  normalizeStage,
+  getResponsavelZone,
+  getResponsavelZonesMulti,
+  isStageSkippedForResponsavel,
+  getZoneForResp,
 };

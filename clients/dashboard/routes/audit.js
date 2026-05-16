@@ -8,6 +8,14 @@ const { runAudit } = require('../../../services/auditor');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
 const { config } = require('../../../config');
 const { dateInMes } = require('../../../services/date-utils');
+const {
+  normalizeStage:        audrNorm,           // mesma assinatura da função antiga
+  getResponsavelZone:    audrZoneForStage,
+  getResponsavelZonesMulti: audrMultiZonesForStage,
+  isStageSkippedForResponsavel,
+  getZoneForResp:        audrZoneForResp,
+  ZONE_LABELS:           AUDR_ZONE_LABEL,
+} = require('../../../services/audit-rules');
 
 const router = Router();
 
@@ -293,74 +301,10 @@ router.post('/audit/cobrar-cau-whatsapp', requireAdmin, async (req, res, next) =
 
 // ── Auditoria de Responsável ─────────────────────────────────────────────────
 
-// Fases ignoradas pela auditoria — qualquer responsável é OK aqui (não gera erro)
-const AUDR_SKIP_STAGES = [
-  'IGNORAR ESSA ETAPA',
-  // Arquivados: independente de quem ficou, está correto
-  'ARQUIVADO IMPROCEDENTE',
-  'ARQUIVADO PROCEDENTE',
-  'ARQUIVADO POR DETERMINACAO JUDICIAL',
-  'ARQUIVADO ENCERRADO',
-  // INSS cancelou — semi-arquivado, qualquer responsável OK (Eduardo: NUNCA é erro)
-  'CANCELADO REQUERIMENTO',
-];
-
-const AUDR_ZONES = {
-  MARILIA:          ['PROCESSOS SEM LAUDOS','PERICIA MARCADA SEM DATA DE AUDIENCIA','PARA DAR ENTRADA','PROTOCOLADO ADM','PROTOCOLADO','AUXILIO INCAPACIDADE','PROCESSO COM GUARDA BPC','EM ANALISE PERICIAS FEITAS','SALARIO MATERNIDADE GUIA PAGA','SALARIO MATERNIDADE 5 7 MESES','SALARIO MATERNIDADE 3 5 MESES','SALARIO MATERNIDADE 1 A 3 MESES','SALARIO MATERNIDADE'],
-  LETICIA_OU_ALICE: ['ELABORAR PETICAO INICIAL','SENTENCA PROCEDENTE VERIFICAR IMPLANTACAO','PERICIA SOCIAL MARCADA','COM PRAZO','SENTENCA IMPROCEDENTE','PROTOCOLADO JUDICIAL','AGUARDANDO EXPEDICAO DE RPV','FAZER ACAO DE GUARDA','PROCEDENTE EM PARTE FAZER RECURSO','IMPROCEDENTE CABE RECURSO','DESENVOLVENDO RECURSO AOS TRIBUNAIS','RECURSO PROTOCOLADO INICIADO','APRESENTADA RESPOSTA A RECURSO','AGUARDANDO JULGAMENTO DO RECURSO','RECURSO JULGADO ENTRE EM CONTATO','TRANSITO EM JULGADO NAO CABE RECURSO'],
-  CAU:              ['SALARIO MATERNIDADE PARCELADO','JUDICIAL PARCELADO','ADM PARCELADO','RPV DO MES','RPV DO PROXIMO MES','JUDICIAL IMPLANTADO A RECEBER','ADM IMPLANTADO A RECEBER','SALARIO MATERNIDADE CONCEDIDO','ARQUIVADO IMPROCEDENTE','ARQUIVADO PROCEDENTE','ARQUIVADO POR DETERMINACAO JUDICIAL','BENEFICIO CONCEDIDO AGUARDAR','ARQUIVADO ENCERRADO'],
-  TAMMYRES:         ['FALTA LAUDO FAZER PREVDOC','FALTA LAUDO','PREVDOC'],
-  EDUARDO:          ['TRABALHISTA'],
-};
-
-// Fases válidas para MÚLTIPLAS zonas — qualquer uma delas está correto
-const AUDR_MULTI_ZONES = {
-  'PERICIA MEDICA MARCADA': ['MARILIA', 'LETICIA_OU_ALICE'],
-  'PERICIAS MARCADAS':      ['MARILIA', 'LETICIA_OU_ALICE'],
-};
-
-const AUDR_ZONE_LABEL = { MARILIA: 'Ana Marília', LETICIA_OU_ALICE: 'Letícia ou Alice', CAU: 'Claudiana (Cau)', TAMMYRES: 'Tammyres', EDUARDO: 'Eduardo' };
-
-function audrNorm(s) { return (s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
-
-const AUDR_STAGE_MAP = {};
-for (const [zone, stages] of Object.entries(AUDR_ZONES)) stages.forEach(s => { AUDR_STAGE_MAP[audrNorm(s)] = zone; });
-
-// Mapa normalizado de fases multi-zona
-const AUDR_MULTI_MAP = {};
-for (const [stage, zones] of Object.entries(AUDR_MULTI_ZONES)) AUDR_MULTI_MAP[audrNorm(stage)] = zones;
-
-function audrZoneForStage(stage) {
-  const n = audrNorm(stage);
-  if (AUDR_STAGE_MAP[n]) return AUDR_STAGE_MAP[n];
-  const nW4 = n.split(' ').slice(0, 4).join(' ');
-  for (const [mapped, zone] of Object.entries(AUDR_STAGE_MAP)) {
-    const mW4 = mapped.split(' ').slice(0, 4).join(' ');
-    if (nW4 === mW4 && nW4.length > 5) return zone;
-    if (n.startsWith(mapped) || mapped.startsWith(n)) return zone;
-  }
-  return null;
-}
-
-// Retorna array de zonas válidas para fases compartilhadas, ou null
-function audrMultiZonesForStage(stage) {
-  const n = audrNorm(stage);
-  if (AUDR_MULTI_MAP[n]) return AUDR_MULTI_MAP[n];
-  for (const [mapped, zones] of Object.entries(AUDR_MULTI_MAP)) {
-    if (n.startsWith(mapped) || mapped.startsWith(n)) return zones;
-  }
-  return null;
-}
-
-function audrZoneForResp(r) {
-  const n = audrNorm(r);
-  if (n.includes('MARILIA'))                        return 'MARILIA';
-  if (n.includes('LETICIA') || n.includes('ALICE')) return 'LETICIA_OU_ALICE';
-  if (n.includes('CLAUDIANA') || n.includes('CAU')) return 'CAU';
-  if (n.includes('TAMMYRES'))                       return 'TAMMYRES';
-  if (n.includes('EDUARDO'))                        return 'EDUARDO';
-  return null;
-}
+// ── Regras de zona/responsável ────────────────────────────────────────────────
+// FONTE ÚNICA: services/audit-rules.js (importado no topo do arquivo).
+// Quando precisar mudar zona ou skip de fase, editar APENAS lá.
+// As constantes locais abaixo foram REMOVIDAS — agora vêm via require alias.
 
 cache.define('audit-responsible', 20 * 60 * 1000);
 
@@ -372,12 +316,10 @@ router.get('/audit-responsible', requireAdmin, async (req, res, next) => {
       const items = [], byPerson = {}, byStage = {};
       let totalAuditados = 0, totalCorretos = 0, totalErrados = 0, totalNaoMapeados = 0;
 
-      const AUDR_SKIP_SET = new Set(AUDR_SKIP_STAGES.map(audrNorm));
-
       for (const l of lawsuits) {
         const stage        = l.stage || l.step || '';
         const responsible  = l.responsible || '';
-        if (AUDR_SKIP_SET.has(audrNorm(stage))) continue;
+        if (isStageSkippedForResponsavel(stage)) continue;
         const expectedZone = audrZoneForStage(stage);
         const actualZone   = audrZoneForResp(responsible);
         const clienteNome  = (Array.isArray(l.customers) && l.customers[0]?.name) || '—';
