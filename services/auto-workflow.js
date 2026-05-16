@@ -16,6 +16,8 @@ const r = require('./audit-rules');
 const { TEMPLATES, daysFromNow } = require('./auto-workflow-templates');
 const { fetchLawsuits, fetchAllPosts, client } = require('./data');
 const { query } = require('./db');
+const { pickClientName } = require('./auditor');
+const { sendStageChangeDigest } = require('./email-notifier');
 
 function normStr(s) {
   if (!s) return '';
@@ -309,6 +311,7 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
   let erros = 0;
   let skippedDuplicates = 0;
   const detalhes = [];
+  const stageChanges = []; // pra email digest no fim do ciclo
 
   for (const law of lawsuits) {
     const lawId = law.id;
@@ -323,6 +326,17 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
     // só populamos o snapshot — NÃO disparamos workflow. Senão a primeira
     // rodada após deploy criaria workflow pra todos os ~500 processos ativos.
     const ehPrimeiraVez = prevStage === null;
+
+    // Coleta mudança real (não primeira vez) pra digest. Email vai TODA mudança,
+    // mesmo que não tenha template de workflow associado.
+    if (mudou && !ehPrimeiraVez && !onlyLawsuitId) {
+      stageChanges.push({
+        lawId,
+        clientName: pickClientName(law),
+        prevStage,
+        newStage,
+      });
+    }
 
     // force=1 ignora trava de "mudou" e "primeira vez". Continua respeitando
     // alreadyDispatched (que agora só conta sucessos).
@@ -401,7 +415,15 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
   }
 
   logger.info(`[Auto-Workflow] Ciclo: ${lawsuits.length} processados, ${novos} workflows novos, ${criados} tarefas criadas, ${skippedDuplicates} pulados por dedup, ${erros} erros.`);
-  return { processados: lawsuits.length, novos, criados, skippedDuplicates, erros, detalhes, dryRun };
+
+  // Dispara email digest com mudanças de fase detectadas neste ciclo.
+  // Falhas no envio não afetam o resultado do ciclo (apenas logam).
+  let emailResult = null;
+  if (!dryRun && stageChanges.length > 0) {
+    emailResult = await sendStageChangeDigest(stageChanges, { logger });
+  }
+
+  return { processados: lawsuits.length, novos, criados, skippedDuplicates, erros, detalhes, dryRun, stageChanges: stageChanges.length, emailResult };
 }
 
 module.exports = { runCycle, ensureTables };
