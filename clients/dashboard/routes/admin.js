@@ -549,7 +549,7 @@ router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
     };
 
     const stats = {
-      JUSTINO_PROVAVEL:    { count: 0, exemplos: [], por_tipo: {} },
+      JUSTINO_PROVAVEL:    { count: 0, exemplos: [], por_tipo: {}, por_destinatario: {}, por_tipo_destinatario: {} },
       AUTO_WORKFLOW_NOSSO: { count: 0, exemplos: [] },
       MANUAL_PROVAVEL:     { count: 0, exemplos: [] },
       INDETERMINADO:       { count: 0, exemplos: [] },
@@ -565,10 +565,17 @@ router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
       const cat = classificar(p);
       stats[cat].count++;
 
-      // Pra Justino, agrupa por tipo de tarefa
+      // Pra Justino, agrupa por tipo + por destinatário + matriz tipo×destinatário
       if (cat === 'JUSTINO_PROVAVEL') {
         const t = p.task || '(sem nome)';
         stats[cat].por_tipo[t] = (stats[cat].por_tipo[t] || 0) + 1;
+
+        const guests = (p.users || []).map(u => u.name).filter(Boolean);
+        for (const nome of guests) {
+          stats[cat].por_destinatario[nome] = (stats[cat].por_destinatario[nome] || 0) + 1;
+          if (!stats[cat].por_tipo_destinatario[t]) stats[cat].por_tipo_destinatario[t] = {};
+          stats[cat].por_tipo_destinatario[t][nome] = (stats[cat].por_tipo_destinatario[t][nome] || 0) + 1;
+        }
       }
 
       // Sample dos 5 mais recentes de cada categoria
@@ -586,10 +593,14 @@ router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
       }
     }
 
-    // Top tipos do Justino
+    // Top tipos do Justino + top destinatários
     const topTiposJustino = Object.entries(stats.JUSTINO_PROVAVEL.por_tipo)
       .sort((a, b) => b[1] - a[1])
       .map(([task, count]) => ({ task, count }));
+
+    const topDestinatariosJustino = Object.entries(stats.JUSTINO_PROVAVEL.por_destinatario)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
 
     res.json({
       window_days: days,
@@ -599,6 +610,8 @@ router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
         JUSTINO_PROVAVEL: {
           count: stats.JUSTINO_PROVAVEL.count,
           top_tipos: topTiposJustino,
+          top_destinatarios: topDestinatariosJustino,
+          matriz_tipo_destinatario: stats.JUSTINO_PROVAVEL.por_tipo_destinatario,
           exemplos: stats.JUSTINO_PROVAVEL.exemplos,
         },
         AUTO_WORKFLOW_NOSSO: {
