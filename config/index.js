@@ -41,11 +41,22 @@ const config = Object.freeze({
   port:       intOpt('PORT', 5000),
 
   // ── Sessão ──────────────────────────────────────────────────────────────────
-  session: {
-    secret:    required('SESSION_SECRET', 'gerar com `node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"`'),
-    maxAgeMs:  intOpt('SESSION_MAX_AGE_MS', 12 * 60 * 60 * 1000),
-    secure:    isProd,
-  },
+  // SESSION_KEYS (CSV) ou SESSION_SECRET (legacy single string).
+  // Preferir SESSION_KEYS pra rotação gradual sem invalidar sessões existentes:
+  //   1. Gera nova key: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+  //   2. SESSION_KEYS=NOVA,ANTIGA  (nova entra na frente — cookie-session assina com a primeira, valida com todas)
+  //   3. Espera 12h (maxAge default) — todas as sessões antigas expiraram naturalmente
+  //   4. SESSION_KEYS=NOVA  (remove a antiga)
+  // Cadência recomendada: trimestral, OU imediato após saída de membro de equipe com acesso ao Replit.
+  session: (() => {
+    const keysList = listOpt('SESSION_KEYS', []);
+    if (keysList.length > 0) {
+      return { keys: keysList, maxAgeMs: intOpt('SESSION_MAX_AGE_MS', 12 * 60 * 60 * 1000), secure: isProd };
+    }
+    // Fallback: SESSION_SECRET single (legacy)
+    const single = required('SESSION_SECRET', 'gerar com `node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"` — ou usar SESSION_KEYS (CSV) pra suportar rotação');
+    return { keys: [single], maxAgeMs: intOpt('SESSION_MAX_AGE_MS', 12 * 60 * 60 * 1000), secure: isProd };
+  })(),
 
   // ── Usuários ────────────────────────────────────────────────────────────────
   users: {

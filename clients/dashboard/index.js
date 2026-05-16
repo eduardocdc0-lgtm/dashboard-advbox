@@ -85,9 +85,10 @@ app.use(corsMiddleware());
 app.use(express.json({ limit: config.limits.bodyJson }));
 
 // ── Sessão ───────────────────────────────────────────────────────────────────
+// keys (array) habilita rotação gradual — ver config/index.js
 app.use(cookieSession({
   name:     'advsess',
-  secret:   config.session.secret,
+  keys:     config.session.keys,
   maxAge:   config.session.maxAgeMs,
   httpOnly: true,
   sameSite: 'lax',

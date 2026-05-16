@@ -260,13 +260,43 @@ function hasRecentDuplicate(idx, lawsuitId, tasksId) {
 
 // ── Loop principal ──────────────────────────────────────────────────────────
 
+// Advisory lock ID — número arbitrário mas estável (qualquer int32). Se algum
+// outro código no projeto usar advisory lock no futuro, escolher número
+// diferente pra não conflitar.
+const AUTO_WORKFLOW_LOCK_ID = 902301;
+
 /**
  * Roda 1 ciclo de detecção + dispatch.
  * Retorna { processados, novos, criados, erros, skippedDuplicates }.
+ *
+ * Concorrência: usa pg_try_advisory_lock pra impedir 2 instâncias rodando ao
+ * mesmo tempo (ex: cron lento + manual via /api, ou Replit Autoscale com
+ * 2 containers). Race condition aqui sobrescrevia snapshot e causava
+ * duplicação de tarefa.
  */
 async function runCycle({ logger = console, dryRun = false, forceRefresh = true, force = false, onlyLawsuitId = null } = {}) {
   await ensureTables();
 
+  // Tenta adquirir lock. Se outro ciclo está rodando, abandona com log.
+  const lockRes = await query('SELECT pg_try_advisory_lock($1) AS got', [AUTO_WORKFLOW_LOCK_ID]);
+  if (!lockRes.rows[0].got) {
+    logger.warn(`[Auto-Workflow] Outro ciclo já em execução (lock ${AUTO_WORKFLOW_LOCK_ID} ocupado) — abandonando`);
+    return { skipped: true, reason: 'lock_held', processados: 0, novos: 0, criados: 0, skippedDuplicates: 0, erros: 0, detalhes: [], dryRun };
+  }
+
+  try {
+    return await _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsuitId });
+  } finally {
+    // Sempre libera o lock — se conexão morrer, Postgres libera no disconnect
+    try {
+      await query('SELECT pg_advisory_unlock($1)', [AUTO_WORKFLOW_LOCK_ID]);
+    } catch (e) {
+      logger.error(`[Auto-Workflow] Falha ao liberar lock: ${e.message}`);
+    }
+  }
+}
+
+async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsuitId }) {
   let lawsuits = await fetchLawsuits(forceRefresh);
   if (onlyLawsuitId) lawsuits = lawsuits.filter(l => Number(l.id) === Number(onlyLawsuitId));
   logger.info(`[Auto-Workflow] Analisando ${lawsuits.length} lawsuits${force ? ' (force=1)' : ''}...`);

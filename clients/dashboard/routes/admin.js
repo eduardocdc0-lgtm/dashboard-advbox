@@ -49,7 +49,8 @@ router.get('/healthz/jobs', requireAdmin, (req, res) => {
   const jobs = jobsRegistry.snapshot();
   const secrets = [
     { name: 'DATABASE_URL',        required: true,  set: !!process.env.DATABASE_URL },
-    { name: 'SESSION_SECRET',      required: true,  set: !!process.env.SESSION_SECRET },
+    // Sessão: aceita SESSION_KEYS (preferido, suporta rotação) OU SESSION_SECRET (legacy)
+    { name: 'SESSION_KEYS or SESSION_SECRET', required: true, set: !!(process.env.SESSION_KEYS || process.env.SESSION_SECRET) },
     { name: 'ADVBOX_TOKEN',        required: true,  set: !!process.env.ADVBOX_TOKEN },
     { name: 'DISCORD_WEBHOOK_URL', required: false, set: !!process.env.DISCORD_WEBHOOK_URL },
     { name: 'CHATGURU_API_KEY',    required: false, set: !!process.env.CHATGURU_API_KEY },
