@@ -29,5 +29,6 @@ router.use(require('./admin'));
 router.use(require('./sentencas'));
 router.use(require('./asaas'));
 router.use(require('./publications'));
+router.use(require('./advbox-webhook'));
 
 module.exports = router;

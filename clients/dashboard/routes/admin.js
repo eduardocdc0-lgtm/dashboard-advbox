@@ -514,12 +514,23 @@ router.get('/admin/overdue-by-person', requireAdmin, async (req, res, next) => {
 //   GET /api/admin/justino-today?days=3            → últimos 3 dias
 router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
   try {
-    const days = Math.min(30, Math.max(1, Number(req.query.days) || 1));
-    // Recife = UTC-3
+    // Default: SÓ HOJE em America/Recife. Pra janela maior, ?days=N (de hoje pra trás)
+    // OU ?date=YYYY-MM-DD pra dia específico
     const nowRecife = new Date(Date.now() - 3 * 3600 * 1000);
-    const cutoffDate = new Date(nowRecife);
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffISO = cutoffDate.toISOString().slice(0, 10);
+    const todayISO = nowRecife.toISOString().slice(0, 10);
+
+    let cutoffISO, endISO;
+    if (req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)) {
+      // Dia específico: só esse dia
+      cutoffISO = req.query.date;
+      endISO    = req.query.date;
+    } else {
+      const days = Math.max(0, Number(req.query.days) || 0);
+      const cutoffDate = new Date(nowRecife);
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      cutoffISO = cutoffDate.toISOString().slice(0, 10);
+      endISO    = todayISO;
+    }
 
     const posts = await fetchAllPosts();
 
@@ -628,6 +639,57 @@ router.get('/admin/justino-today', requireAdmin, async (req, res, next) => {
         },
       },
       hint: 'Heurística: notes vazio + tipo intimacional = JUSTINO. Pode haver falso positivo (tarefa criada manual sem notes). Pra precisão real, peça pra equipe escrever notes ao criar manualmente.',
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/admin/flowter-events ────────────────────────────────────────────
+// Inspeciona os webhooks que o Flowter (AdvBox) mandou. Útil pra debugar o
+// schema real do payload antes de adicionar reações.
+//
+//   GET /api/admin/flowter-events            → últimos 50
+//   GET /api/admin/flowter-events?limit=200  → mais
+//   GET /api/admin/flowter-events?raw=1      → inclui payload completo (default: só preview)
+router.get('/admin/flowter-events', requireAdmin, async (req, res, next) => {
+  try {
+    const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 50));
+    const includeRaw = req.query.raw === '1';
+
+    const r = await query(
+      `SELECT id, event_type, lawsuit_id, post_id, stage,
+              received_at, processed_at, processed_ok, error_message, source_ip,
+              ${includeRaw ? 'payload' : "LEFT(payload::text, 200) AS payload_preview"}
+       FROM advbox_flowter_events
+       ORDER BY received_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    // Stats agregadas (sempre retorna, pra dar visão rápida)
+    const stats = await query(`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE received_at > NOW() - INTERVAL '24 hours')::int AS last_24h,
+        COUNT(*) FILTER (WHERE received_at > NOW() - INTERVAL '7 days')::int AS last_7d,
+        COUNT(*) FILTER (WHERE processed_ok = false)::int AS errors,
+        COUNT(DISTINCT event_type)::int AS distinct_event_types,
+        COUNT(DISTINCT lawsuit_id)::int AS distinct_lawsuits
+      FROM advbox_flowter_events
+    `);
+
+    const byEventType = await query(`
+      SELECT event_type, COUNT(*)::int AS count
+      FROM advbox_flowter_events
+      WHERE received_at > NOW() - INTERVAL '7 days'
+      GROUP BY event_type
+      ORDER BY count DESC
+    `);
+
+    res.json({
+      stats: stats.rows[0],
+      by_event_type_last_7d: byEventType.rows,
+      events: r.rows,
+      hint: 'V1 só persiste — não reage ainda. Configure o Flowter no AdvBox apontando pra /api/advbox/webhook/flowter com header x-flowter-token=<ADVBOX_FLOWTER_TOKEN>. Depois que vier 1 evento real, podemos adicionar reação automatizada.',
     });
   } catch (err) { next(err); }
 });

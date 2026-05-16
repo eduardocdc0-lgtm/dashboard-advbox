@@ -240,6 +240,32 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_cs_setor ON controller_snapshots(setor_id, snapshot_date DESC);
     `);
 
+    // ── ADVBOX_FLOWTER_EVENTS — webhooks recebidos do Flowter (event-driven) ──
+    // Toda chamada do Flowter persiste aqui (cru). Permite:
+    //  - Debugar payload real do AdvBox antes de confiar em parsing
+    //  - Auditar quem mandou, quando, o que aconteceu
+    //  - Re-processar eventos antigos se a lógica de reação tiver bug
+    // V1 só persiste. V2 (depois de ver payload real) adiciona reações.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS advbox_flowter_events (
+        id              BIGSERIAL PRIMARY KEY,
+        event_type      TEXT,
+        lawsuit_id      INT,
+        post_id         INT,
+        stage           TEXT,
+        payload         JSONB,
+        received_at     TIMESTAMP DEFAULT NOW(),
+        processed_at    TIMESTAMP,
+        processed_ok    BOOLEAN,
+        error_message   TEXT,
+        source_ip       TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_afe_received ON advbox_flowter_events(received_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_afe_lawsuit ON advbox_flowter_events(lawsuit_id);
+      CREATE INDEX IF NOT EXISTS idx_afe_unprocessed ON advbox_flowter_events(processed_ok)
+        WHERE processed_ok IS NULL OR processed_ok = false;
+    `);
+
     // ── ROUTE_ACCESS_LOG — telemetria de uso de rota pra auditoria de morto ──
     // Loga cada GET /api/* (não params, só path) pra descobrir quais
     // features Eduardo realmente usa vs quais estão lá só ocupando código.

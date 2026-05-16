@@ -156,7 +156,7 @@ app.get('/healthz', (req, res) => {
 app.use('/api', apiLimiter);
 
 // ── Auth gate para /api/* (com fallback X-Api-Key timing-safe) ───────────────
-const OPEN_ROUTES = new Set(['/login', '/logout', '/me', '/webhooks/chatguru', '/asaas/webhook', '/healthz']);
+const OPEN_ROUTES = new Set(['/login', '/logout', '/me', '/webhooks/chatguru', '/asaas/webhook', '/healthz', '/advbox/webhook/flowter']);
 
 app.use('/api', (req, res, next) => {
   if (OPEN_ROUTES.has(req.path)) return next();
