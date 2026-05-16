@@ -11,11 +11,14 @@
 'use strict';
 
 const { Router } = require('express');
+const crypto = require('crypto');
 const fetch = require('node-fetch');
 const { AsaasClient } = require('../../../services/asaas-client');
 const { createBatch } = require('../../../services/asaas-batch');
 const { requireFinance } = require('../../../middleware/auth');
 const { query } = require('../../../services/db');
+const { validatePaymentValue, sanitizeCpfCnpj } = require('../../../services/finance-helpers');
+const cache = require('../../../cache');
 
 const router = Router();
 
@@ -140,7 +143,7 @@ router.post('/asaas/payer-overrides', requireFinance, async (req, res, next) => 
     const lawsuit_id     = b.lawsuit_id ? Number(b.lawsuit_id) : null;
     const transaction_id = b.transaction_id ? Number(b.transaction_id) : null;
     const payer_name     = (b.payer_name || '').trim();
-    const payer_cpf_cnpj = String(b.payer_cpf_cnpj || '').replace(/\D/g, '');
+    const payer_cpf_cnpj = sanitizeCpfCnpj(b.payer_cpf_cnpj);  // null se inválido
     const payer_email    = b.payer_email || null;
     const payer_phone    = b.payer_phone || null;
 
@@ -148,10 +151,7 @@ router.post('/asaas/payer-overrides', requireFinance, async (req, res, next) => 
       return res.status(400).json({ error: 'lawsuit_id ou transaction_id obrigatório' });
     }
     if (!payer_name || !payer_cpf_cnpj) {
-      return res.status(400).json({ error: 'payer_name e payer_cpf_cnpj obrigatórios' });
-    }
-    if (payer_cpf_cnpj.length !== 11 && payer_cpf_cnpj.length !== 14) {
-      return res.status(400).json({ error: 'CPF (11) ou CNPJ (14) dígitos' });
+      return res.status(400).json({ error: 'payer_name e CPF/CNPJ válidos (11 ou 14 dígitos) obrigatórios' });
     }
 
     // Upsert manual — UNIQUE parcial não bate em ON CONFLICT direto com NULL.
@@ -220,15 +220,33 @@ router.get('/asaas/payments-received', requireFinance, async (req, res, next) =>
 // CONFIRMED, tenta marcar como paga no AdvBox via /transactions; se a API
 // não permitir, mantém o registro local pro front exibir badge "PAGO".
 router.post('/asaas/webhook', async (req, res) => {
-  // Verificação de token — Asaas envia header asaas-access-token em todo webhook.
-  // Configura ASAAS_WEBHOOK_TOKEN no Replit Secrets e no painel Asaas (Config → Webhook → Token).
-  // Se a env não estiver setada, aceita tudo (modo sem verificação — menos seguro).
+  // ── Segurança ──────────────────────────────────────────────────────────────
+  // ASAAS_WEBHOOK_TOKEN é OBRIGATÓRIO. Sem ele, atacador pode forjar evento
+  // PAYMENT_RECEIVED e marcar dívida como paga.
+  // Configurar:
+  //   1. Secret Replit: ASAAS_WEBHOOK_TOKEN=<32 bytes hex>
+  //   2. Painel Asaas: Config → Webhooks → Token (mesmo valor)
   const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
-  if (webhookToken && req.headers['asaas-access-token'] !== webhookToken) {
-    console.warn('[ASAAS webhook] token inválido — possível chamada não autorizada', {
-      ip: req.ip, token_recebido: String(req.headers['asaas-access-token'] || '').slice(0, 8) + '...',
-    });
-    return res.status(200).json({ ok: false, error: 'token inválido' });
+  if (!webhookToken) {
+    console.error('[ASAAS webhook] ASAAS_WEBHOOK_TOKEN não configurado — recusando TUDO');
+    return res.status(204).end();  // 204 = sem body, não vaza info
+  }
+
+  // Timing-safe compare (evita brute force por timing) + resposta SEMPRE
+  // idêntica (oculta validade pra atacador).
+  const received = String(req.headers['asaas-access-token'] || '');
+  let tokenOk = false;
+  if (received.length === webhookToken.length) {
+    try {
+      tokenOk = crypto.timingSafeEqual(
+        Buffer.from(received, 'utf8'),
+        Buffer.from(webhookToken, 'utf8'),
+      );
+    } catch (_) { tokenOk = false; }
+  }
+  if (!tokenOk) {
+    console.warn('[ASAAS webhook] token inválido', { ip: req.ip });
+    return res.status(204).end();
   }
 
   try {
@@ -254,13 +272,20 @@ router.post('/asaas/webhook', async (req, res) => {
     let synced = false;
     let syncErr = null;
 
-    // Tentativa V2 (best-effort): marcar transaction como paga no AdvBox quando
-    // recebido. Como o endpoint PATCH /transactions/:id pode não estar exposto
-    // no plano atual, captura erro silenciosamente e segue.
+    // Tentativa V2 (best-effort): marcar transaction como paga no AdvBox.
+    // IMPORTANTE: paymentDate (cliente pagou) tem prioridade sobre
+    // confirmedDate (ASAAS confirmou). Pra contabilidade brasileira (regime
+    // de caixa), a data correta é quando o dinheiro entrou — não quando o
+    // ASAAS processou. SEM fallback pra new Date() — se ASAAS não enviou
+    // data, ABORTAMOS o sync (data falsa é pior que pagamento não-sincronizado).
     if ((event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED_IN_CASH')
         && payment.externalReference && payment.externalReference.startsWith('tx_')) {
       const txId = Number(payment.externalReference.slice(3));
-      if (txId && process.env.ADVBOX_TOKEN) {
+      const dataPagamento = payment.paymentDate || payment.confirmedDate;
+      if (!dataPagamento) {
+        syncErr = 'ASAAS não enviou paymentDate nem confirmedDate — sync abortado pra não falsificar histórico';
+        console.warn('[ASAAS webhook] sync abortado: sem data', { payment_id: payment.id });
+      } else if (txId && process.env.ADVBOX_TOKEN) {
         try {
           const r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
             method: 'PATCH',
@@ -269,12 +294,17 @@ router.post('/asaas/webhook', async (req, res) => {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
             },
-            body: JSON.stringify({
-              date_payment: (payment.confirmedDate || payment.paymentDate || new Date().toISOString().slice(0, 10)),
-            }),
+            body: JSON.stringify({ date_payment: dataPagamento }),
           });
-          if (r.ok) synced = true;
-          else syncErr = `AdvBox HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`;
+          if (r.ok) {
+            synced = true;
+            // Invalida cache de inadimplência — sem isso, Cau/Letícia podem
+            // ligar pra cliente cobrando dívida que acabou de ser paga.
+            try { cache.invalidate('inadimplentes_full'); } catch (_) {}
+            try { cache.invalidate('transactions'); } catch (_) {}
+          } else {
+            syncErr = `AdvBox HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`;
+          }
         } catch (e) {
           syncErr = e.message || String(e);
         }
@@ -301,10 +331,10 @@ router.post('/asaas/webhook', async (req, res) => {
       payment.externalReference || null,
       event || 'UNKNOWN',
       payment.status || 'UNKNOWN',
-      payment.value || null,
-      payment.netValue || null,
+      validatePaymentValue(payment.value),     // null se inválido (negativo, NaN, >R$10M)
+      validatePaymentValue(payment.netValue),
       payment.customer || null,
-      (payment.confirmedDate || payment.paymentDate) || null,
+      (payment.paymentDate || payment.confirmedDate) || null,  // paymentDate prioritário
       JSON.stringify(body),
       synced,
       syncErr,

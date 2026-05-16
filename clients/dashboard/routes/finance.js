@@ -4,6 +4,8 @@ const { query } = require('../../../services/db');
 const { requireFinance } = require('../../../middleware/auth');
 const { fetchTransactions } = require('../../../services/data');
 const { getInadimplentes } = require('../../../services/inadimplentes');
+const { parseAdvboxDate, toISODate } = require('../../../services/date-utils');
+const { isParcelaValida, validateEntryInput } = require('../../../services/finance-helpers');
 const cache = require('../../../cache');
 
 const router = Router();
@@ -11,16 +13,8 @@ const router = Router();
 cache.define('inadimplencia', 30 * 60 * 1000); // 30 min
 cache.define('inadimplentes_full', 30 * 60 * 1000); // 30 min
 
-// ── Helper: filtra parcelas válidas (descarta lixo) ──────────────────────────
-function isParcelaValida(t) {
-  if (t.entry_type !== 'income') return false;
-  const amt = Number(t.amount || 0);
-  if (amt < 1) return false; // 0.01 placeholder usado como "EXCLUIR/ARQUIVADO"
-  const desc = String(t.description || t.notes || '').toUpperCase();
-  if (desc.includes('EXCLUIR')) return false;
-  if (desc.includes('ARQUIVADO')) return false;
-  return true;
-}
+// isParcelaValida agora vem de services/finance-helpers.js (fonte única).
+// matchMes mantido aqui (lógica de filtro de mês com regex bruto, ok).
 
 function matchMes(dateStr, mm, yyyy) {
   if (!dateStr) return false;
@@ -46,10 +40,12 @@ function calcInadimplenciaMes(transactions, mm, yyyy) {
     } else {
       // Inadimplente — agrega no devedor
       const nome = String(t.name || t.customer_name || '').trim().toUpperCase() || '(sem nome)';
-      const cur = devedoresMap.get(nome) || { nome: t.name || t.customer_name || '(sem nome)', valor: 0, count: 0, oldestDue: t.date_due };
+      // Normaliza date_due pra ISO antes de comparar (BR quebra string compare)
+      const dueISO = toISODate(t.date_due);
+      const cur = devedoresMap.get(nome) || { nome: t.name || t.customer_name || '(sem nome)', valor: 0, count: 0, oldestDue: dueISO };
       cur.valor += amt;
       cur.count += 1;
-      if (t.date_due && (!cur.oldestDue || t.date_due < cur.oldestDue)) cur.oldestDue = t.date_due;
+      if (dueISO && (!cur.oldestDue || dueISO < cur.oldestDue)) cur.oldestDue = dueISO;
       devedoresMap.set(nome, cur);
     }
   }
@@ -136,8 +132,11 @@ router.get('/finance/inadimplencia', requireFinance, async (req, res, next) => {
 router.get('/finance/inadimplentes', requireFinance, async (req, res, next) => {
   try {
     const force = req.query.force === '1';
+    // Quando o user explicitamente clicou "Atualizar", força refetch das
+    // transactions também (sem isso, cache stale de 30min faz Cau/Letícia
+    // cobrarem dívidas JÁ pagas no AdvBox).
     const data = await cache.getOrFetch('inadimplentes_full',
-      () => getInadimplentes({ force }), force);
+      () => getInadimplentes({ force: true }), force);
     res.json(data);
   } catch (err) { next(err); }
 });
@@ -183,8 +182,12 @@ router.post('/finance/entries', requireFinance, async (req, res, next) => {
     if (!['a_vista', 'parcelado'].includes(kind)) {
       return res.status(400).json({ error: 'kind deve ser a_vista ou parcelado' });
     }
+    // Sanity checks centralizados (anti-typo)
+    const validationErrs = validateEntryInput(req.body || {});
+    if (validationErrs.length) {
+      return res.status(400).json({ error: validationErrs.join(' · '), errors: validationErrs });
+    }
     const pv = Number(parcela_value);
-    if (!pv || pv <= 0) return res.status(400).json({ error: 'parcela_value inválido' });
     const tp = kind === 'a_vista' ? 1 : Math.max(1, parseInt(total_parcelas, 10) || 1);
     if (!isValidDate(first_due_date)) {
       return res.status(400).json({ error: 'first_due_date inválido (esperado YYYY-MM-DD)' });

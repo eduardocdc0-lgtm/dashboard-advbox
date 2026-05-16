@@ -16,6 +16,8 @@
 'use strict';
 
 const { fetchTransactions } = require('./data');
+const { parseAdvboxDate, isBeforeISO } = require('./date-utils');
+const { isParcelaValida } = require('./finance-helpers');
 
 // ── Configuração ─────────────────────────────────────────────────────────────
 const CFG = Object.freeze({
@@ -25,27 +27,18 @@ const CFG = Object.freeze({
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function isParcelaValida(t) {
-  if (t.entry_type !== 'income') return false;
-  const amt = Number(t.amount || 0);
-  if (amt < 1) return false; // placeholders 0.01
-  const desc = String(t.description || t.notes || '').toUpperCase();
-  if (desc.includes('EXCLUIR')) return false;
-  if (desc.includes('ARQUIVADO')) return false;
-  return true;
-}
+// isParcelaValida agora vem de finance-helpers (fonte única).
 
 function isAtrasada(t, hojeISO) {
   if (t.date_payment) return false;     // já paga
   if (!t.date_due) return false;        // sem vencimento, ignora
-  return String(t.date_due) < hojeISO;
+  // Usa parser robusto — string compare quebra em formato BR (dd/mm/yyyy)
+  return isBeforeISO(t.date_due, hojeISO);
 }
 
 function diasEntre(dateStr, hoje) {
-  if (!dateStr) return null;
-  const d = new Date(String(dateStr) + 'T12:00:00Z');
-  if (isNaN(d)) return null;
+  const d = parseAdvboxDate(dateStr);
+  if (!d) return null;
   return Math.max(0, Math.floor((hoje.getTime() - d.getTime()) / 86_400_000));
 }
 
@@ -89,8 +82,11 @@ async function getInadimplentes({ force = false } = {}) {
     if (!isParcelaValida(t)) continue;
     if (!isAtrasada(t, hojeISO)) continue;
 
+    // Chave preferencial: CPF (anti-homônimo). Fallback: nome normalizado.
+    const cpfDigits = String(t.identification || '').replace(/\D/g, '');
     const nomeNorm = normNome(t.name || t.customer_name || '(sem nome)');
-    let cluster = byCliente.get(nomeNorm);
+    const chave = cpfDigits.length >= 11 ? `cpf:${cpfDigits}` : `nome:${nomeNorm}`;
+    let cluster = byCliente.get(chave);
     if (!cluster) {
       cluster = {
         cliente: t.name || t.customer_name || '(sem nome)',
@@ -103,15 +99,19 @@ async function getInadimplentes({ force = false } = {}) {
         lawsuits: new Map(),   // lawsuit_id -> process_number
         transactions: [],
       };
-      byCliente.set(nomeNorm, cluster);
+      byCliente.set(chave, cluster);
     }
     cluster.parcelas += 1;
     cluster.valorTotal += Number(t.amount || 0);
-    if (!cluster.primeiraAtraso || t.date_due < cluster.primeiraAtraso) {
-      cluster.primeiraAtraso = t.date_due;
-    }
-    if (!cluster.ultimaAtraso || t.date_due > cluster.ultimaAtraso) {
-      cluster.ultimaAtraso = t.date_due;
+    // Normaliza pra ISO antes de comparar (string compare em BR quebra)
+    const dueISO = parseAdvboxDate(t.date_due)?.toISOString().slice(0, 10);
+    if (dueISO) {
+      if (!cluster.primeiraAtraso || dueISO < cluster.primeiraAtraso) {
+        cluster.primeiraAtraso = dueISO;
+      }
+      if (!cluster.ultimaAtraso || dueISO > cluster.ultimaAtraso) {
+        cluster.ultimaAtraso = dueISO;
+      }
     }
     if (t.identification) cluster.cpf = t.identification;
     const lid = t.lawsuit_id || t.lawsuits_id;
