@@ -421,10 +421,12 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
       }
     }
 
-    // Atualiza snapshot só se a tentativa foi bem-sucedida (ou nem foi tentada).
-    // Se houve erro, mantém snapshot antigo pra próxima rodada detectar "mudou"
-    // de novo e tentar.
-    if (!dryRun && !dispatchError) await updateSnapshot(lawId, newStage);
+    // Atualiza snapshot SEMPRE que viu a fase nova, mesmo se dispatch falhou.
+    // Antes condicionava a !dispatchError pra ter auto-retry, mas isso causava
+    // spam de email digest (toda hora detectava "mudou" pros que falharam por
+    // duplicate no AdvBox). Pra retry de workflow específico, usar
+    // ?force=1&onlyLawsuitId=X no endpoint.
+    if (!dryRun) await updateSnapshot(lawId, newStage);
   }
 
   logger.info(`[Auto-Workflow] Ciclo: ${lawsuits.length} processados, ${novos} workflows novos, ${criados} tarefas criadas, ${skippedDuplicates} pulados por dedup, ${erros} erros.`);
