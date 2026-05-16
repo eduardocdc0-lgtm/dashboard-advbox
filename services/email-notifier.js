@@ -1,23 +1,35 @@
 /**
- * Email Notifier — envia digest de mudanças de fase via Resend.
+ * Email Notifier — envia digest de mudanças de fase via Gmail SMTP (Workspace).
  *
  * Disparado pelo auto-workflow no fim do ciclo horário. Manda 1 email único
  * com TODAS as mudanças detectadas naquele ciclo (evita encher caixa).
  *
  * Env:
- *   RESEND_API_KEY    — obrigatório. Sem isso, pula envio com warning.
- *   NOTIFY_EMAIL_TO   — destinatário (default: eduardorodriguesadv1@gmail.com)
- *   NOTIFY_EMAIL_FROM — remetente (default: sandbox Resend onboarding@resend.dev,
- *                       que só entrega pro email verificado na conta Resend)
+ *   GMAIL_USER         — obrigatório. Email completo do Workspace (ex: eduardo@dominio.com)
+ *   GMAIL_APP_PASSWORD — obrigatório. Senha de app gerada no Google Account
+ *                        (2FA precisa estar ativo). 16 chars sem espaço.
+ *   NOTIFY_EMAIL_TO    — destinatário. Default = GMAIL_USER (manda pra si mesmo)
+ *
+ * Sem GMAIL_USER ou GMAIL_APP_PASSWORD, pula envio com warning (não quebra ciclo).
  */
 
 'use strict';
 
-const fetchNF = require('node-fetch');
+const nodemailer = require('nodemailer');
 
-const RESEND_API = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'Auto-Workflow AdvBox <onboarding@resend.dev>';
-const DEFAULT_TO = 'eduardorodriguesadv1@gmail.com';
+let _transporter = null;
+
+function getTransporter() {
+  if (_transporter) return _transporter;
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return null;
+  _transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+  return _transporter;
+}
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -71,42 +83,28 @@ async function sendStageChangeDigest(changes, { logger = console } = {}) {
     return { skipped: true, reason: 'no_changes' };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    logger.warn('[Email-Notifier] RESEND_API_KEY não configurado — pulando envio');
-    return { skipped: true, reason: 'no_api_key' };
+  const transporter = getTransporter();
+  if (!transporter) {
+    logger.warn('[Email-Notifier] GMAIL_USER ou GMAIL_APP_PASSWORD ausente — pulando envio');
+    return { skipped: true, reason: 'no_credentials' };
   }
 
-  const to = process.env.NOTIFY_EMAIL_TO || DEFAULT_TO;
-  const from = process.env.NOTIFY_EMAIL_FROM || DEFAULT_FROM;
+  const from = process.env.GMAIL_USER;
+  const to = process.env.NOTIFY_EMAIL_TO || from;
   const subject = `[AdvBox] ${changes.length} processo(s) mudaram de fase`;
 
   try {
-    const resp = await fetchNF(RESEND_API, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        html: buildHtml(changes),
-        text: buildText(changes),
-      }),
+    const info = await transporter.sendMail({
+      from: `"Auto-Workflow AdvBox" <${from}>`,
+      to,
+      subject,
+      text: buildText(changes),
+      html: buildHtml(changes),
     });
-    const raw = await resp.text();
-    let body; try { body = JSON.parse(raw); } catch { body = { raw }; }
-    if (!resp.ok) {
-      const detail = body.message || body.error || body.raw;
-      logger.error(`[Email-Notifier] Resend ${resp.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
-      return { ok: false, status: resp.status, error: detail };
-    }
-    logger.info(`[Email-Notifier] Email enviado pra ${to}: ${changes.length} mudança(s), id=${body.id}`);
-    return { ok: true, id: body.id, count: changes.length };
+    logger.info(`[Email-Notifier] Email enviado pra ${to}: ${changes.length} mudança(s), id=${info.messageId}`);
+    return { ok: true, id: info.messageId, count: changes.length };
   } catch (e) {
-    logger.error(`[Email-Notifier] Falha de rede: ${e.message}`);
+    logger.error(`[Email-Notifier] Falha SMTP: ${e.message}`);
     return { ok: false, error: e.message };
   }
 }
