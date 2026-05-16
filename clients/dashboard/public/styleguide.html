@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Styleguide — Dashboard AdvBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ⚠️ ATENÇÃO: se você mudar tokens (`:root`) ou sistema btn/card/empty
+       no index.html, atualize TAMBÉM aqui pra manter consistência visual.
+       Eventualmente isso vira tokens.css importado. */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FFFFFF; --bg-card: #FAFAF8; --surface: #FAFAF8; --surface-2: #FAFAFA;
+      --text: #000000; --text-2: #6B6B6B; --text-3: #767676;
+      --border: #D4D4D4; --hover: #F0F0EE;
+      --success: #2D5F3F; --warning: #8B6914; --danger: #8B2828;
+      --accent: #1D4ED8; --accent-bg: #EFF6FF;
+      --radius-sm: 6px; --radius: 10px; --radius-lg: 16px;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-5: 20px; --space-6: 24px; --space-8: 32px;
+      --card-padding-sm: 14px 18px;
+      --card-padding-md: 18px 22px 20px;
+      --card-padding-lg: 24px 26px;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      font-size: 14px; line-height: 1.55; padding: 48px 32px 96px;
+      max-width: 1160px; margin: 0 auto;
+    }
+
+    /* A11y */
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Tipografia da styleguide */
+    h1 {
+      font-family: 'DM Serif Display', serif; font-weight: 400;
+      font-size: 34px; margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .subtitle {
+      font-size: 12px; font-weight: 500; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 48px;
+    }
+    h2 {
+      font-family: 'DM Serif Display', serif; font-weight: 400;
+      font-size: 22px; margin: 56px 0 6px; letter-spacing: -0.01em;
+    }
+    h2:first-of-type { margin-top: 0; }
+    .section-desc {
+      font-size: 13px; color: var(--text-2); margin-bottom: 24px; max-width: 600px;
+    }
+    code {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 4px;
+      color: var(--text);
+    }
+    pre {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: 12px 16px; border-radius: var(--radius-sm);
+      overflow-x: auto;
+      color: var(--text); margin-top: 8px;
+    }
+
+    .demo-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
+    .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .demo-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; max-width: 480px; }
+
+    /* Swatches */
+    .swatch {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .swatch__chip {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); flex-shrink: 0;
+    }
+    .swatch__meta { display: flex; flex-direction: column; gap: 2px; }
+    .swatch__name { font-size: 13px; font-weight: 500; }
+    .swatch__hex  { font-size: 11px; color: var(--text-2); font-family: 'SF Mono', Menlo, monospace; }
+
+    /* Sample cards (copiados do index.html pra referência visual) */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: var(--card-padding-lg);
+    }
+    .card-title {
+      font-family: 'DM Serif Display', serif; font-size: 17px;
+      font-weight: 400; color: var(--text); margin-bottom: 12px;
+    }
+    .metric-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: var(--card-padding-md); border-radius: 12px;
+    }
+    .metric-label {
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-2);
+    }
+    .metric-value {
+      font-size: 34px; font-weight: 700; color: var(--text);
+      line-height: 1; margin-top: 4px;
+    }
+    .metric-sub {
+      font-size: 11px; color: var(--text-3); margin-top: 6px;
+    }
+    .ctrl-card {
+      display: flex; flex-direction: column; gap: var(--space-1);
+      padding: var(--card-padding-sm); border-radius: var(--radius-lg);
+      background: var(--surface-2); border: 1px solid var(--border);
+    }
+
+    /* BUTTON SYSTEM (cópia exata do index.html) */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 9px 20px; border-radius: var(--radius);
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.01em;
+      line-height: 1; border: 1px solid transparent;
+      transition: opacity .15s, background-color .15s, border-color .15s, color .15s;
+      text-decoration: none; user-select: none; white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn--xs    { padding: 6px 10px; font-size: 11px; border-radius: var(--radius-sm); }
+    .btn--sm    { padding: 6px 14px; font-size: 12px; border-radius: var(--radius-sm); }
+    .btn--lg    { padding: 13px 22px; font-size: 14px; font-weight: 600; }
+    .btn--block { width: 100%; }
+    .btn--primary { background: var(--text); color: #fff; }
+    .btn--primary:hover:not(:disabled) { opacity: 0.82; }
+    .btn--secondary { background: transparent; color: var(--text-2); border-color: var(--border); }
+    .btn--secondary:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+    .btn--ghost { background: transparent; color: var(--text-2); border-color: transparent; }
+    .btn--ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+    .btn--danger { background: var(--danger); color: #fff; }
+    .btn--danger:hover:not(:disabled) { opacity: 0.85; }
+    .btn--link {
+      background: transparent; color: var(--accent); padding: 4px 8px;
+      border: none; text-decoration: underline; text-underline-offset: 3px;
+    }
+    .btn--link:hover:not(:disabled) { opacity: 0.75; }
+
+    /* Empty states (cópia exata) */
+    .empty {
+      text-align: center; padding: 40px 20px; color: var(--text-2); font-size: 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .empty__icon { font-size: 28px; line-height: 1; margin-bottom: 4px; opacity: 0.7; }
+    .empty__title { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--text); font-weight: 400; }
+    .empty__desc { font-size: 13px; color: var(--text-2); max-width: 360px; }
+    .empty__action { margin-top: 8px; }
+    .empty--success .empty__title { color: var(--success); }
+    .empty--success .empty__icon  { opacity: 1; }
+    .empty--error   .empty__title { color: var(--danger); }
+    .empty--error   .empty__icon  { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <h1>Styleguide</h1>
+  <div class="subtitle">Dashboard AdvBox — Componentes & Padrões</div>
+
+  <p style="color:var(--text-2); font-size:13px; max-width:600px; margin-bottom:32px;">
+    Antes de criar componente novo no <code>index.html</code>, consulte aqui.
+    Provavelmente o padrão já existe — copiar &gt; inventar.
+  </p>
+
+  <!-- ─────────── PALETA ─────────── -->
+  <h2>1. Paleta</h2>
+  <div class="section-desc">Tokens em <code>:root</code> no index.html. Não invente cor nova — use as variáveis.</div>
+
+  <div class="demo-grid">
+    <div class="swatch"><div class="swatch__chip" style="background:#FFFFFF;"></div><div class="swatch__meta"><div class="swatch__name">--bg</div><div class="swatch__hex">#FFFFFF</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#FAFAF8;"></div><div class="swatch__meta"><div class="swatch__name">--bg-card</div><div class="swatch__hex">#FAFAF8</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#000000;"></div><div class="swatch__meta"><div class="swatch__name">--text</div><div class="swatch__hex">#000000</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#6B6B6B;"></div><div class="swatch__meta"><div class="swatch__name">--text-2</div><div class="swatch__hex">#6B6B6B</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#767676;"></div><div class="swatch__meta"><div class="swatch__name">--text-3</div><div class="swatch__hex">#767676 (WCAG AA)</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#D4D4D4;"></div><div class="swatch__meta"><div class="swatch__name">--border</div><div class="swatch__hex">#D4D4D4</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#1D4ED8;"></div><div class="swatch__meta"><div class="swatch__name">--accent</div><div class="swatch__hex">#1D4ED8</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#2D5F3F;"></div><div class="swatch__meta"><div class="swatch__name">--success</div><div class="swatch__hex">#2D5F3F</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#8B6914;"></div><div class="swatch__meta"><div class="swatch__name">--warning</div><div class="swatch__hex">#8B6914</div></div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:#8B2828;"></div><div class="swatch__meta"><div class="swatch__name">--danger</div><div class="swatch__hex">#8B2828</div></div></div>
+  </div>
+
+  <!-- ─────────── TIPOGRAFIA ─────────── -->
+  <h2>2. Tipografia</h2>
+  <div class="section-desc">DM Serif Display pra títulos editoriais. DM Sans pra UI/corpo. Sem 3ª fonte.</div>
+
+  <div class="demo-stack">
+    <div>
+      <div style="font-family:'DM Serif Display',serif; font-size:34px; line-height:1.1;">Título grande</div>
+      <code>DM Serif Display 34px</code>
+    </div>
+    <div>
+      <div style="font-family:'DM Serif Display',serif; font-size:22px; line-height:1.2;">Título de seção</div>
+      <code>DM Serif Display 22px</code>
+    </div>
+    <div>
+      <div style="font-family:'DM Serif Display',serif; font-size:17px; line-height:1.3;">Título de card</div>
+      <code>DM Serif Display 17px (.card-title)</code>
+    </div>
+    <div>
+      <div style="font-family:'DM Sans',sans-serif; font-size:14px;">Corpo padrão — DM Sans 14px / 1.55 line-height.</div>
+      <code>DM Sans 14px</code>
+    </div>
+    <div>
+      <div style="font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-2);">Label uppercase tracked</div>
+      <code>DM Sans 11px uppercase letter-spacing:0.15em</code>
+    </div>
+  </div>
+
+  <!-- ─────────── BOTÕES ─────────── -->
+  <h2>3. Botões</h2>
+  <div class="section-desc">
+    Sistema novo: <code>.btn</code> + variante de cor + tamanho opcional + <code>.btn--block</code>.
+    Classes antigas (.refresh-btn, .login-btn, .logout-btn) continuam funcionando — não migre HTML existente.
+  </div>
+
+  <h3 style="font-size:14px; font-weight:600; margin-bottom:8px;">Variantes de cor</h3>
+  <div class="demo-row">
+    <button class="btn btn--primary">Primary</button>
+    <button class="btn btn--secondary">Secondary</button>
+    <button class="btn btn--ghost">Ghost</button>
+    <button class="btn btn--danger">Danger</button>
+    <a class="btn btn--link" href="#">Link</a>
+  </div>
+
+  <h3 style="font-size:14px; font-weight:600; margin:24px 0 8px;">Tamanhos</h3>
+  <div class="demo-row">
+    <button class="btn btn--primary btn--xs">XS</button>
+    <button class="btn btn--primary btn--sm">SM</button>
+    <button class="btn btn--primary">Default</button>
+    <button class="btn btn--primary btn--lg">LG</button>
+  </div>
+
+  <h3 style="font-size:14px; font-weight:600; margin:24px 0 8px;">Block (largura 100%)</h3>
+  <div class="demo-stack">
+    <button class="btn btn--primary btn--lg btn--block">Entrar</button>
+  </div>
+
+  <h3 style="font-size:14px; font-weight:600; margin:24px 0 8px;">Desabilitado</h3>
+  <div class="demo-row">
+    <button class="btn btn--primary" disabled>Primary disabled</button>
+    <button class="btn btn--secondary" disabled>Secondary disabled</button>
+  </div>
+
+  <pre>&lt;button class="btn btn--primary"&gt;Salvar&lt;/button&gt;
+&lt;button class="btn btn--secondary btn--sm"&gt;Cancelar&lt;/button&gt;
+&lt;a       class="btn btn--link"&gt;Ver mais&lt;/a&gt;
+&lt;button class="btn btn--primary btn--lg btn--block"&gt;Entrar&lt;/button&gt;</pre>
+
+  <!-- ─────────── CARDS ─────────── -->
+  <h2>4. Cards (3 tamanhos)</h2>
+  <div class="section-desc">
+    <code>.card</code> = container grande (padding-lg). <code>.metric-card</code> = KPI (padding-md). <code>.ctrl-card</code> = tile compacto (padding-sm).
+  </div>
+
+  <div class="demo-grid">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title">Card grande</div>
+      <div style="color:var(--text-2); font-size:13px;">Container padrão. Padding: var(--card-padding-lg) = 24px 26px.</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Métrica</div>
+      <div class="metric-value">42</div>
+      <div class="metric-sub">processos críticos</div>
+    </div>
+    <div class="ctrl-card">
+      <div style="font-size:10.5px; color:var(--text-2); text-transform:uppercase; letter-spacing:.04em; font-weight:600;">Eduardo</div>
+      <div style="font-size:30px; font-weight:700; line-height:1; color:var(--accent);">12</div>
+      <div style="font-size:12px; color:var(--text-3);">Tile compacto</div>
+    </div>
+  </div>
+
+  <!-- ─────────── ESTADOS VAZIOS ─────────── -->
+  <h2>5. Estados vazios</h2>
+  <div class="section-desc">Uso simples (1 linha) ou rico (ícone + título + desc + ação). 3 variantes de cor.</div>
+
+  <div class="demo-grid">
+    <div class="card" style="margin-bottom:0;">
+      <div class="empty">Sem dados</div>
+      <div style="text-align:center; color:var(--text-3); font-size:11px;"><code>uso simples</code></div>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="empty">
+        <div class="empty__icon">📭</div>
+        <div class="empty__title">Nada por aqui</div>
+        <div class="empty__desc">Os filtros aplicados não retornaram resultados.</div>
+        <button class="btn btn--ghost btn--sm empty__action">Limpar filtros</button>
+      </div>
+      <div style="text-align:center; color:var(--text-3); font-size:11px;"><code>uso rico (neutro)</code></div>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="empty empty--success">
+        <div class="empty__icon">✅</div>
+        <div class="empty__title">Tudo em dia</div>
+        <div class="empty__desc">Nenhum alerta crítico neste mês.</div>
+      </div>
+      <div style="text-align:center; color:var(--text-3); font-size:11px;"><code>.empty--success</code></div>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="empty empty--error">
+        <div class="empty__icon">⚠️</div>
+        <div class="empty__title">Erro ao carregar</div>
+        <div class="empty__desc">Tente novamente em alguns segundos.</div>
+        <button class="btn btn--secondary btn--sm empty__action">Tentar de novo</button>
+      </div>
+      <div style="text-align:center; color:var(--text-3); font-size:11px;"><code>.empty--error</code></div>
+    </div>
+  </div>
+
+  <!-- ─────────── ESPAÇAMENTO / RAIOS ─────────── -->
+  <h2>6. Tokens de espaçamento &amp; raios</h2>
+  <div class="section-desc">Use sempre os tokens. Não digite valor literal.</div>
+
+  <pre>--space-1: 4px   --space-2: 8px   --space-3: 12px  --space-4: 16px
+--space-5: 20px  --space-6: 24px  --space-8: 32px  --space-10: 40px
+--space-12: 48px
+
+--radius-sm: 6px    --radius: 10px    --radius-lg: 16px
+
+--card-padding-sm: 14px 18px     (ctrl-card)
+--card-padding-md: 18px 22px 20px (metric-card)
+--card-padding-lg: 24px 26px     (card)</pre>
+
+  <!-- ─────────── KPI 3 PADRÕES ─────────── -->
+  <h2>7. ⚠️ Os 3 padrões de KPI (não confundir)</h2>
+  <pre>.metric-card  → TOPO DE ABA. KPIs grandes 3-5 em grid horizontal.
+.ov-row       → LINHA DE COLUNA. Lista vertical dentro de card Overview.
+.prod-stat    → MICRO-MEDIDA. Sub-número dentro de outro card.
+
+Regra: na dúvida, use .metric-card.</pre>
+
+  <p style="margin-top:48px; padding-top:24px; border-top:1px solid var(--border); color:var(--text-3); font-size:12px; text-align:center;">
+    Esta página é estática — não consome banco, não tem auth.
+    Pra atualizar, edite <code>clients/dashboard/public/styleguide.html</code>.
+  </p>
+
+</body>
+</html>

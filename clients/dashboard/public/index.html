@@ -11,6 +11,37 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
+    /* ════════════════════════════════════════════════════════════════════════
+     * GUIA DOS 3 PADRÕES DE KPI / ESTATÍSTICA
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * Esse SPA tem 3 padrões competindo pra "mostrar número + label".
+     * Eles NÃO são iguais. Use o certo conforme o contexto:
+     *
+     *  ┌─────────────────┬─────────────────────────────────────────────────┐
+     *  │ .metric-card    │ TOPO DE ABA. Grid horizontal de 3-5 KPIs        │
+     *  │ (46 ocorrências)│ grandes ("4 esperas críticas", "R$ 12.4k"...).  │
+     *  │                 │ Sempre tem hover/clickable, abre detalhe.       │
+     *  │                 │ Padding: var(--card-padding-md)                 │
+     *  ├─────────────────┼─────────────────────────────────────────────────┤
+     *  │ .ov-row         │ LINHA DENTRO DE COLUNA. Lista vertical de stats │
+     *  │ (10 ocorrências)│ menores dentro de um card-coluna do Kanban      │
+     *  │                 │ Overview. Label + valor numérico + seta.        │
+     *  │                 │ NÃO usar fora do contexto Overview.             │
+     *  ├─────────────────┼─────────────────────────────────────────────────┤
+     *  │ .prod-stat      │ MICRO-MEDIDA dentro de outro card. Quando       │
+     *  │ (7 ocorrências) │ você precisa de 2-3 sub-números pequenos        │
+     *  │                 │ ("destes 12, 4 estão atrasados"). Espremido.    │
+     *  └─────────────────┴─────────────────────────────────────────────────┘
+     *
+     * REGRA: na dúvida entre os 3, use .metric-card. É o único que tem
+     * tratamento visual sério (border, hover, padding consistente).
+     *
+     * Pra HTML novo evite criar .foo-stat ou .bar-card — chance grande de
+     * já existir um padrão que resolve. Veja /styleguide.html antes de
+     * inventar componente novo.
+     * ════════════════════════════════════════════════════════════════════════ */
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -101,6 +132,78 @@
       gap: 14px;
       margin-bottom: 16px;
     }
+
+    /* ────────────────────────────────────────────────────────────────────────
+     * BUTTON SYSTEM (padrão pra HTML NOVO)
+     *
+     * Classes antigas (.refresh-btn, .login-btn, .logout-btn, .dist-export-btn,
+     * .ov-notify-btn, .ov-today, .pet-period-btn, .btn-link) seguem funcionando
+     * como estão. Não precisa migrar HTML existente.
+     *
+     * Pra HTML novo, use:
+     *   <button class="btn btn--primary">       ← ação principal (fundo preto)
+     *   <button class="btn btn--secondary">     ← ação alternativa (borda)
+     *   <button class="btn btn--ghost">         ← ação leve (só hover)
+     *   <button class="btn btn--danger">        ← ação destrutiva (vermelho)
+     *   <a       class="btn btn--link">         ← link com peso de botão
+     *
+     * Modificadores de tamanho (qualquer variante):
+     *   .btn--xs  (compacto, ex: dentro de card)
+     *   .btn--sm  (pequeno, ex: ação de tabela)
+     *   .btn--lg  (grande, ex: CTA de form)
+     *   .btn--block (largura 100%)
+     *
+     * Combina assim:  class="btn btn--primary btn--lg btn--block"
+     * ──────────────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      border: 1px solid transparent;
+      transition: opacity .15s, background-color .15s, border-color .15s, color .15s, transform .12s;
+      text-decoration: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Tamanhos */
+    .btn--xs    { padding: 6px 10px;  font-size: 11px; border-radius: var(--radius-sm); }
+    .btn--sm    { padding: 6px 14px;  font-size: 12px; border-radius: var(--radius-sm); }
+    .btn--lg    { padding: 13px 22px; font-size: 14px; font-weight: 600; }
+    .btn--block { width: 100%; }
+
+    /* Variantes de cor */
+    .btn--primary { background: var(--text); color: #fff; }
+    .btn--primary:hover:not(:disabled) { opacity: 0.82; }
+
+    .btn--secondary { background: transparent; color: var(--text-2); border-color: var(--border); }
+    .btn--secondary:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+
+    .btn--ghost { background: transparent; color: var(--text-2); border-color: transparent; }
+    .btn--ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+
+    .btn--danger { background: var(--danger); color: #fff; }
+    .btn--danger:hover:not(:disabled) { opacity: 0.85; }
+
+    .btn--link {
+      background: transparent;
+      color: var(--accent);
+      padding: 4px 8px;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .btn--link:hover:not(:disabled) { opacity: 0.75; }
 
     .container {
       max-width: 1160px;
@@ -540,12 +643,55 @@
     .loading.loading-lg::before { top: 18px; right: 10%;  height: 13px; }
     .loading.loading-lg::after  { top: 44px; right: 20%;  height: 13px; }
 
+    /* ── ESTADOS VAZIOS ──
+     * Uso simples (compatível com HTML legado):
+     *   <div class="empty">Sem dados</div>
+     *
+     * Uso rico (recomendado pra HTML novo):
+     *   <div class="empty">
+     *     <div class="empty__icon">📭</div>
+     *     <div class="empty__title">Nada por aqui</div>
+     *     <div class="empty__desc">Os filtros aplicados não retornaram resultados.</div>
+     *     <button class="btn btn--ghost btn--sm empty__action">Limpar filtros</button>
+     *   </div>
+     *
+     * Variantes (cor do título/ícone):
+     *   .empty.empty--success  (verde, ex: "Nenhum alerta crítico ✅")
+     *   .empty.empty--error    (vermelho, ex: "Erro ao carregar")
+     */
     .empty {
       text-align: center;
       padding: 40px 20px;
       color: var(--text-2);
       font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
     }
+    .empty__icon {
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+    .empty__title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px;
+      color: var(--text);
+      font-weight: 400;
+    }
+    .empty__desc {
+      font-size: 13px;
+      color: var(--text-2);
+      max-width: 360px;
+    }
+    .empty__action { margin-top: 8px; }
+
+    .empty--success .empty__title { color: var(--success); }
+    .empty--success .empty__icon  { opacity: 1; }
+    .empty--error   .empty__title { color: var(--danger); }
+    .empty--error   .empty__icon  { opacity: 1; }
     .error {
       background: #FFF4F4;
       color: var(--danger);
