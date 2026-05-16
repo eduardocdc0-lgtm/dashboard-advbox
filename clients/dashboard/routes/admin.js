@@ -10,6 +10,7 @@ const { Router } = require('express');
 const { requireAdmin } = require('../../../middleware/auth');
 const jobsRegistry = require('../../../services/jobs-registry');
 const { query } = require('../../../services/db');
+const { fetchAllPosts } = require('../../../services/data');
 
 const router = Router();
 
@@ -154,6 +155,106 @@ router.get('/admin/route-usage', requireAdmin, async (req, res, next) => {
       bottom,
       never_used,
       hint: 'top = core | bottom (≤3 hits) = candidatos a poda | never_used = morto seguro',
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/admin/duplicate-tasks ───────────────────────────────────────────
+// Detecta tarefas duplicadas históricas no AdvBox: mesmo (lawsuit_id, tasks_id)
+// criadas em janela curta entre si. Útil pra LIMPEZA RETROATIVA — todas as
+// dups criadas antes do commit 17197d8 (que ligou o dedup automático) seguem
+// vivas no AdvBox enchendo o saco da equipe.
+//
+//   GET /api/admin/duplicate-tasks               → últimos 30 dias (default)
+//   GET /api/admin/duplicate-tasks?days=15       → janela menor (foco recente)
+//   GET /api/admin/duplicate-tasks?days=60       → janela maior (mais histórico)
+//   GET /api/admin/duplicate-tasks?onlyOpen=1    → só posts ainda abertos
+//                                                  (ignora os já concluídos)
+//
+// Retorno: lista de "grupos" (cada grupo = N posts duplicados pro mesmo
+// lawsuit+task), com links diretos pro AdvBox pra você/Letícia deletar a mão.
+router.get('/admin/duplicate-tasks', requireAdmin, async (req, res, next) => {
+  try {
+    const days = Math.min(180, Math.max(1, Number(req.query.days) || 30));
+    const onlyOpen = req.query.onlyOpen === '1';
+    const cutoffMs = Date.now() - days * 86400 * 1000;
+
+    const posts = await fetchAllPosts();
+
+    // Agrupa por (lawsuit_id, tasks_id)
+    const groups = new Map();   // key: `${lid}_${tid}` → posts[]
+    for (const p of posts) {
+      const lid = Number(p.lawsuits_id || p.lawsuit_id || 0);
+      const tid = Number(p.tasks_id || 0);
+      if (!lid || !tid) continue;
+
+      const criadaTs = Date.parse(p.created_at || p.date_created || p.date || p.start_date || '');
+      if (Number.isNaN(criadaTs) || criadaTs < cutoffMs) continue;
+
+      // Filtro "only open": pula posts onde TODOS os users já marcaram concluído.
+      // (No AdvBox cada user no array `users` tem own `completed` flag.)
+      if (onlyOpen) {
+        const usrs = Array.isArray(p.users) ? p.users : [];
+        const allDone = usrs.length > 0 && usrs.every(u => u.completed === true || u.completed === 1);
+        if (allDone) continue;
+      }
+
+      const key = `${lid}_${tid}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    }
+
+    // Filtra só grupos com 2+ posts (= duplicação)
+    const dupGroups = [];
+    let totalExtra = 0;
+
+    for (const [, postsArr] of groups) {
+      if (postsArr.length < 2) continue;
+      // Ordena por created_at ASC (mais antigo primeiro = original)
+      postsArr.sort((a, b) => {
+        const ta = Date.parse(a.created_at || a.date_created || 0);
+        const tb = Date.parse(b.created_at || b.date_created || 0);
+        return ta - tb;
+      });
+
+      const first = postsArr[0];
+      const lid = Number(first.lawsuits_id || first.lawsuit_id);
+      const tid = Number(first.tasks_id);
+      totalExtra += postsArr.length - 1;
+
+      dupGroups.push({
+        lawsuit_id: lid,
+        tasks_id: tid,
+        task: first.task || first.title || '(sem nome)',
+        count: postsArr.length,
+        extra_count: postsArr.length - 1,
+        advboxLawsuitUrl: `https://app.advbox.com.br/lawsuits/${lid}`,
+        posts: postsArr.map(p => ({
+          id: p.id,
+          created_at: p.created_at || p.date_created || null,
+          start_date: p.start_date || null,
+          date_deadline: p.date_deadline || null,
+          notes_preview: (p.notes || '').slice(0, 80),
+          users: (Array.isArray(p.users) ? p.users : []).map(u => ({
+            name: u.name || null,
+            completed: !!(u.completed === true || u.completed === 1),
+          })),
+          advboxTaskUrl: `https://app.advbox.com.br/0?t=${p.id}`,
+          is_likely_original: p === first,
+        })),
+      });
+    }
+
+    // Ordena grupos pelos mais "barulhentos" primeiro
+    dupGroups.sort((a, b) => b.count - a.count);
+
+    res.json({
+      window_days: days,
+      onlyOpen,
+      total_groups: dupGroups.length,
+      total_extra_posts: totalExtra,
+      hint: `Cada grupo tem ${dupGroups.length ? 'N' : '0'} posts idênticos (mesmo lawsuit+task). O mais antigo (is_likely_original=true) é provavelmente o legítimo — os demais são candidatos a delete manual no AdvBox via advboxTaskUrl.`,
+      groups: dupGroups,
     });
   } catch (err) { next(err); }
 });
