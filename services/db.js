@@ -240,6 +240,21 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_cs_setor ON controller_snapshots(setor_id, snapshot_date DESC);
     `);
 
+    // ── ROUTE_ACCESS_LOG — telemetria de uso de rota pra auditoria de morto ──
+    // Loga cada GET /api/* (não params, só path) pra descobrir quais
+    // features Eduardo realmente usa vs quais estão lá só ocupando código.
+    // Retenção 30 dias (limpeza no cron de discord-briefing ou manual).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS route_access_log (
+        id          BIGSERIAL PRIMARY KEY,
+        route       TEXT NOT NULL,
+        user_id     INT,
+        accessed_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_ral_route_time ON route_access_log(route, accessed_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_ral_time ON route_access_log(accessed_at DESC);
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);

@@ -9,6 +9,7 @@
 const { Router } = require('express');
 const { requireAdmin } = require('../../../middleware/auth');
 const jobsRegistry = require('../../../services/jobs-registry');
+const { query } = require('../../../services/db');
 
 const router = Router();
 
@@ -69,6 +70,91 @@ router.get('/healthz/jobs', requireAdmin, (req, res) => {
         ? 'Um ou mais crons não iniciaram — checar status individual.'
         : 'Tudo no ar.',
   });
+});
+
+// ── GET /api/admin/route-usage ───────────────────────────────────────────────
+// Telemetria de uso de rota (alimentada pelo middleware/access-log.js).
+// Pra Eduardo decidir o que cortar do dashboard sem chutar:
+//
+//   GET /api/admin/route-usage          → últimos 7 dias (default)
+//   GET /api/admin/route-usage?days=14  → janela custom (1..30)
+//   GET /api/admin/route-usage?cleanup=1 → bonus: roda DELETE de >30 dias
+//
+// Retorna 3 listas:
+//   - top: rotas mais usadas (= core do produto)
+//   - bottom: rotas com 1-3 hits (= candidatas a poda)
+//   - never_used: rotas registradas que NUNCA apareceram no log (= morto certo)
+//
+// CUIDADO: rotas POST não são logadas (só GET). Pra mapear cobertura completa
+// olhe na sidebar do SPA e correlacione manualmente.
+router.get('/admin/route-usage', requireAdmin, async (req, res, next) => {
+  try {
+    const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
+
+    // Cleanup opcional (retenção 30 dias)
+    if (req.query.cleanup === '1') {
+      const del = await query(
+        `DELETE FROM route_access_log WHERE accessed_at < NOW() - INTERVAL '30 days'`
+      );
+      return res.json({ cleanup: true, deleted: del.rowCount });
+    }
+
+    const stats = await query(
+      `SELECT route,
+              COUNT(*)::int        AS hits,
+              COUNT(DISTINCT user_id)::int AS users,
+              MAX(accessed_at)     AS last_use,
+              MIN(accessed_at)     AS first_use
+         FROM route_access_log
+        WHERE accessed_at > NOW() - ($1::int || ' days')::interval
+        GROUP BY route
+        ORDER BY hits DESC`,
+      [days]
+    );
+
+    const all = stats.rows;
+    const top = all.slice(0, 20);
+    const bottom = all.filter(r => r.hits <= 3).slice(-20);
+
+    // Rotas registradas que NUNCA apareceram (poda segura)
+    // Fonte: routes registradas + algumas GETs que conheço — mantém lista
+    // simples; pode ser expandido se a auditoria virar recorrente.
+    const REGISTERED_GET_ROUTES = [
+      '/api/lawsuits', '/api/customers', '/api/transactions', '/api/settings',
+      '/api/flow', '/api/posts', '/api/last-movements',
+      '/api/distribution', '/api/evolucao',
+      '/api/meta/campaign-roi',
+      '/api/incomplete-registrations',
+      '/api/audit-debug-stages', '/api/audit-responsible',
+      '/api/audit/usage', '/api/audit/kanban-financeiro',
+      '/api/controller/overview', '/api/controller/snapshot', '/api/controller/tendencia',
+      '/api/birthday/hoje', '/api/birthday/mes', '/api/birthday/historico', '/api/birthday/config',
+      '/api/inss-conference/history',
+      '/api/petitions/by-person',
+      '/api/cash-flow/upcoming',
+      '/api/esteira',
+      '/api/finance/entries', '/api/finance/inadimplentes', '/api/finance/calendar',
+      '/api/overview',
+      '/api/admin/discord', '/api/admin/team-status',
+      '/api/sentencas/placar',
+      '/api/asaas/charges', '/api/asaas/payer-overrides', '/api/asaas/payments-received',
+      '/api/publications/recent',
+      '/api/leads', '/api/leads/stats',
+      '/api/birthdays',
+    ];
+    const usedSet = new Set(all.map(r => r.route));
+    const never_used = REGISTERED_GET_ROUTES.filter(r => !usedSet.has(r));
+
+    res.json({
+      window_days: days,
+      total_requests: all.reduce((s, r) => s + r.hits, 0),
+      distinct_routes: all.length,
+      top,
+      bottom,
+      never_used,
+      hint: 'top = core | bottom (≤3 hits) = candidatos a poda | never_used = morto seguro',
+    });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

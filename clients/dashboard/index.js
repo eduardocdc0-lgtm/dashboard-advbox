@@ -191,6 +191,12 @@ app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
   res.json({ ok: true, invalidated: key || 'all' });
 });
 
+// ── Telemetria de uso (fire-and-forget) ──────────────────────────────────────
+// Loga GET /api/* na route_access_log pra auditar features mortas em 7-14 dias.
+// Plugado APÓS auth gate (só conta requests autenticadas).
+const { accessLog } = require('../../middleware/access-log');
+app.use(accessLog);
+
 // ── Rotas da API ─────────────────────────────────────────────────────────────
 app.use('/api', apiRoutes);
 
