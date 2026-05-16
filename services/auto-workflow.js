@@ -82,6 +82,34 @@ async function alreadyDispatched(lawsuitId, workflowName) {
   return res.rows.length > 0;
 }
 
+/**
+ * Pra retry de workflow que falhou no meio: retorna Set<tasks_id> das tarefas
+ * que JÁ foram criadas com sucesso em tentativa anterior. Permite o retry
+ * pular essas e só tentar as que faltaram. Sem isso, retry recria tudo e
+ * gera duplicação na cabeça da equipe (queixa real da Letícia).
+ */
+async function getAlreadyCreatedTaskIds(lawsuitId, workflowName) {
+  const res = await query(`
+    SELECT posts_created FROM workflow_dispatched
+    WHERE lawsuit_id = $1 AND workflow_name = $2
+    LIMIT 1
+  `, [lawsuitId, workflowName]);
+  if (!res.rows.length) return new Set();
+  const pc = res.rows[0].posts_created;
+  if (!pc) return new Set();
+  // Formato novo: { created: [...], skipped: [...] }
+  // Formato antigo (legado): array direto [...]
+  const arr = Array.isArray(pc) ? pc : (Array.isArray(pc.created) ? pc.created : []);
+  const ids = new Set();
+  for (const item of arr) {
+    const tid = Number(item?.tasks_id);
+    // O formato antigo não salvava tasks_id — só task name + post_id. Não tem
+    // como inferir. O formato novo (introduzido nesta onda) salva tasks_id.
+    if (tid) ids.add(tid);
+  }
+  return ids;
+}
+
 async function markDispatched(lawsuitId, workflowName, stage, postsCreated, errorMessage) {
   // Se já tem registro de tentativa anterior COM erro, atualiza (retry). Se
   // tem registro de sucesso, mantém como está (idempotente).
@@ -141,12 +169,26 @@ const ADVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
 const fetchNF = require('node-fetch');
 const FROM_USER_ID = 198347; // Eduardo (admin/dono do token)
 
-async function createPost({ lawsuitId, task, userId, deadline }) {
+async function createPost({ lawsuitId, task, userId, deadline, workflowName = '', stage = '' }) {
   const tasksId = await resolveTaskId(task);
   const hoje = new Date().toISOString().slice(0, 10);
+  const agoraBR = new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Recife',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+  // Notes ricas — equipe consegue identificar a origem e evitar pânico se
+  // achar que é duplicação. Padrão: marcador + workflow + fase + timestamp.
+  const notes = [
+    `[Auto-workflow] ${task}`,
+    workflowName ? `Workflow: ${workflowName}` : '',
+    stage        ? `Disparado quando fase mudou pra: ${stage}` : '',
+    `Em: ${agoraBR}`,
+    `Se você acha que isso é duplicado, avise o Eduardo (lawsuit #${lawsuitId}).`,
+  ].filter(Boolean).join('\n');
   const payload = {
     tasks_id: tasksId,
-    notes: `[Auto-workflow] ${task} — disparado quando processo mudou de fase.`,
+    notes,
     start_date: hoje,
     date_deadline: deadline,
     from: FROM_USER_ID,
@@ -179,9 +221,12 @@ async function createPost({ lawsuitId, task, userId, deadline }) {
 //   2. Membro da equipe que criou manualmente
 //   3. Auto-workflow anterior que não foi registrado (ex: import manual)
 //
-// Janela default: 72h. Configurável via DEDUP_WINDOW_HOURS (env).
+// Janela default: 168h (7 dias). Configurável via DEDUP_WINDOW_HOURS (env).
+// Por que 7 dias? Letícia/Marília podem demorar 3-4 dias pra cumprir uma
+// tarefa. Se você roda force=1 ou rebooteia 5 dias depois, 72h não pega
+// a duplicação. 168h cobre quase qualquer ciclo realista.
 
-const DEDUP_WINDOW_HOURS = Number(process.env.DEDUP_WINDOW_HOURS) || 72;
+const DEDUP_WINDOW_HOURS = Number(process.env.DEDUP_WINDOW_HOURS) || 168;
 
 /**
  * Monta índice de tarefas recentes por lawsuit.
@@ -261,13 +306,24 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
         if (dryRun) {
           detalhes.push({ lawId, stage: newStage, workflow: tpl.name, dryRun: true });
         } else {
-          // Cria as tarefas no AdvBox (com dedup contra Justino/manual/etc)
+          // Cria as tarefas no AdvBox — 3 camadas de proteção contra duplicação:
+          //  1. Retry inteligente: pula tasks já criadas em tentativa anterior
+          //     do MESMO workflow (resolve cenário Letícia: falha parcial + retry)
+          //  2. Dedup global: pula tasks que existem nas últimas 168h por
+          //     qualquer fonte (Justino, manual, outro workflow)
+          //  3. Atualização incremental do índice intra-ciclo
+          const alreadyCreatedIds = await getAlreadyCreatedTaskIds(lawId, tpl.name);
           const created = [];
           const skipped = [];
           let firstError = null;
           for (const t of tpl.tasks) {
             try {
               const tasksId = await resolveTaskId(t.task);
+              if (alreadyCreatedIds.has(tasksId)) {
+                skipped.push({ task: t.task, tasks_id: tasksId, motivo: 'retry_ja_criada' });
+                logger.info(`[Auto-Workflow] Skip retry lawsuit=${lawId} task='${t.task}' (tasks_id=${tasksId}) — já criada em tentativa anterior deste workflow`);
+                continue;
+              }
               if (hasRecentDuplicate(recentIdx, lawId, tasksId)) {
                 skipped.push({ task: t.task, tasks_id: tasksId, motivo: 'duplicado_recente' });
                 skippedDuplicates++;
@@ -279,8 +335,10 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
                 task: t.task,
                 userId: t.user_id,
                 deadline: daysFromNow(t.prazo_dias),
+                workflowName: tpl.name,
+                stage: newStage,
               });
-              created.push({ task: t.task, post_id: post?.id || null });
+              created.push({ task: t.task, tasks_id: tasksId, post_id: post?.id || null });
               criados++;
               // Atualiza índice em memória — evita 2 templates do mesmo ciclo
               // pedirem a mesma task no mesmo lawsuit
@@ -295,7 +353,12 @@ async function runCycle({ logger = console, dryRun = false, forceRefresh = true,
               break; // para na primeira falha pra não criar workflow parcial
             }
           }
-          await markDispatched(lawId, tpl.name, newStage, { created, skipped }, firstError);
+          // Merge com o que já tinha sido criado em tentativas anteriores
+          // (pra preservar histórico e não perder rastreamento)
+          const allCreated = [];
+          for (const id of alreadyCreatedIds) allCreated.push({ tasks_id: id, from_previous_attempt: true });
+          allCreated.push(...created);
+          await markDispatched(lawId, tpl.name, newStage, { created: allCreated, skipped }, firstError);
           detalhes.push({ lawId, stage: newStage, workflow: tpl.name, tasksCreated: created.length, tasksSkipped: skipped.length, error: firstError });
         }
       }
