@@ -15,7 +15,7 @@
 const r = require('./audit-rules');
 const { TEMPLATES, daysFromNow } = require('./auto-workflow-templates');
 const { fetchLawsuits, fetchAllPosts, client } = require('./data');
-const { query } = require('./db');
+const { query, pool } = require('./db');
 const { pickClientName } = require('./auditor');
 const { sendStageChangeDigest } = require('./email-notifier');
 
@@ -279,22 +279,35 @@ const AUTO_WORKFLOW_LOCK_ID = 902301;
 async function runCycle({ logger = console, dryRun = false, forceRefresh = true, force = false, onlyLawsuitId = null } = {}) {
   await ensureTables();
 
-  // Tenta adquirir lock. Se outro ciclo está rodando, abandona com log.
-  const lockRes = await query('SELECT pg_try_advisory_lock($1) AS got', [AUTO_WORKFLOW_LOCK_ID]);
-  if (!lockRes.rows[0].got) {
-    logger.warn(`[Auto-Workflow] Outro ciclo já em execução (lock ${AUTO_WORKFLOW_LOCK_ID} ocupado) — abandonando`);
-    return { skipped: true, reason: 'lock_held', processados: 0, novos: 0, criados: 0, skippedDuplicates: 0, erros: 0, detalhes: [], dryRun };
-  }
+  // Pega client DEDICADO do pool pro lock. Advisory locks são por sessão
+  // (conexão). Se usar `query()` direto, o pool entrega conexões diferentes
+  // pra acquire vs release — unlock cai em conexão errada, lock fica preso
+  // em conexão aleatória até reciclar. Bug histórico: lock ficou órfão por
+  // horas após ciclos que aparentemente terminaram.
+  const lockClient = await pool.connect();
+  let lockAcquired = false;
 
   try {
+    const lockRes = await lockClient.query('SELECT pg_try_advisory_lock($1) AS got', [AUTO_WORKFLOW_LOCK_ID]);
+    lockAcquired = lockRes.rows[0].got;
+
+    if (!lockAcquired) {
+      logger.warn(`[Auto-Workflow] Outro ciclo já em execução (lock ${AUTO_WORKFLOW_LOCK_ID} ocupado) — abandonando`);
+      return { skipped: true, reason: 'lock_held', processados: 0, novos: 0, criados: 0, skippedDuplicates: 0, erros: 0, detalhes: [], dryRun };
+    }
+
     return await _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsuitId });
   } finally {
-    // Sempre libera o lock — se conexão morrer, Postgres libera no disconnect
-    try {
-      await query('SELECT pg_advisory_unlock($1)', [AUTO_WORKFLOW_LOCK_ID]);
-    } catch (e) {
-      logger.error(`[Auto-Workflow] Falha ao liberar lock: ${e.message}`);
+    if (lockAcquired) {
+      try {
+        await lockClient.query('SELECT pg_advisory_unlock($1)', [AUTO_WORKFLOW_LOCK_ID]);
+      } catch (e) {
+        logger.error(`[Auto-Workflow] Falha ao liberar lock: ${e.message}`);
+      }
     }
+    // release() devolve a conexão ao pool. Mesmo se unlock falhou acima,
+    // ao fechar a sessão o Postgres libera todos os advisory locks dela.
+    lockClient.release();
   }
 }
 
