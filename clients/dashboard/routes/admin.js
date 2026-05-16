@@ -433,4 +433,70 @@ router.get('/admin/team-load', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/admin/overdue-by-person ─────────────────────────────────────────
+// Lista as tarefas ATRASADAS de uma pessoa específica, ordenadas por dias de
+// atraso (mais atrasadas primeiro). Pra triagem urgente.
+//
+//   GET /api/admin/overdue-by-person?name=ANA%20MAR%C3%8DLIA
+//   GET /api/admin/overdue-by-person?name=marilia      (case-insensitive,
+//                                                       match parcial)
+router.get('/admin/overdue-by-person', requireAdmin, async (req, res, next) => {
+  try {
+    const nameQuery = String(req.query.name || '').trim();
+    if (!nameQuery) return res.status(400).json({ error: 'name obrigatório' });
+
+    const nameNorm = nameQuery.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const todayISO = new Date().toISOString().slice(0, 10);
+
+    const posts = await fetchAllPosts();
+    const overdue = [];
+
+    for (const p of posts) {
+      const users = Array.isArray(p.users) ? p.users : [];
+      if (!users.length) continue;
+
+      // Acha o user com nome batendo (case + acento-insensitive, match parcial)
+      const matchedUser = users.find(u => {
+        if (!u.name) return false;
+        const norm = u.name.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        return norm.includes(nameNorm) || nameNorm.includes(norm);
+      });
+      if (!matchedUser) continue;
+
+      const completed = matchedUser.completed === true || matchedUser.completed === 1;
+      if (completed) continue;  // só atrasadas ATIVAS
+
+      const deadlineISO = p.date_deadline ? String(p.date_deadline).slice(0, 10) : null;
+      if (!deadlineISO || deadlineISO >= todayISO) continue;
+
+      const diasAtraso = Math.floor(
+        (new Date(todayISO).getTime() - new Date(deadlineISO).getTime()) / 86400000
+      );
+
+      overdue.push({
+        id: p.id,
+        task: p.task || '(sem nome)',
+        lawsuit_id: p.lawsuits_id || null,
+        date_deadline: deadlineISO,
+        dias_atraso: diasAtraso,
+        created_at: p.created_at || null,
+        notes_preview: (p.notes || '').slice(0, 80),
+        outros_responsaveis: users.filter(u => u !== matchedUser).map(u => u.name).filter(Boolean),
+        advboxTaskUrl: `https://app.advbox.com.br/0?t=${p.id}`,
+        advboxLawsuitUrl: p.lawsuits_id ? `https://app.advbox.com.br/lawsuits/${p.lawsuits_id}` : null,
+      });
+    }
+
+    // Mais atrasadas primeiro
+    overdue.sort((a, b) => b.dias_atraso - a.dias_atraso);
+
+    res.json({
+      name_queried: nameQuery,
+      total: overdue.length,
+      generated_at: new Date().toISOString(),
+      tasks: overdue,
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
