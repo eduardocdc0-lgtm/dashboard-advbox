@@ -7483,8 +7483,14 @@
       try {
         const data = await fetchJson('/api/posts');
         const posts = data.data || [];
-        const pendentes = posts.filter(p => !p.completed_at && !p.completed).length;
-        document.getElementById('tarefasPendentes').textContent = pendentes || posts.length;
+        // Pendente = pelo menos UM responsável com completed != true.
+        // (post.completed só existe quando TODOS responsáveis concluíram.)
+        const pendentes = posts.filter(p => {
+          if (p.completed_at || p.completed) return false;
+          const users = Array.isArray(p.users) ? p.users : [];
+          return users.some(u => !(u.completed === true || u.completed === 1));
+        }).length;
+        document.getElementById('tarefasPendentes').textContent = pendentes;
       } catch (e) { console.error('posts:', e); }
     }
 

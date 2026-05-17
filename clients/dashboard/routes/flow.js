@@ -19,7 +19,12 @@ router.get('/last-movements', asyncHandler(async (req, res) => {
 }));
 
 router.get('/posts', asyncHandler(async (req, res) => {
-  res.json(await client.request('/posts?limit=50'));
+  // Antes: client.request('/posts?limit=50') — cap hardcoded de 50 fazia o
+  // card "Tarefas Pendentes" SEMPRE bater no teto, mostrando 50 falso. Agora
+  // usa fetchAllPosts (cacheado, paginado corretamente). Shape { data: [...] }
+  // mantido pra compat com o frontend (loadPosts em index.html).
+  const posts = await fetchAllPosts();
+  res.json({ data: posts });
 }));
 
 router.get('/debug-posts', asyncHandler(async (req, res) => {
