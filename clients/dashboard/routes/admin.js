@@ -131,7 +131,6 @@ router.get('/admin/route-usage', requireAdmin, async (req, res, next) => {
       '/api/audit/usage', '/api/audit/kanban-financeiro',
       '/api/controller/overview', '/api/controller/snapshot', '/api/controller/tendencia',
       '/api/birthday/hoje', '/api/birthday/mes', '/api/birthday/historico', '/api/birthday/config',
-      '/api/inss-conference/history',
       '/api/petitions/by-person',
       '/api/cash-flow/upcoming',
       '/api/esteira',

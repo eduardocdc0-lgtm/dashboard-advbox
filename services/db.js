@@ -111,16 +111,9 @@ async function migrate() {
       );
       CREATE INDEX IF NOT EXISTS idx_audit_cob_at ON audit_cobranca_log(logged_at DESC);
 
-      CREATE TABLE IF NOT EXISTS inss_conference_log (
-        id               SERIAL PRIMARY KEY,
-        total            INTEGER NOT NULL DEFAULT 0,
-        coerentes        INTEGER NOT NULL DEFAULT 0,
-        divergentes      INTEGER NOT NULL DEFAULT 0,
-        nao_encontrados  INTEGER NOT NULL DEFAULT 0,
-        detalhes         TEXT,
-        conferido_em     TIMESTAMP DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_icl_at ON inss_conference_log(conferido_em DESC);
+      -- Tabela inss_conference_log removida do schema (feature removida em 2026-05-16).
+      -- A tabela ainda existe em produção com histórico. Pra liberar espaço:
+      --   DROP TABLE IF EXISTS inss_conference_log;
 
       CREATE TABLE IF NOT EXISTS audit_actions (
         id                SERIAL PRIMARY KEY,

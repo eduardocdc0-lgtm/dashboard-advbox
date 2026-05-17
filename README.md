@@ -1,6 +1,6 @@
 # Dashboard AdvBox
 
-Dashboard interno do escritório **Eduardo Rodrigues Advocacia** — integra a API do AdvBox e Meta Ads, com visão executiva (financeiro, processos, distribuição de carga, gargalos, auditoria fase × responsável, conferência INSS, ROI de campanhas, etc.).
+Dashboard interno do escritório **Eduardo Rodrigues Advocacia** — integra a API do AdvBox e Meta Ads, com visão executiva (financeiro, processos, distribuição de carga, gargalos, auditoria fase × responsável, ROI de campanhas, etc.).
 
 > **Para usuários finais (sem programar):** veja [`LEIA-ME.md`](./LEIA-ME.md).
 
@@ -84,7 +84,6 @@ Veja [`.env.example`](./.env.example). Mínimo obrigatório:
 - `/api/cash-flow/upcoming?days=7|15|30` (admin)
 - `/api/petitions/by-person?period=today|...`
 - `/api/meta/campaign-roi?period=this_month|...` (admin)
-- `/api/inss-conference/run` (POST, admin, multipart .docx)
 
 ### Cache (admin)
 - `GET  /api/cache-status` — estado, métricas

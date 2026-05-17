@@ -151,17 +151,6 @@ clients/
 - Exportar CSV (admin-only)
 - Rota: `clients/dashboard/routes/petitions.js` · GET `/api/petitions/by-person?period=today|yesterday|this_week|this_month`
 
-## Conferência INSS × AdvBox (aba admin "🔍 Conf. INSS")
-- Upload de até 3 arquivos .docx (EM ANÁLISE, EM EXIGÊNCIA, CONCLUÍDOS)
-- Leitura com `mammoth`; extração de nomes via padrão CPF (linha anterior ao CPF é o nome)
-- Cruzamento por nome normalizado (sem acento, uppercase, sem espaço duplo); match parcial visual
-- Regras: EM ANÁLISE e EM EXIGÊNCIA → 7 fases ADM válidas; CONCLUÍDO → grupos Judicial/Financeiro/Arquivamento
-- Relatório: resumo, divergentes (com fase atual + fases sugeridas + link AdvBox), não encontrados, coerentes
-- Filtros: por status INSS e por responsável; copiar divergentes; exportar CSV
-- Histórico de conferências em `inss_conference_log` (totais, sem arquivo .docx)
-- Pacotes: `mammoth` (parse .docx), `multer` (upload em memória)
-- Rota: `clients/dashboard/routes/inss-conference.js` · POST `/api/inss-conference/run` · GET `/api/inss-conference/history`
-
 ## Identidade Visual
 - Preto/branco minimalista premium
 - Tipografia: DM Serif Display (títulos/números) + DM Sans (corpo)

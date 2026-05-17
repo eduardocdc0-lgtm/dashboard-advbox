@@ -17,7 +17,6 @@ router.use(require('./audit-actions'));
 router.use(require('./controller'));
 router.use(require('./webhook'));
 router.use(require('./birthday'));
-router.use(require('./inss-conference'));
 router.use(require('./petitions'));
 router.use(require('./cash-flow'));
 router.use(require('./campaign-roi'));
