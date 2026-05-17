@@ -867,14 +867,14 @@
      *
      * Uso rico (recomendado pra HTML novo):
      *   <div class="empty">
-     *     <div class="empty__icon">📭</div>
+     *     <div class="empty__icon"><svg class="ico"><use href="#ico-mail-open"/></svg></div>
      *     <div class="empty__title">Nada por aqui</div>
      *     <div class="empty__desc">Os filtros aplicados não retornaram resultados.</div>
      *     <button class="btn btn--ghost btn--sm empty__action">Limpar filtros</button>
      *   </div>
      *
      * Variantes (cor do título/ícone):
-     *   .empty.empty--success  (verde, ex: "Nenhum alerta crítico ✅")
+     *   .empty.empty--success  (verde, ex: "Nenhum alerta crítico ✓")
      *   .empty.empty--error    (vermelho, ex: "Erro ao carregar")
      */
     .empty {
@@ -2690,6 +2690,29 @@
     .ico--success { color: var(--success); }
     .ico--accent  { color: var(--accent); }
     .ov-col-icon  { font-size: 16px; line-height: 1; color: var(--text-2); }
+
+    /* Bolinha de status — substitui emojis de dots coloridos (yellow/red/green/blue/purple/gray/white) */
+    .dot {
+      display: inline-block;
+      width: .7em; height: .7em; border-radius: 50%;
+      vertical-align: -0.05em;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+    .dot--sm { width: .55em; height: .55em; }
+    .dot--lg { width: .85em; height: .85em; }
+    .dot--red    { color: var(--danger); }
+    .dot--yellow { color: var(--warning); }
+    .dot--green  { color: var(--success); }
+    .dot--blue   { color: var(--accent); }
+    .dot--purple { color: #6B46C1; }
+    .dot--gray   { color: var(--text-3); }
+    .dot--white  { color: #fff; border: 1px solid var(--border); }
+
+    /* Força renderização texto de ✓ ✗ ⚠ unicode (evita Safari/iOS converter pra emoji) */
+    body, button, input, select, textarea, table, .tab, .btn, .nav-item {
+      font-variant-emoji: text;
+    }
   </style>
 </head>
 <body>
@@ -2789,6 +2812,63 @@
     </symbol>
     <symbol id="ico-pulse" viewBox="0 0 24 24">
       <path d="M3 12h4l3-8 4 16 3-8h4"/>
+    </symbol>
+    <symbol id="ico-check" viewBox="0 0 24 24">
+      <path d="M4 12.5l5 5L20 6"/>
+    </symbol>
+    <symbol id="ico-check-circle" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.2"/>
+      <path d="M8 12l3 3 5-6"/>
+    </symbol>
+    <symbol id="ico-x" viewBox="0 0 24 24">
+      <path d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <symbol id="ico-x-circle" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.2"/>
+      <path d="M9 9l6 6M15 9l-6 6"/>
+    </symbol>
+    <symbol id="ico-megaphone" viewBox="0 0 24 24">
+      <path d="M3 11v3l11 5V6L3 11z"/>
+      <path d="M14 8a4 4 0 010 8M7 14v4a2 2 0 002 2"/>
+    </symbol>
+    <symbol id="ico-mail" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="1.5"/>
+      <path d="M3 7l9 7 9-7"/>
+    </symbol>
+    <symbol id="ico-mail-open" viewBox="0 0 24 24">
+      <path d="M3 10l9-6 9 6v9a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 19z"/>
+      <path d="M3 10l9 6 9-6"/>
+    </symbol>
+    <symbol id="ico-upload" viewBox="0 0 24 24">
+      <path d="M12 4v12M7 9l5-5 5 5"/>
+      <path d="M4 18v1.5A1.5 1.5 0 005.5 21h13a1.5 1.5 0 001.5-1.5V18"/>
+    </symbol>
+    <symbol id="ico-bell" viewBox="0 0 24 24">
+      <path d="M6 17V11a6 6 0 0112 0v6l2 2H4l2-2z"/>
+      <path d="M10 21a2 2 0 004 0"/>
+    </symbol>
+    <symbol id="ico-trash" viewBox="0 0 24 24">
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>
+    </symbol>
+    <symbol id="ico-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="1.5"/>
+      <path d="M3 10h18M8 3v4M16 3v4"/>
+    </symbol>
+    <symbol id="ico-ban" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.2"/>
+      <path d="M5.5 5.5l13 13"/>
+    </symbol>
+    <symbol id="ico-sparkles" viewBox="0 0 24 24">
+      <path d="M12 3l1.7 4.7L18 9l-4.3 1.3L12 15l-1.7-4.7L6 9l4.3-1.3L12 3z"/>
+      <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/>
+    </symbol>
+    <symbol id="ico-user" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>
+    </symbol>
+    <symbol id="ico-cone" viewBox="0 0 24 24">
+      <path d="M12 3l7 18H5z"/>
+      <path d="M8 13h8M6.5 17h11"/>
     </symbol>
   </svg>
 
@@ -3116,15 +3196,15 @@
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
                 <div id="placarHojeProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
                 <div id="placarHojeImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
                 <div id="placarHojeParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
           </div>
@@ -3134,15 +3214,15 @@
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
                 <div id="placarMesProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
                 <div id="placarMesImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
                 <div id="placarMesParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
           </div>
@@ -3152,22 +3232,22 @@
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
                 <div id="placarAnoProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">✅ Procedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
                 <div id="placarAnoImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">❌ Improcedente</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
                 <div id="placarAnoParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
-                <div style="font-size:10px;color:#666;margin-top:4px;">⚠️ Parcial</div>
+                <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
           </div>
         </div>
 
         <div id="placarHint" style="margin-top:12px;font-size:10.5px;color:#999;line-height:1.4;">
-          ⚠️ Limitação: o AdvBox só guarda a data da fase <em>atual</em>. Se um processo saiu de "Procedente" pra outra fase, não aparece aqui.
+          ⚠ Limitação: o AdvBox só guarda a data da fase <em>atual</em>. Se um processo saiu de "Procedente" pra outra fase, não aparece aqui.
         </div>
       </section>
     </div>
@@ -3195,7 +3275,7 @@
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🧾 Petições</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-receipt"/></svg> Petições</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="petUpdatedAt">Produtividade jurídica por responsável</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -3207,7 +3287,7 @@
             <button class="pet-period-btn"         data-p="last_month" onclick="petSetPeriod('last_month',this)">Mês passado</button>
           </div>
           <button class="refresh-btn" onclick="loadPetitions(true)">↺ Atualizar</button>
-          <button class="dist-export-btn admin-only" onclick="petExportCSV()">📊 Exportar CSV</button>
+          <button class="dist-export-btn admin-only" onclick="petExportCSV()"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
         </div>
       </div>
 
@@ -3242,7 +3322,7 @@
         <!-- Tabela detalhada -->
         <details id="petDetailsWrap" style="margin-bottom:16px;">
           <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:10px 14px;background:#f5f5f5;border-radius:8px;border:1px solid #e5e5e5;list-style:none;display:flex;align-items:center;gap:8px;">
-            📋 Detalhamento por petição <span id="petDetailCount" style="font-weight:400;font-size:11px;color:#888;"></span>
+            <svg class="ico"><use href="#ico-clipboard"/></svg> Detalhamento por petição <span id="petDetailCount" style="font-weight:400;font-size:11px;color:#888;"></span>
           </summary>
           <div style="overflow-x:auto;margin-top:8px;">
             <table class="fin-table" id="petDetailTable" style="width:100%;min-width:600px;">
@@ -3269,7 +3349,7 @@
       <header class="section-header">
         <div>
           <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Radar</div>
-          <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">📰 Publicações da semana</h2>
+          <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin:0;line-height:1.1;color:var(--text);"><svg class="ico"><use href="#ico-news"/></svg> Publicações da semana</h2>
           <div style="font-size:12px;color:var(--text-2);margin-top:3px;">Movimentos processuais capturados dos diários da justiça nos últimos N dias.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -3295,14 +3375,14 @@
       </div>
 
       <div id="pubError" class="empty empty--error" style="display:none;">
-        <div class="empty__icon">⚠️</div>
+        <div class="empty__icon">⚠</div>
         <div class="empty__title">Erro ao carregar</div>
         <div class="empty__desc" id="pubErrorMsg">—</div>
         <button class="btn btn--secondary btn--sm empty__action" onclick="publicationsLoad(true)">Tentar de novo</button>
       </div>
 
       <div id="pubEmpty" class="empty empty--success" style="display:none;">
-        <div class="empty__icon">📭</div>
+        <div class="empty__icon"><svg class="ico"><use href="#ico-mail-open"/></svg></div>
         <div class="empty__title">Sem publicações no período</div>
         <div class="empty__desc">Nenhum movimento capturado dos diários nessa janela.</div>
       </div>
@@ -3330,7 +3410,7 @@
       <div class="admin-only card" id="cfBlock" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
           <div>
-            <div class="card-title" style="margin-bottom:2px;">💰 Caixa — Próximos Dias</div>
+            <div class="card-title" style="margin-bottom:2px;"><svg class="ico"><use href="#ico-coins"/></svg> Caixa — Próximos Dias</div>
             <div id="cfUpdatedAt" style="font-size:11px;color:#bbb;"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -3339,7 +3419,7 @@
               <button class="cf-days-btn" onclick="cfSetDays(15, this)">15 dias</button>
               <button class="cf-days-btn" onclick="cfSetDays(30, this)">30 dias</button>
             </div>
-            <button onclick="cfExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;">📊 Exportar CSV</button>
+            <button onclick="cfExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
             <button onclick="loadCashFlow(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
           </div>
         </div>
@@ -3494,12 +3574,12 @@
     <div id="inadimplentes" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">💸 Inadimplentes</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--danger"><use href="#ico-receipt"/></svg> Inadimplentes</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="inadMeta">Carregando...</div>
         </div>
         <div style="display:flex;gap:8px;">
-          <button onclick="inadimplentesExportCSV()" class="btn btn-secondary btn-sm">📥 Exportar CSV</button>
-          <button onclick="inadimplentesLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
+          <button onclick="inadimplentesExportCSV()" class="btn btn-secondary btn-sm"><svg class="ico"><use href="#ico-upload"/></svg> Exportar CSV</button>
+          <button onclick="inadimplentesLoad(true)" class="btn btn-secondary btn-sm"><svg class="ico"><use href="#ico-refresh"/></svg> Recarregar</button>
         </div>
       </div>
 
@@ -3508,10 +3588,10 @@
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
         <div class="inad-filters" style="display:flex;gap:4px;border:1px solid var(--border);border-radius:8px;padding:3px;background:#fff;">
           <button class="inad-fbtn inad-fbtn--active" data-filter="todos" onclick="inadimplentesSetFilter(this)">Todos</button>
-          <button class="inad-fbtn" data-filter="critico" onclick="inadimplentesSetFilter(this)">🟡 Crítico recente</button>
-          <button class="inad-fbtn" data-filter="acumulado" onclick="inadimplentesSetFilter(this)">🔴 Acumulado</button>
+          <button class="inad-fbtn" data-filter="critico" onclick="inadimplentesSetFilter(this)"><span class="dot dot--yellow"></span> Crítico recente</button>
+          <button class="inad-fbtn" data-filter="acumulado" onclick="inadimplentesSetFilter(this)"><span class="dot dot--red"></span> Acumulado</button>
         </div>
-        <input id="inadBusca" placeholder="🔎 Filtrar por nome, CPF, processo..." oninput="inadimplentesFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:340px;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <input id="inadBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por nome, CPF, processo..." oninput="inadimplentesFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:340px;font-size:14px;font-family:'DM Sans',sans-serif;">
       </div>
 
       <div id="inadTabelaWrap"></div>
@@ -3537,8 +3617,8 @@
             <option>Claudiana Maria</option>
             <option>Thiago Tavares</option>
           </select>
-          <button id="auditExportBtn" class="reg-filter admin-only" onclick="auditExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:5px 12px;border-radius:6px;">📊 Exportar CSV</button>
-          <button class="reg-filter" onclick="loadAudit(true)" style="font-size:12px;">🔄 Atualizar</button>
+          <button id="auditExportBtn" class="reg-filter admin-only" onclick="auditExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:5px 12px;border-radius:6px;"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
+          <button class="reg-filter" onclick="loadAudit(true)" style="font-size:12px;"><svg class="ico"><use href="#ico-refresh"/></svg> Atualizar</button>
         </div>
       </div>
 
@@ -3546,7 +3626,7 @@
       <div class="audit-cards-row" id="auditSummaryRow">
         <div class="audit-sum-card audit-sum-crit" id="auditCardCrit" onclick="auditSetFilter('criticos')" style="cursor:pointer;">
           <div class="audit-sum-head">
-            <span class="audit-sum-icon">🔴</span>
+            <span class="audit-sum-icon"><span class="dot dot--red"></span></span>
             <span class="audit-sum-label">Críticos</span>
           </div>
           <div class="audit-sum-count" id="auditCritCount">—</div>
@@ -3554,7 +3634,7 @@
         </div>
         <div class="audit-sum-card audit-sum-mon" id="auditCardMon" onclick="auditSetFilter('monitoramento')" style="cursor:pointer;">
           <div class="audit-sum-head">
-            <span class="audit-sum-icon">🟡</span>
+            <span class="audit-sum-icon"><span class="dot dot--yellow"></span></span>
             <span class="audit-sum-label">Monitorar</span>
           </div>
           <div class="audit-sum-count" id="auditMonCount">—</div>
@@ -3562,7 +3642,7 @@
         </div>
         <div class="audit-sum-card audit-sum-ok" id="auditCardOk" onclick="auditSetFilter('ok')" style="cursor:pointer;">
           <div class="audit-sum-head">
-            <span class="audit-sum-icon">✅</span>
+            <span class="audit-sum-icon">✓</span>
             <span class="audit-sum-label">OK</span>
           </div>
           <div class="audit-sum-count" id="auditOkCount">—</div>
@@ -3574,17 +3654,17 @@
       <!-- Alertas Críticos -->
       <div class="card" id="auditSecCriticos">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-          <div class="card-title" style="color:#b02020;margin-bottom:0;">🔴 Alertas Críticos
+          <div class="card-title" style="color:#b02020;margin-bottom:0;"><span class="dot dot--red"></span> Alertas Críticos
             <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
           </div>
-          <button id="auditCobrarTodosBtn" class="audit-btn-cobrar" onclick="auditCobrarTodos(this)" style="font-size:12px;padding:8px 14px;display:none;">📋 Cobrar Cau (todos)</button>
+          <button id="auditCobrarTodosBtn" class="audit-btn-cobrar" onclick="auditCobrarTodos(this)" style="font-size:12px;padding:8px 14px;display:none;"><svg class="ico"><use href="#ico-clipboard"/></svg> Cobrar Cau (todos)</button>
         </div>
         <div id="auditCritList"><div class="loading">Carregando...</div></div>
       </div>
 
       <!-- Em Monitoramento -->
       <div class="card" id="auditSecMonitoramento" style="margin-top:14px;">
-        <div class="card-title" style="margin-bottom:12px;color:#856404;">🟡 Em Monitoramento
+        <div class="card-title" style="margin-bottom:12px;color:#856404;"><span class="dot dot--yellow"></span> Em Monitoramento
           <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fases aguardando lançamento futuro</span>
         </div>
         <div class="audit-section-toolbar">
@@ -3606,7 +3686,7 @@
       <details class="card" id="auditSecOk" style="margin-top:14px;">
         <summary>
           <span class="audit-ok-summary-left">
-            <span class="audit-ok-icon">📊</span>
+            <span class="audit-ok-icon"><svg class="ico"><use href="#ico-bars"/></svg></span>
             <span style="display:inline-flex;flex-direction:column;">
               <span class="audit-ok-title">Saúde Geral</span>
               <span class="audit-ok-sub">processos com lançamentos em dia no mês</span>
@@ -3762,13 +3842,13 @@
     <div id="auditresp" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🔍 Auditoria de Responsável</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-search"/></svg> Auditoria de Responsável</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="audrSummaryBadge">Fases × quem deveria ser responsável — clique ↺ Atualizar para carregar</div>
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="dist-export-btn" onclick="exportAuditResp()">📊 Exportar CSV</button>
+          <button class="dist-export-btn" onclick="exportAuditResp()"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
           <button class="dist-export-btn" onclick="loadAuditResp(true)" style="background:#f5f5f5;color:#555;">↺ Atualizar</button>
-          <button class="dist-export-btn" onclick="openStagesModal()" style="background:#1a1a2e;color:#fff;">🔬 Ver fases do AdvBox</button>
+          <button class="dist-export-btn" onclick="openStagesModal()" style="background:#1a1a2e;color:#fff;"><svg class="ico"><use href="#ico-search"/></svg> Ver fases do AdvBox</button>
         </div>
       </div>
       <div id="audrLoading" style="display:none;text-align:center;padding:40px;color:#aaa;font-size:14px;">Carregando auditoria…</div>
@@ -3782,24 +3862,24 @@
       <!-- Erros por Responsável -->
       <div class="admin-only" style="margin-bottom:16px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:14px 16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-          <div style="font-weight:700;font-size:13px;">⚠️ Erros por Responsável <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></div>
-          <button onclick="audrGerarCobrancaGeral()" style="font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Gerar lista de cobrança geral</button>
+          <div style="font-weight:700;font-size:13px;">⚠ Erros por Responsável <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></div>
+          <button onclick="audrGerarCobrancaGeral()" style="font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;"><svg class="ico"><use href="#ico-clipboard"/></svg> Gerar lista de cobrança geral</button>
         </div>
         <div id="audrByPerson"></div>
       </div>
 
       <!-- Resumo por Fase -->
       <details class="admin-only" style="margin-bottom:14px;">
-        <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;">📊 Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:8px 12px;background:#f5f5f5;border-radius:7px;border:1px solid #e5e5e5;list-style:none;"><svg class="ico"><use href="#ico-bars"/></svg> Resumo por Fase <span id="audrByStageTitle" style="font-weight:400;font-size:11px;color:#888;"></span></summary>
         <div id="audrByStage" style="margin-top:8px;overflow-x:auto;"></div>
       </details>
 
       <!-- View toggle -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div class="audr-view-toggle">
-          <button class="audr-view-btn active" id="audrBtnLista" onclick="audrSetView('lista')">📋 Lista</button>
-          <button class="audr-view-btn" id="audrBtnKanban" onclick="audrSetView('kanban')">📌 Kanban</button>
-          <button class="audr-view-btn" id="audrBtnHistorico" onclick="audrSetView('historico')">📊 Histórico</button>
+          <button class="audr-view-btn active" id="audrBtnLista" onclick="audrSetView('lista')"><svg class="ico"><use href="#ico-clipboard"/></svg> Lista</button>
+          <button class="audr-view-btn" id="audrBtnKanban" onclick="audrSetView('kanban')"><svg class="ico"><use href="#ico-clipboard"/></svg> Kanban</button>
+          <button class="audr-view-btn" id="audrBtnHistorico" onclick="audrSetView('historico')"><svg class="ico"><use href="#ico-bars"/></svg> Histórico</button>
         </div>
         <div style="font-size:11px;color:#bbb;" id="audrViewNote">Vista atual: Lista de processos</div>
       </div>
@@ -3808,18 +3888,18 @@
       <div id="audrListaContainer">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:#f9f9f9;border-radius:8px;">
           <select id="audrStatusFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
-            <option value="ERRADO">❌ Somente errados</option>
+            <option value="ERRADO">✗ Somente errados</option>
             <option value="">Todos</option>
-            <option value="CORRETO">✅ Somente corretos</option>
-            <option value="NAO_MAPEADO">⚪ Não mapeados</option>
+            <option value="CORRETO">✓ Somente corretos</option>
+            <option value="NAO_MAPEADO"><span class="dot dot--white"></span> Não mapeados</option>
           </select>
           <select id="audrZonaFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;">
             <option value="">Todas as zonas</option>
-            <option value="MARILIA">🟢 Zona Marília</option>
-            <option value="LETICIA_OU_ALICE">🔵 Zona Letícia/Alice</option>
-            <option value="CAU">🟡 Zona Cau</option>
-            <option value="TAMMYRES">🟣 Zona Tammyres</option>
-            <option value="EDUARDO">⚫ Zona Eduardo</option>
+            <option value="MARILIA"><span class="dot dot--green"></span> Zona Marília</option>
+            <option value="LETICIA_OU_ALICE"><span class="dot dot--blue"></span> Zona Letícia/Alice</option>
+            <option value="CAU"><span class="dot dot--yellow"></span> Zona Cau</option>
+            <option value="TAMMYRES"><span class="dot dot--purple"></span> Zona Tammyres</option>
+            <option value="EDUARDO"><span class="dot dot--gray"></span> Zona Eduardo</option>
           </select>
           <select id="audrRespFiltro" class="reg-filter" onchange="renderAuditRespTable()" style="font-size:12px;"><option value="">Todos os responsáveis</option></select>
           <input id="audrBusca" class="reg-filter" type="text" placeholder="Buscar cliente..." oninput="renderAuditRespTable()" style="font-size:12px;min-width:150px;">
@@ -3841,11 +3921,11 @@
           </select>
           <select id="audrKbDestinoFiltro" class="reg-filter" onchange="renderAuditKanban()" style="font-size:12px;">
             <option value="">Todos os destinos</option>
-            <option value="MARILIA">🟢 Para Ana Marília</option>
-            <option value="LETICIA_OU_ALICE">🔵 Para Letícia/Alice</option>
-            <option value="CAU">🟡 Para Claudiana (Cau)</option>
-            <option value="TAMMYRES">🟣 Para Tammyres</option>
-            <option value="EDUARDO">⚫ Para Eduardo</option>
+            <option value="MARILIA"><span class="dot dot--green"></span> Para Ana Marília</option>
+            <option value="LETICIA_OU_ALICE"><span class="dot dot--blue"></span> Para Letícia/Alice</option>
+            <option value="CAU"><span class="dot dot--yellow"></span> Para Claudiana (Cau)</option>
+            <option value="TAMMYRES"><span class="dot dot--purple"></span> Para Tammyres</option>
+            <option value="EDUARDO"><span class="dot dot--gray"></span> Para Eduardo</option>
           </select>
           <span id="audrKbStats" style="font-size:11px;color:#888;margin-left:4px;"></span>
         </div>
@@ -3857,7 +3937,7 @@
         <div id="audrHistoricoContent"><div class="audr-hist-empty">Clique em "Histórico" para carregar.</div></div>
       </div>
 
-      <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">ⓘ Somente processos ativos. 🟢 Marília = Adm/Pré-judicial · 🔵 Letícia/Alice = Judicial · 🟡 Cau = Pagamento/Arquivo. Cache 20 min.</div>
+      <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">ⓘ Somente processos ativos. <span class="dot dot--green"></span> Marília = Adm/Pré-judicial · <span class="dot dot--blue"></span> Letícia/Alice = Judicial · <span class="dot dot--yellow"></span> Cau = Pagamento/Arquivo. Cache 20 min.</div>
     </div>
 
     <!-- ABA: AUDITORIA DE USO -->
@@ -3865,11 +3945,11 @@
       <!-- Header padronizado (mesmo padrão da Visão Geral) -->
       <header class="ov-page-head">
         <div>
-          <h1 class="ov-page-title">📊 Auditoria de uso</h1>
+          <h1 class="ov-page-title"><svg class="ico"><use href="#ico-bars"/></svg> Auditoria de uso</h1>
           <div class="ov-page-sub" id="auuSummaryBadge">cadastro + workflow do AdvBox — clique ↺ Atualizar pra recarregar</div>
         </div>
         <div class="ov-toolbar" style="margin-bottom:0;">
-          <button class="btn-link" onclick="exportAuditUsage()" aria-label="Exportar como CSV">📊 Exportar CSV</button>
+          <button class="btn-link" onclick="exportAuditUsage()" aria-label="Exportar como CSV"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
           <button class="btn-link" onclick="loadAuditUsage(true)" aria-label="Atualizar dados">↺ Atualizar</button>
         </div>
       </header>
@@ -3917,8 +3997,8 @@
           </select>
           <select id="auuNivelFiltro" class="reg-filter" onchange="renderAuditUsageTable()" aria-label="Nível">
             <option value="">Todos os níveis</option>
-            <option value="erro">❌ Erro</option>
-            <option value="aviso">⚠️ Aviso</option>
+            <option value="erro">✗ Erro</option>
+            <option value="aviso">⚠ Aviso</option>
           </select>
           <select id="auuRespFiltro" class="reg-filter admin-only" onchange="renderAuditUsageTable()" aria-label="Responsável">
             <option value="">Todos os responsáveis</option>
@@ -3949,14 +4029,14 @@
       <div style="text-align:center;margin-top:8px;" id="auuLoadMore"></div>
 
       <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">
-        ⓘ Cache 30 min. Botão "🔔 Cobrar" cria tarefa no AdvBox pro responsável (cooldown 60 min por processo).
+        ⓘ Cache 30 min. Botão "<svg class="ico"><use href="#ico-bell"/></svg> Cobrar" cria tarefa no AdvBox pro responsável (cooldown 60 min por processo).
       </div>
     </div>
 
     <!-- MODAL: Cobrar responsável -->
     <div id="auuCobrarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
       <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:10px;">🔔 Cobrar responsável</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:10px;"><svg class="ico"><use href="#ico-bell"/></svg> Cobrar responsável</div>
         <div id="auuCobrarBody" style="font-size:13px;color:#444;line-height:1.6;margin-bottom:20px;"></div>
         <div id="auuCobrarErr" style="display:none;background:#fff5f5;border:1px solid #fcd;color:#b02020;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:14px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -3973,7 +4053,7 @@
     <div id="controller" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🎛️ Controller — Esteira</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-sliders"/></svg> Controller — Esteira</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="ctrlMeta">Carregando...</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -3981,8 +4061,8 @@
             <button class="ctrl-view-btn" id="ctrlBtnKanban" onclick="ctrlSetView('kanban')">⊞ Kanban</button>
             <button class="ctrl-view-btn" id="ctrlBtnList"   onclick="ctrlSetView('list')">☰ Lista</button>
           </div>
-          <button onclick="controllerLoad(true)" class="btn btn-secondary btn-sm">🔄 Recarregar</button>
-          <button onclick="controllerSnapshotNow()" class="btn btn-secondary btn-sm admin-only" title="Salva snapshot do Controller agora pro histórico/ranking">📸 Snapshot</button>
+          <button onclick="controllerLoad(true)" class="btn btn-secondary btn-sm"><svg class="ico"><use href="#ico-refresh"/></svg> Recarregar</button>
+          <button onclick="controllerSnapshotNow()" class="btn btn-secondary btn-sm admin-only" title="Salva snapshot do Controller agora pro histórico/ranking"><svg class="ico"><use href="#ico-bars"/></svg> Snapshot</button>
         </div>
       </div>
 
@@ -3991,10 +4071,10 @@
       <div id="ctrlCards" class="ctrl-cards-row"></div>
 
       <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-        <input id="ctrlBusca" placeholder="🔎 Filtrar por cliente, CPF, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:360px;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <input id="ctrlBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por cliente, CPF, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:360px;font-size:14px;font-family:'DM Sans',sans-serif;">
         <div id="ctrlBulkBar" style="display:none;align-items:center;gap:10px;padding:8px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;">
           <span style="font-weight:600;color:#3730a3;font-size:13px;"><span id="ctrlBulkCount">0</span> selecionado(s)</span>
-          <button onclick="controllerCobrarSelecionados()" id="ctrlBulkBtn" style="padding:6px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📢 Cobrar selecionados</button>
+          <button onclick="controllerCobrarSelecionados()" id="ctrlBulkBtn" style="padding:6px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;"><svg class="ico"><use href="#ico-megaphone"/></svg> Cobrar selecionados</button>
           <button onclick="controllerClearSelecao()" style="padding:6px 10px;background:white;color:#666;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;">Limpar</button>
         </div>
       </div>
@@ -4008,34 +4088,34 @@
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🚧 Gargalos — Processos com Ação Pendente</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--warning"><use href="#ico-cone"/></svg> Gargalos — Processos com Ação Pendente</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="gargalosUpdatedAt"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select id="gargRespFiltro" class="reg-filter" onchange="applyGargFilter()" style="font-size:12px;">
             <option value="">Todos os responsáveis</option>
           </select>
-          <button class="dist-export-btn admin-only" onclick="exportGargCsv()">📊 Exportar CSV</button>
-          <button class="reg-filter" onclick="loadFluxo()" style="font-size:12px;">🔄</button>
+          <button class="dist-export-btn admin-only" onclick="exportGargCsv()"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
+          <button class="reg-filter" onclick="loadFluxo()" style="font-size:12px;" aria-label="Atualizar"><svg class="ico"><use href="#ico-refresh"/></svg></button>
         </div>
       </div>
 
       <!-- 3 cards de resumo -->
       <div class="garg-cards-row">
         <div class="garg-card garg-card-crit" id="gcCrit" onclick="gargSetFilter('crit')">
-          <div class="garg-card-icon">🔴</div>
+          <div class="garg-card-icon"><span class="dot dot--red"></span></div>
           <div class="garg-card-label">Crítico</div>
           <div class="garg-card-count" id="gcCritN">—</div>
           <div class="garg-card-sub">+90 dias parado</div>
         </div>
         <div class="garg-card garg-card-warn" id="gcWarn" onclick="gargSetFilter('warn')">
-          <div class="garg-card-icon">🟡</div>
+          <div class="garg-card-icon"><span class="dot dot--yellow"></span></div>
           <div class="garg-card-label">Atenção</div>
           <div class="garg-card-count" id="gcWarnN">—</div>
           <div class="garg-card-sub">30–90 dias parado</div>
         </div>
         <div class="garg-card garg-card-ext" id="gcExt" onclick="gargSetFilter('ext')">
-          <div class="garg-card-icon">🟢</div>
+          <div class="garg-card-icon"><span class="dot dot--green"></span></div>
           <div class="garg-card-label">Espera Externa</div>
           <div class="garg-card-count" id="gcExtN">—</div>
           <div class="garg-card-sub">aguarda INSS / Juiz</div>
@@ -4045,9 +4125,9 @@
       <!-- Chips de severidade + fase ativa -->
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
         <button class="garg-chip active" id="gcChipAll"  onclick="gargSetFilter('all')">Todos</button>
-        <button class="garg-chip"        id="gcChipCrit" onclick="gargSetFilter('crit')">🔴 Críticos</button>
-        <button class="garg-chip"        id="gcChipWarn" onclick="gargSetFilter('warn')">🟡 Atenção</button>
-        <button class="garg-chip"        id="gcChipExt"  onclick="gargSetFilter('ext')">🟢 Espera Externa</button>
+        <button class="garg-chip"        id="gcChipCrit" onclick="gargSetFilter('crit')"><span class="dot dot--red"></span> Críticos</button>
+        <button class="garg-chip"        id="gcChipWarn" onclick="gargSetFilter('warn')"><span class="dot dot--yellow"></span> Atenção</button>
+        <button class="garg-chip"        id="gcChipExt"  onclick="gargSetFilter('ext')"><span class="dot dot--green"></span> Espera Externa</button>
         <span id="gargFaseChip" style="display:none;" class="garg-chip garg-chip-fase" onclick="gargClearFase()"></span>
       </div>
 
@@ -4075,7 +4155,7 @@
       <!-- Gargalos por etapa (recolhível) -->
       <details class="card" style="margin-top:18px;">
         <summary style="cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-          <span>📍 Gargalos por etapa <span style="font-size:11px;font-weight:400;color:#999;">(ação do escritório)</span></span>
+          <span><svg class="ico ico--warning"><use href="#ico-warning"/></svg> Gargalos por etapa <span style="font-size:11px;font-weight:400;color:#999;">(ação do escritório)</span></span>
           <span style="font-size:11px;color:#bbb;">clique para expandir</span>
         </summary>
         <div id="gargEtapaList" style="margin-top:14px;"></div>
@@ -4152,7 +4232,7 @@
       <!-- ── ROI por Campanha (admin-only) ── -->
       <div class="admin-only" id="roiBlock" style="margin-top:28px;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-          <div class="card-title" style="margin:0;">💸 ROI por Campanha</div>
+          <div class="card-title" style="margin:0;"><svg class="ico ico--danger"><use href="#ico-receipt"/></svg> ROI por Campanha</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <select id="roiPeriod" class="reg-filter" onchange="loadCampaignRoi()" style="font-size:12px;">
               <option value="this_month" selected>Este mês</option>
@@ -4387,7 +4467,7 @@
     <div id="discordMsgs" class="tab-content">
       <header class="ov-page-head">
         <div>
-          <h1 class="ov-page-title">💬 Mensagens — Discord</h1>
+          <h1 class="ov-page-title"><svg class="ico"><use href="#ico-chat"/></svg> Mensagens — Discord</h1>
           <div class="ov-page-sub">envia agora ou agenda mensagens pro canal do escritório (Spidey Bot)</div>
         </div>
         <div class="ov-toolbar" style="margin-bottom:0;">
@@ -4434,7 +4514,7 @@
         <div id="dmStatus" style="display:none;margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
 
         <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-          <button id="dmSubmitBtn" class="ov-notify-btn" style="width:auto;padding:10px 20px;font-size:13px;" onclick="dmSubmit()">📤 Enviar</button>
+          <button id="dmSubmitBtn" class="ov-notify-btn" style="width:auto;padding:10px 20px;font-size:13px;" onclick="dmSubmit()"><svg class="ico"><use href="#ico-upload"/></svg> Enviar</button>
         </div>
       </section>
 
@@ -4449,7 +4529,7 @@
     <div id="diagnostico" class="tab-content">
       <header class="ov-page-head">
         <div>
-          <h1 class="ov-page-title">🩺 Diagnóstico do Sistema</h1>
+          <h1 class="ov-page-title"><svg class="ico"><use href="#ico-pulse"/></svg> Diagnóstico do Sistema</h1>
           <div class="ov-page-sub">status dos jobs automáticos (crons) e dos secrets configurados</div>
         </div>
         <div class="ov-toolbar" style="margin-bottom:0;">
@@ -4466,7 +4546,7 @@
       </section>
 
       <section class="card">
-        <h2 class="card-title">🔐 Secrets / chaves de configuração</h2>
+        <h2 class="card-title"><svg class="ico"><use href="#ico-cog"/></svg> Secrets / chaves de configuração</h2>
         <div style="font-size:12px;color:#888;margin-bottom:12px;">credenciais necessárias pra cada integração funcionar — nenhum valor é exibido, só "configurado" ou "faltando"</div>
         <div id="diagSecretsBody"><div class="loading">Carregando…</div></div>
       </section>
@@ -4482,7 +4562,7 @@
         </div>
         <div style="display:flex;gap:8px;">
           <button class="refresh-btn" onclick="loadAdmin(true)" id="adminRefreshBtn">↺ Atualizar</button>
-          <button class="logout-btn" onclick="adminInvalidateCache()" id="adminInvalidateBtn">🗑 Limpar Cache</button>
+          <button class="logout-btn" onclick="adminInvalidateCache()" id="adminInvalidateBtn"><svg class="ico"><use href="#ico-trash"/></svg> Limpar Cache</button>
         </div>
       </div>
 
@@ -4524,7 +4604,7 @@
     <div id="aniversarios" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">🎂 Aniversários</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-gift"/></svg> Aniversários</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="bdUpdatedAt">—</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -4536,7 +4616,7 @@
             <span id="bdAutoLabel" style="color:#888;">Envio automático desativado</span>
           </label>
           <button class="refresh-btn" onclick="loadBirthday(true)">↺ Atualizar</button>
-          <button class="logout-btn" onclick="sendAllBirthdays()" id="bdSendAllBtn" style="display:none;">📤 Enviar todos hoje</button>
+          <button class="logout-btn" onclick="sendAllBirthdays()" id="bdSendAllBtn" style="display:none;"><svg class="ico"><use href="#ico-upload"/></svg> Enviar todos hoje</button>
         </div>
       </div>
 
@@ -4706,9 +4786,9 @@
         </div>
         <div class="es-pills">
           <button class="es-pill active" data-fil="todos" onclick="esSetPillFilter('todos')">Todos</button>
-          <button class="es-pill" data-fil="critico" onclick="esSetPillFilter('critico')">🔴 Sem lançamento</button>
-          <button class="es-pill" data-fil="atrasado" onclick="esSetPillFilter('atrasado')">⚠️ Atrasados</button>
-          <button class="es-pill" data-fil="parcial" onclick="esSetPillFilter('parcial')">🟡 Parciais</button>
+          <button class="es-pill" data-fil="critico" onclick="esSetPillFilter('critico')"><span class="dot dot--red"></span> Sem lançamento</button>
+          <button class="es-pill" data-fil="atrasado" onclick="esSetPillFilter('atrasado')">⚠ Atrasados</button>
+          <button class="es-pill" data-fil="parcial" onclick="esSetPillFilter('parcial')"><span class="dot dot--yellow"></span> Parciais</button>
           <button class="es-pill" data-fil="completo" onclick="esSetPillFilter('completo')">✓ OK</button>
         </div>
       </div>
@@ -5562,7 +5642,7 @@
       const visible = list.slice(0, _gargPage * GARG_PER_PAGE);
       const total   = list.length;
 
-      const sevLabel = { crit: '🔴', warn: '🟡', ok: '🟢', ext: '🟢' };
+      const sevLabel = { crit: '<span class="dot dot--red"></span>', warn: '<span class="dot dot--yellow"></span>', ok: '<span class="dot dot--green"></span>', ext: '<span class="dot dot--green"></span>' };
       const rows = visible.map(l => {
         const link = `https://app.advbox.com.br/lawsuit/${l.id}`;
         const nome = clientName(l);
@@ -5962,11 +6042,11 @@
     const AUDR_PER_PAGE = 60;
 
     const AUDR_ZONE_LABEL_FE = {
-      MARILIA:          '🟢 Ana Marília',
-      LETICIA_OU_ALICE: '🔵 Letícia ou Alice',
-      CAU:              '🟡 Claudiana (Cau)',
-      TAMMYRES:         '🟣 Tammyres',
-      EDUARDO:          '⚫ Eduardo'
+      MARILIA:          '<span class="dot dot--green"></span> Ana Marília',
+      LETICIA_OU_ALICE: '<span class="dot dot--blue"></span> Letícia ou Alice',
+      CAU:              '<span class="dot dot--yellow"></span> Claudiana (Cau)',
+      TAMMYRES:         '<span class="dot dot--purple"></span> Tammyres',
+      EDUARDO:          '<span class="dot dot--gray"></span> Eduardo'
     };
     const AUDR_BADGE_CLS = {
       MARILIA: 'ar-badge-marilia', LETICIA_OU_ALICE: 'ar-badge-leticia',
@@ -6020,7 +6100,7 @@
       if (!el) return;
       const errados = byPerson.filter(p => p.errado > 0).sort((a,b) => b.errado - a.errado);
       if (title) title.textContent = `— ${errados.length} pessoa${errados.length !== 1 ? 's' : ''} com processos errados`;
-      if (!errados.length) { el.innerHTML = '<div style="padding:8px 0;color:#aaa;font-size:13px;">Nenhum erro encontrado! ✅</div>'; return; }
+      if (!errados.length) { el.innerHTML = '<div style="padding:8px 0;color:#aaa;font-size:13px;">Nenhum erro encontrado! ✓</div>'; return; }
       el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="border-bottom:1px solid #e5e5e5;">
           <th style="text-align:left;padding:6px 10px;font-weight:600;color:#555;">Responsável</th>
@@ -6039,7 +6119,7 @@
             <td style="padding:8px 10px;text-align:right;">
               <button onclick="audrGerarCobranca(${JSON.stringify(p.responsible)}, ${JSON.stringify(erradosItems)})"
                 style="font-size:11px;padding:4px 10px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;">
-                📋 Lista
+                <svg class="ico"><use href="#ico-clipboard"/></svg> Lista
               </button>
             </td>
           </tr>`;
@@ -6084,7 +6164,7 @@
 
       const visible = lista.slice(0, _audrPage * AUDR_PER_PAGE);
       const rows = visible.map(i => {
-        const statusIcon = i.status === 'CORRETO' ? '✅' : i.status === 'ERRADO' ? '❌' : '⚪';
+        const statusIcon = i.status === 'CORRETO' ? '✓' : i.status === 'ERRADO' ? '✗' : '<span class="dot dot--white"></span>';
         const rowCls = i.status === 'ERRADO' ? 'ar-err-row' : '';
         return `<tr class="${rowCls}" style="cursor:pointer;" onclick="window.open('${i.link}','_blank')">
           <td style="font-weight:500;max-width:200px;white-space:normal;">${i.cliente}</td>
@@ -6099,7 +6179,7 @@
       }).join('');
 
       document.getElementById('audrTableBody').innerHTML =
-        rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#166534;">✅ Nenhum processo com os filtros atuais.</td></tr>';
+        rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#166534;">✓ Nenhum processo com os filtros atuais.</td></tr>';
 
       const moreEl = document.getElementById('audrLoadMore');
       if (moreEl) {
@@ -6178,7 +6258,7 @@
       if (stats) stats.textContent = `${errados.length} processo${errados.length!==1?'s':''} com erro`;
 
       if (!errados.length) {
-        board.innerHTML = '<div class="audr-kanban-empty">Nenhum processo com erro nos filtros atuais. ✅</div>';
+        board.innerHTML = '<div class="audr-kanban-empty">Nenhum processo com erro nos filtros atuais. ✓</div>';
         return;
       }
 
@@ -6213,7 +6293,7 @@
               <div class="audr-kanban-card-fase">${it.stage || '—'}</div>
               <div class="audr-kanban-card-dest">→ <strong>${zoneLabel}</strong></div>
               <div class="audr-kanban-card-actions">
-                <button class="audr-kb-btn-ok" onclick="event.stopPropagation();audrMarkResolved('${it.id}',${safeIt})">✅ Passado</button>
+                <button class="audr-kb-btn-ok" onclick="event.stopPropagation();audrMarkResolved('${it.id}',${safeIt})">✓ Passado</button>
                 <a href="${it.link}" target="_blank" class="audr-kb-btn-link" onclick="event.stopPropagation()">↗ AdvBox</a>
               </div>
             </div>`;
@@ -6236,7 +6316,7 @@
           </div>
           <div class="audr-kanban-col-body">${cardsHtml}</div>
           <div class="audr-kanban-col-footer">
-            <button class="audr-kb-btn-cobrar" onclick="audrGerarCobranca(${safeResp}, _audrColItemsByResp[${safeResp}])">📋 Gerar lista de cobrança</button>
+            <button class="audr-kb-btn-cobrar" onclick="audrGerarCobranca(${safeResp}, _audrColItemsByResp[${safeResp}])"><svg class="ico"><use href="#ico-clipboard"/></svg> Gerar lista de cobrança</button>
           </div>
         </div>`;
       }).join('');
@@ -6250,7 +6330,7 @@
         </table>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
           <a href="${item.link}" target="_blank" class="dist-export-btn" style="text-decoration:none;">↗ Abrir no AdvBox</a>
-          <button class="dist-export-btn" style="background:#f0faf5;color:#166534;border:1px solid #bbf0d0;" onclick="audrMarkResolved('${item.id}',${JSON.stringify(item)});document.getElementById('audrDetailModal').style.display='none'">✅ Marcar como passado</button>
+          <button class="dist-export-btn" style="background:#f0faf5;color:#166534;border:1px solid #bbf0d0;" onclick="audrMarkResolved('${item.id}',${JSON.stringify(item)});document.getElementById('audrDetailModal').style.display='none'">✓ Marcar como passado</button>
         </div>
       </div>`;
       document.getElementById('audrDetailModalBody').innerHTML = html;
@@ -6303,7 +6383,7 @@
         a.click();
       };
       document.getElementById('audrCobrancaCopyBtn').onclick = () => {
-        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✅ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='📋 Copiar',2000); });
+        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✓ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='Copiar',2000); });
       };
       modal.style.display = 'flex';
       // Log no backend
@@ -6324,7 +6404,7 @@
         if (!byResp[k]) byResp[k] = [];
         byResp[k].push(it);
       }
-      let texto = `📋 RELATÓRIO GERAL DE PENDÊNCIAS — ${errados.length} processos\n${'─'.repeat(50)}\n`;
+      let texto = `<svg class="ico"><use href="#ico-clipboard"/></svg> RELATÓRIO GERAL DE PENDÊNCIAS — ${errados.length} processos\n${'─'.repeat(50)}\n`;
       for (const [resp, items] of Object.entries(byResp).sort((a,b)=>b[1].length-a[1].length)) {
         texto += `\n${resp.toUpperCase()} — ${items.length} processo${items.length!==1?'s':''} a repassar:\n`;
         const byDest = {};
@@ -6347,7 +6427,7 @@
         a.download = 'cobranca-geral.csv'; a.click();
       };
       document.getElementById('audrCobrancaCopyBtn').onclick = () => {
-        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✅ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='📋 Copiar',2000); });
+        navigator.clipboard.writeText(texto).then(()=>{ document.getElementById('audrCobrancaCopyBtn').textContent='✓ Copiado!'; setTimeout(()=>document.getElementById('audrCobrancaCopyBtn').textContent='Copiar',2000); });
       };
       modal.style.display = 'flex';
       fetch('/api/audit-responsible/cobranca-log', {
@@ -6379,11 +6459,11 @@
 
         el.innerHTML = `
           <div class="audr-hist-section">
-            <div class="audr-hist-title">✅ Processos marcados como passados (${data.resolved.length})</div>
+            <div class="audr-hist-title">✓ Processos marcados como passados (${data.resolved.length})</div>
             ${resolvedHtml}
           </div>
           <div class="audr-hist-section">
-            <div class="audr-hist-title">📋 Listas de cobrança geradas (${data.cobrancas.length})</div>
+            <div class="audr-hist-title"><svg class="ico"><use href="#ico-clipboard"/></svg> Listas de cobrança geradas (${data.cobrancas.length})</div>
             ${cobHtml}
           </div>`;
       } catch (e) {
@@ -6607,7 +6687,7 @@
       const critEl = document.getElementById('auditCritList');
       if (!showCrit) { critEl.innerHTML = ''; }
       else if (filtCrit.length === 0) {
-        critEl.innerHTML = '<div class="empty" style="color:#166534;padding:20px 0;">✅ Nenhum alerta crítico neste mês!</div>';
+        critEl.innerHTML = '<div class="empty" style="color:#166534;padding:20px 0;">✓ Nenhum alerta crítico neste mês!</div>';
       } else {
         critEl.innerHTML = filtCrit.map(c => {
           const diasCls = c.diasNaFase == null ? ''
@@ -6618,7 +6698,7 @@
           const msgEnc = encodeURIComponent(msgRaw);
           return `<div class="audit-alert-item">
             <div class="audit-alert-top">
-              <span class="audit-alert-nome">🔴 ${c.cliente}</span>
+              <span class="audit-alert-nome"><span class="dot dot--red"></span> ${c.cliente}</span>
               ${c.diasNaFase != null ? `<span class="${diasCls}">${c.diasNaFase}d na fase</span>` : ''}
             </div>
             <div class="audit-alert-fase">${c.fase}${c.responsavel ? ' · ' + c.responsavel : ''}</div>
@@ -6631,7 +6711,7 @@
               ${c.valorFees ? `<span>Honorários da causa: ${formatMoney(c.valorFees)}</span>` : ''}
             </div>
             <div class="audit-alert-actions">
-              <button class="audit-btn-cobrar" onclick="auditCopiarMsg(this,decodeURIComponent('${msgEnc}'))">📋 Cobrar Cau</button>
+              <button class="audit-btn-cobrar" onclick="auditCopiarMsg(this,decodeURIComponent('${msgEnc}'))"><svg class="ico"><use href="#ico-clipboard"/></svg> Cobrar Cau</button>
               <a href="${c.linkAdvBox}" target="advbox" rel="noopener" class="audit-btn-advbox">↗ Abrir no AdvBox</a>
             </div>
           </div>`;
@@ -6686,8 +6766,8 @@
             </div>
             <a href="${c.linkAdvBox}" target="_blank" rel="noopener" class="audit-mon-row__link" aria-label="Abrir ${c.cliente} no AdvBox">↗</a>
             ${_asaasChargesByTx.has('law_' + c.lawsuitId)
-              ? `<a href="${(_asaasChargesByTx.get('law_' + c.lawsuitId).invoice_url || '#')}" target="_blank" rel="noopener" title="Cobrança já gerada — clique pra abrir" style="font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:2px 8px;border-radius:8px;text-decoration:none;font-weight:600;align-self:center;">📨 Gerado</a>`
-              : `<button onclick="abrirCobrancaMon('${c.lawsuitId}')" style="font-size:10px;background:#2C7A4D;color:#fff;border:none;border-radius:8px;padding:2px 8px;cursor:pointer;font-weight:600;align-self:center;">💰 Boleto</button>`}
+              ? `<a href="${(_asaasChargesByTx.get('law_' + c.lawsuitId).invoice_url || '#')}" target="_blank" rel="noopener" title="Cobrança já gerada — clique pra abrir" style="font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:2px 8px;border-radius:8px;text-decoration:none;font-weight:600;align-self:center;"><svg class="ico"><use href="#ico-mail-open"/></svg> Gerado</a>`
+              : `<button onclick="abrirCobrancaMon('${c.lawsuitId}')" style="font-size:10px;background:#2C7A4D;color:#fff;border:none;border-radius:8px;padding:2px 8px;cursor:pointer;font-weight:600;align-self:center;"><svg class="ico"><use href="#ico-coins"/></svg> Boleto</button>`}
           </article>`;
         }).join('') + '</div>';
       }
@@ -7059,7 +7139,7 @@
 
         // Top devedores
         if (!data.top_devedores || !data.top_devedores.length) {
-          topEl.innerHTML = '<div class="empty" style="padding:16px;font-size:12px;text-align:center;color:#999;">Nenhum devedor neste mês 🎉</div>';
+          topEl.innerHTML = '<div class="empty" style="padding:16px;font-size:12px;text-align:center;color:#999;">Nenhum devedor neste mês <svg class="ico ico--accent"><use href="#ico-sparkles"/></svg></div>';
         } else {
           topEl.innerHTML = data.top_devedores.map(d => `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f3f3;gap:10px;">
@@ -7155,13 +7235,13 @@
     const _finSelectedTxs = new Set();
     // Mapa externalReference ('tx_<id>') → { payment_id, status, invoice_url, due_date }
     // Preenchido por loadAsaasCharges() ao abrir o Financeiro. Usado pra mostrar
-    // badge "📨 Cobrança gerada" e alertar duplicação no modal.
+    // badge "<svg class="ico"><use href="#ico-mail-open"/></svg> Cobrança gerada" e alertar duplicação no modal.
     const _asaasChargesByTx = new Map();
     // Mapa "law_<id>" e "tx_<id>" → { name, cpfCnpj, email, phone }
     // Override de pagador (mãe/responsável legal de cliente menor de idade).
     let _payerOverrides = {};
     // Mapa external_reference ('tx_<id>') → { status, paid_at, value }
-    // Pagamentos recebidos via webhook ASAAS. Marca badge "✅ PAGO" no card.
+    // Pagamentos recebidos via webhook ASAAS. Marca badge "✓ PAGO" no card.
     let _asaasPaymentsReceived = {};
 
     function _payerOverrideFor(tx) {
@@ -7268,7 +7348,7 @@
       const initialCpf  = override ? override.cpfCnpj : (c.cpfCnpj || '');
       const venc = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
       const desc = `Honorários — ${c.fase}${c.processo ? ' · ' + c.processo : ''}`;
-      const overrideBadge = override ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;">👤 Pagador salvo</div>` : '';
+      const overrideBadge = override ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;"><svg class="ico"><use href="#ico-user"/></svg> Pagador salvo</div>` : '';
       const tbody = document.getElementById('cobrItemsBody');
       tbody.innerHTML = `
         <tr data-ref="${ref}" data-lawsuit-id="${lawsuitId}">
@@ -7314,7 +7394,7 @@
           return `  • ${t.name || '(sem nome)'} — cobrança ${c.status}, vence ${c.due_date}`;
         }).join('\n');
         const ok = confirm(
-          `⚠️ ${jaCobrados.length} cliente(s) selecionado(s) JÁ tem cobrança ativa no ASAAS:\n\n${lista}\n\n` +
+          `⚠ ${jaCobrados.length} cliente(s) selecionado(s) JÁ tem cobrança ativa no ASAAS:\n\n${lista}\n\n` +
           `Gerar OUTRA cobrança vai criar boleto/PIX duplicado. Tens certeza?\n\n` +
           `OK = criar mesmo assim\nCancelar = desmarcar os já cobrados`
         );
@@ -7332,7 +7412,7 @@
       tbody.innerHTML = items.map((t, i) => {
         const cobr = _asaasChargesByTx.get('tx_' + t.id);
         const flagDup = cobr
-          ? `<div style="font-size:10px;color:#c75c00;font-weight:600;margin-top:2px;">⚠️ DUPLICADA (${cobr.status})</div>` : '';
+          ? `<div style="font-size:10px;color:#c75c00;font-weight:600;margin-top:2px;">⚠ DUPLICADA (${cobr.status})</div>` : '';
 
         // Override de pagador (criança → responsável legal). Pega por
         // lawsuit primeiro, depois transaction como fallback.
@@ -7340,7 +7420,7 @@
         const initialName = override ? override.name : (t.name || '');
         const initialCpf  = override ? override.cpfCnpj : (t.identification || '');
         const overrideBadge = override
-          ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;">👤 Pagador salvo (responsável legal)</div>`
+          ? `<div style="font-size:10px;color:#1a5e3a;font-weight:600;margin-top:2px;"><svg class="ico"><use href="#ico-user"/></svg> Pagador salvo (responsável legal)</div>`
           : '';
         const procName = (t.name && override) ? `<div style="font-size:9.5px;color:#999;margin-top:2px;">cliente: ${t.name}</div>` : '';
 
@@ -7460,7 +7540,7 @@
       } catch (err) {
         alert('Falha: ' + (err.message || err));
       } finally {
-        btn.disabled = false; btn.textContent = '✉️ Gerar cobranças';
+        btn.disabled = false; btn.textContent = 'Gerar cobranças';
       }
     }
 
@@ -7474,11 +7554,11 @@
         li.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:12.5px;">✅ ${s.name} — R$ ${Number(s.value).toFixed(2)}</div>
+              <div style="font-weight:600;font-size:12.5px;">✓ ${s.name} — R$ ${Number(s.value).toFixed(2)}</div>
               <div style="font-size:10.5px;color:#666;">Vence ${s.due_date} · payment ${s.payment_id}</div>
             </div>
             <div style="display:flex;gap:4px;">
-              <button onclick="copyText('${s.invoice_url}');" style="font-size:11px;padding:4px 8px;background:#2C7A4D;color:#fff;border:none;border-radius:4px;cursor:pointer;">📋 Copiar link</button>
+              <button onclick="copyText('${s.invoice_url}');" style="font-size:11px;padding:4px 8px;background:#2C7A4D;color:#fff;border:none;border-radius:4px;cursor:pointer;"><svg class="ico"><use href="#ico-clipboard"/></svg> Copiar link</button>
               <a href="${s.invoice_url}" target="_blank" rel="noopener" style="font-size:11px;padding:4px 8px;background:#fff;border:1px solid var(--border);border-radius:4px;color:var(--text);text-decoration:none;">↗ Abrir</a>
             </div>
           </div>`;
@@ -7487,7 +7567,7 @@
       (data.errors || []).forEach(e => {
         const li = document.createElement('div');
         li.style.cssText = 'padding:8px;border:1px solid #f3c2c2;background:#fdf4f4;border-radius:6px;margin-bottom:6px;';
-        li.innerHTML = `<div style="font-size:12px;"><strong>❌ ${e.name}</strong> — ${e.error}</div>`;
+        li.innerHTML = `<div style="font-size:12px;"><strong>✗ ${e.name}</strong> — ${e.error}</div>`;
         list.appendChild(li);
       });
       document.getElementById('cobrResultStats').textContent =
@@ -7497,7 +7577,7 @@
       _finSelectedTxs.clear();
       _refreshCobrarBtn();
       // Recarrega mapa de cobranças no ASAAS pra os cards mostrarem o badge
-      // "📨 Cobrança gerada" imediatamente, sem precisar reload manual.
+      // "<svg class="ico"><use href="#ico-mail-open"/></svg> Cobrança gerada" imediatamente, sem precisar reload manual.
       loadAsaasCharges().then(() => renderFinanceiro());
     }
 
@@ -7705,14 +7785,14 @@
         const chkbox = selectable
           ? `<input type="checkbox" class="kb-chk" data-tx-id="${t.id}" ${checked} onclick="event.stopPropagation();toggleTxSelection(${JSON.stringify(t.id)});" title="Selecionar pra cobrar" style="cursor:pointer;margin-right:4px;">`
           : '';
-        // Badges ASAAS: "✅ PAGO" tem prioridade > "📨 Cobrança gerada"
+        // Badges ASAAS: "✓ PAGO" tem prioridade > "<svg class="ico"><use href="#ico-mail-open"/></svg> Cobrança gerada"
         const paidEvent = _asaasPaymentsReceived['tx_' + t.id];
         const existingCharge = _asaasChargesByTx.get('tx_' + t.id);
         let cobradoBadge = '';
         if (paidEvent) {
-          cobradoBadge = `<span title="Pago em ${paidEvent.paid_at || '—'} via ASAAS — R$ ${Number(paidEvent.value || 0).toFixed(2)}" style="margin-left:auto;font-size:10px;background:#d6f4e0;border:1px solid #98d9b2;color:#1a5e3a;padding:1px 6px;border-radius:8px;font-weight:600;">✅ PAGO</span>`;
+          cobradoBadge = `<span title="Pago em ${paidEvent.paid_at || '—'} via ASAAS — R$ ${Number(paidEvent.value || 0).toFixed(2)}" style="margin-left:auto;font-size:10px;background:#d6f4e0;border:1px solid #98d9b2;color:#1a5e3a;padding:1px 6px;border-radius:8px;font-weight:600;">✓ PAGO</span>`;
         } else if (existingCharge) {
-          cobradoBadge = `<a href="${existingCharge.invoice_url || '#'}" target="_blank" rel="noopener" title="Cobrança ${existingCharge.status} criada em ${existingCharge.due_date} — clique pra abrir" style="margin-left:auto;font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:1px 6px;border-radius:8px;text-decoration:none;font-weight:600;">📨 Cobrança gerada</a>`;
+          cobradoBadge = `<a href="${existingCharge.invoice_url || '#'}" target="_blank" rel="noopener" title="Cobrança ${existingCharge.status} criada em ${existingCharge.due_date} — clique pra abrir" style="margin-left:auto;font-size:10px;background:#e8f0fe;border:1px solid #c2d8f5;color:#1a5490;padding:1px 6px;border-radius:8px;text-decoration:none;font-weight:600;"><svg class="ico"><use href="#ico-mail-open"/></svg> Cobrança gerada</a>`;
         }
         return `<div class="kb-card">
           <div class="kb-card-top">
@@ -7764,7 +7844,7 @@
             <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
               <button onclick="selectAllCobraveis('inadimplente')" class="btn-link" style="font-size:10.5px;padding:3px 6px;" title="Marcar/desmarcar todos inadimplentes">☑ Todos</button>
               <button onclick="abrirCobrancaLote()" id="btnCobrarLote" disabled style="font-size:11px;padding:5px 10px;background:#2C7A4D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;opacity:.4;">
-                💰 Cobrar selecionados <span id="cobrarCount">(0)</span>
+                <svg class="ico"><use href="#ico-coins"/></svg> Cobrar selecionados <span id="cobrarCount">(0)</span>
               </button>
             </div>
             <div class="kb-cards">${inadimplentes.map(txCard).join('') || '<div class="kb-empty">—</div>'}</div>
@@ -7793,7 +7873,7 @@
 
         // Carrega cobranças ASAAS + pagamentos recebidos + overrides de pagador
         // em paralelo (todos silenciam erros). Re-renderiza depois pra exibir
-        // badges "📨 Cobrança gerada" e "✅ PAGO".
+        // badges "<svg class="ico"><use href="#ico-mail-open"/></svg> Cobrança gerada" e "✓ PAGO".
         await Promise.all([
           loadAsaasCharges(),
           loadAsaasPaymentsReceived(),
@@ -8774,7 +8854,7 @@
       const btn    = document.getElementById('dmSubmitBtn');
       if (v === 'schedule') {
         fields.style.display = 'block';
-        btn.textContent = '📅 Agendar';
+        btn.textContent = 'Agendar';
         // sugere "agora + 1h" como default
         if (!document.getElementById('dmSendAt').value) {
           const d = new Date(Date.now() + 60*60*1000);
@@ -8784,7 +8864,7 @@
         }
       } else {
         fields.style.display = 'none';
-        btn.textContent = '📤 Enviar';
+        btn.textContent = 'Enviar';
       }
     }
 
@@ -8830,7 +8910,7 @@
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-        dmShowStatus(when === 'now' ? '✅ Mensagem enviada.' : '✅ Mensagem agendada.', 'ok');
+        dmShowStatus(when === 'now' ? '✓ Mensagem enviada.' : '✓ Mensagem agendada.', 'ok');
         document.getElementById('dmContent').value = '';
         if (when === 'schedule') discordLoadList();
       } catch (e) {
@@ -8864,8 +8944,8 @@
         const data = await r.json();
 
         // Overall banner
-        const okColors  = { bg: '#E6F4EA', fg: '#1B5E20', txt: '✅ Tudo no ar' };
-        const attColors = { bg: '#FFF4E5', fg: '#B45309', txt: '⚠️ Atenção — checar itens abaixo' };
+        const okColors  = { bg: '#E6F4EA', fg: '#1B5E20', txt: '✓ Tudo no ar' };
+        const attColors = { bg: '#FFF4E5', fg: '#B45309', txt: '⚠ Atenção — checar itens abaixo' };
         const c = data.overall === 'ok' ? okColors : attColors;
         overall.style.background = c.bg;
         overall.style.color = c.fg;
@@ -9111,7 +9191,7 @@
       } catch (e) {
         alert('Erro ao limpar cache: ' + e.message);
       } finally {
-        btn.disabled = false; btn.textContent = '🗑 Limpar Cache';
+        btn.disabled = false; btn.textContent = 'Limpar Cache';
       }
     }
 
@@ -9207,7 +9287,7 @@
             <div style="font-size:12px;color:#888;">${phone} · ${bday}</div>
           </div>
           <button class="refresh-btn" onclick="sendOneBirthday(${c.id}, this)" style="white-space:nowrap;">
-            📤 Enviar agora
+            <svg class="ico"><use href="#ico-upload"/></svg> Enviar agora
           </button>
         </div>`;
       }).join('');
@@ -9250,7 +9330,7 @@
         alert('Erro: ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = '📤 Enviar todos hoje';
+        btn.textContent = 'Enviar todos hoje';
       }
     }
 
@@ -9324,7 +9404,7 @@
       } catch(e) {
         document.getElementById('cfLoading').style.display = 'none';
         document.getElementById('cfEmpty').style.display   = '';
-        document.getElementById('cfEmpty').textContent     = '❌ Erro ao carregar: ' + e.message;
+        document.getElementById('cfEmpty').textContent     = '✗ Erro ao carregar: ' + e.message;
       }
     }
 
@@ -9464,7 +9544,7 @@
       } catch (e) {
         document.getElementById('roiLoading').style.display  = 'none';
         document.getElementById('roiMetaErr').style.display  = '';
-        document.getElementById('roiMetaErr').textContent    = '❌ Erro ao carregar ROI: ' + e.message;
+        document.getElementById('roiMetaErr').textContent    = '✗ Erro ao carregar ROI: ' + e.message;
       }
     }
 
@@ -9480,7 +9560,7 @@
       if (meta_error) {
         document.getElementById('roiMetaErr').style.display = '';
         document.getElementById('roiMetaErr').innerHTML =
-          `⚠️ <strong>Meta Ads API:</strong> ${meta_error}` +
+          `⚠ <strong>Meta Ads API:</strong> ${meta_error}` +
           (by_campaign.length === 0
             ? ' — Tabela de campanhas indisponível. Dados AdvBox mostrados abaixo.'
             : '');
@@ -9553,7 +9633,7 @@
       if (unmatched_meta_campaigns && unmatched_meta_campaigns.length > 0) {
         unmEl.style.display = '';
         unmEl.innerHTML = `<div class="card" style="border-left:3px solid #e6a817;padding:14px 16px;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:8px;">⚠️ Campanhas Meta sem cruzamento (${unmatched_meta_campaigns.length})</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;">⚠ Campanhas Meta sem cruzamento (${unmatched_meta_campaigns.length})</div>
           <div style="font-size:12px;color:#555;margin-bottom:10px;">Estas campanhas não têm nenhum cliente com <em>Origem</em> igual ao nome da campanha no AdvBox. Para vincular, cadastre novos clientes com a origem preenchida exatamente igual ao nome da campanha.</div>
           <ul style="margin:0;padding-left:18px;font-size:12px;color:#555;line-height:1.8;">
             ${unmatched_meta_campaigns.map(n => `<li><code style="background:#f5f5f5;padding:1px 5px;border-radius:3px;">${n}</code></li>`).join('')}
@@ -9574,7 +9654,7 @@
             <td style="font-size:12px;padding:5px 10px;text-align:right;">${fmt(v.revenue)}</td>
           </tr>`).join('');
         origEl.innerHTML = `<details style="margin-top:4px;">
-          <summary style="font-size:12px;font-weight:600;color:#555;cursor:pointer;padding:6px 0;">📊 Origens AdvBox no período (${range?.since?.slice(0,7)||''}) — ${Object.keys(origin_breakdown).length} tipos</summary>
+          <summary style="font-size:12px;font-weight:600;color:#555;cursor:pointer;padding:6px 0;"><svg class="ico"><use href="#ico-bars"/></svg> Origens AdvBox no período (${range?.since?.slice(0,7)||''}) — ${Object.keys(origin_breakdown).length} tipos</summary>
           <div style="margin-top:10px;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:11px;">
               <thead><tr style="border-bottom:1px solid #e5e5e5;font-size:10px;color:#888;text-transform:uppercase;">
@@ -9593,7 +9673,7 @@
       // Attribution lost
       if (attribution_lost > 0) {
         document.getElementById('roiAttrLost').textContent =
-          `⚠️ ${attribution_lost} cliente(s) sem origem preenchida no AdvBox — receita não atribuída.`;
+          `⚠ ${attribution_lost} cliente(s) sem origem preenchida no AdvBox — receita não atribuída.`;
       } else {
         document.getElementById('roiAttrLost').textContent = '';
       }
@@ -9632,7 +9712,7 @@
       } catch(e) {
         document.getElementById('petLoading').style.display = 'none';
         document.getElementById('petEmpty').style.display   = '';
-        document.getElementById('petEmpty').textContent     = '❌ Erro ao carregar: ' + e.message;
+        document.getElementById('petEmpty').textContent     = '✗ Erro ao carregar: ' + e.message;
       }
     }
 
@@ -10217,7 +10297,7 @@
           <div class="fc-pinfo">
             <div class="fc-pclient" title="${p.client_name}">${p.client_name}</div>
             <div class="fc-pmeta">
-              <span>📅 ${due}</span> ${numTag} ${catTag}
+              <span><svg class="ico"><use href="#ico-calendar"/></svg> ${due}</span> ${numTag} ${catTag}
             </div>
           </div>
           <div class="fc-pvalue">${fcFmt(p.value)}</div>
@@ -10517,7 +10597,7 @@
               </div>
               <div class="ov-row-list">${ovItemsHtml(d.adm.aguardandoConclusao.items)}</div>
             </div>
-            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')">📢 Notificar setor</button></div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'adm')"><svg class="ico"><use href="#ico-megaphone"/></svg> Notificar setor</button></div>
           </div>
         </details>
 
@@ -10546,7 +10626,7 @@
               </div>
               <div class="ov-row-list">${ovItemsHtml(d.judicial.sentencaProcedente.items)}</div>
             </div>
-            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')">📢 Notificar setor</button></div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'jud')"><svg class="ico"><use href="#ico-megaphone"/></svg> Notificar setor</button></div>
           </div>
         </details>
 
@@ -10561,7 +10641,7 @@
               </div>
               <div class="ov-row-list">${ovItemsHtml(d.financeiro.criticos.items)}</div>
             </div>
-            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')">📢 Notificar setor</button></div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'fin')"><svg class="ico"><use href="#ico-megaphone"/></svg> Notificar setor</button></div>
           </div>
         </details>
 
@@ -10583,7 +10663,7 @@
                 <span class="ov-row-money">${ovFmt(d.receitas.total)}</span>
               </div>
             </div>
-            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Notificar setor</button></div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')"><svg class="ico"><use href="#ico-megaphone"/></svg> Notificar setor</button></div>
           </div>
         </details>
 
@@ -10601,7 +10681,7 @@
                 <span class="ov-row-money ${(d.receitas.pagas - d.despesas.pagas) >= 0 ? 'success' : 'danger'}">${ovFmt(d.receitas.pagas - d.despesas.pagas)}</span>
               </div>
             </div>
-            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')">📢 Notificar setor</button></div>
+            <div class="ov-col-foot"><button class="ov-notify-btn" onclick="ovNotify(this,'receitas')"><svg class="ico"><use href="#ico-megaphone"/></svg> Notificar setor</button></div>
           </div>
         </details>
       `;
@@ -10724,7 +10804,7 @@
 
       const tbody = document.getElementById('auuTableBody');
       if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">Nenhum problema no filtro atual ✅</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">Nenhum problema no filtro atual ✓</td></tr>';
         document.getElementById('auuLoadMore').innerHTML = '';
         return;
       }
@@ -10740,10 +10820,10 @@
         const linkAdv = url ? `<a href="${url}" target="_blank" style="font-size:11px;color:#1a73e8;text-decoration:none;">↗ Abrir</a>` : '';
         const cobravel = p.tipo === 'workflow' && AUU_COBRAVEIS.has(p.campo) && !!p.lawsuit_id;
         const btnCobrar = cobravel
-          ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.lawsuit_id)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">🔔 Cobrar</button>`
+          ? `<button onclick="auuCobrarAbrir('${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.campo)}','${auuEscapeHtml(p.lawsuit_id)}','${auuEscapeHtml(p.user_id || '')}','${auuEscapeHtml(nomeResp)}','${auuEscapeHtml((p.descricao || '').replace(/'/g, '&#39;'))}')" style="background:#1a1a2e;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;"><svg class="ico"><use href="#ico-bell"/></svg> Cobrar</button>`
           : '';
         // Botão "Tratei" disponível pra TODOS os problemas — ignora no auditor por 30 dias.
-        const btnTratei = `<button onclick="auuTrateiClick(this,'${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.tipo)}','${auuEscapeHtml(p.campo || '')}','${auuEscapeHtml(p.lawsuit_id || '')}')" style="background:#eee;color:#333;border:1px solid #ddd;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px;" title="Marcar como tratado — some do auditor por 30 dias">✅ Tratei</button>`;
+        const btnTratei = `<button onclick="auuTrateiClick(this,'${auuEscapeHtml(p.id)}','${auuEscapeHtml(p.tipo)}','${auuEscapeHtml(p.campo || '')}','${auuEscapeHtml(p.lawsuit_id || '')}')" style="background:#eee;color:#333;border:1px solid #ddd;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px;" title="Marcar como tratado — some do auditor por 30 dias">✓ Tratei</button>`;
         const acoes = (btnCobrar || '<span style="color:#bbb;font-size:11px;">—</span>') + btnTratei;
         return `<tr>
           <td>${linkAdv} <span style="font-size:11px;color:#888;">#${auuEscapeHtml(p.id)}</span></td>
@@ -10810,7 +10890,7 @@
         }
       } catch (e) {
         btn.disabled = false;
-        btn.textContent = '✅ Tratei';
+        btn.textContent = '✓ Tratei';
         auuShowToast('Erro: ' + e.message, true);
       }
     }
@@ -10867,7 +10947,7 @@
         const det = window._auuLastError;
         let html = 'Erro: ' + auuEscapeHtml(e.message);
         if (det && (det.payload_enviado || det.advbox_response)) {
-          html += `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:11px;">📋 Detalhes (copiar pro Claude)</summary>
+          html += `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:11px;"><svg class="ico"><use href="#ico-clipboard"/></svg> Detalhes (copiar pro Claude)</summary>
             <pre style="background:#fff;padding:8px;border-radius:4px;font-size:10px;overflow:auto;max-height:200px;margin-top:4px;">${auuEscapeHtml(JSON.stringify(det, null, 2))}</pre></details>`;
         }
         errEl.innerHTML = html;
@@ -10963,7 +11043,7 @@
         const meta = document.getElementById('ctrlMeta');
         const semWf = d.totalSemWorkflow || 0;
         meta.innerHTML = `${d.totalNoController} processos pendentes · ${d.totalAtivos} ativos no AdvBox · atualizado ${new Date(d.geradoEm).toLocaleString('pt-BR')}` +
-          (semWf > 0 ? ` · <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:999px;font-weight:600">🚫 ${semWf} sem workflow</span>` : '');
+          (semWf > 0 ? ` · <span style="background:#fed7aa;color:#9a3412;padding:2px 8px;border-radius:999px;font-weight:600"><svg class="ico ico--danger"><use href="#ico-ban"/></svg> ${semWf} sem workflow</span>` : '');
       }
 
       // Ranking de setor (pódio)
@@ -10977,7 +11057,7 @@
           <strong class="ctrl-card__num">${c.total}</strong>
           <span class="ctrl-card__titulo">${auuEscapeHtml(c.titulo)}</span>
           ${c.estourados
-            ? `<span class="ctrl-card__sla-warn">⚠️ ${c.estourados} fora do SLA (${c.slaDias}d)</span>`
+            ? `<span class="ctrl-card__sla-warn">⚠ ${c.estourados} fora do SLA (${c.slaDias}d)</span>`
             : `<span class="ctrl-card__sla-ok">SLA: ${c.slaDias} dias</span>`}
         </a>
       `).join('');
@@ -11135,13 +11215,13 @@
                     <div class="ctrl-kb-col-label">${auuEscapeHtml(c.responsavel || '—')} · SLA ${c.slaDias}d</div>
                     <div class="ctrl-kb-col-title">${auuEscapeHtml(c.titulo)}</div>
                     <div class="ctrl-kb-col-count" id="ctrl-kb-cnt-${c.id}" style="color:${grp.color};">${c.total}</div>
-                    ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠️ ${c.estourados} fora do SLA</div>` : ''}
-                    ${c.semWorkflow ? `<div class="ctrl-kb-col-sem-wf">🚫 ${c.semWorkflow} sem workflow</div>` : ''}
-                    ${c.semWorkflow > 0 && c.temWorkflowMapeado ? `<button class="btn btn-secondary btn-sm admin-only" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="controllerAplicarWorkflowCategoria('${c.id}')" title="Cria a primeira tarefa do workflow nos ${c.semWorkflow} processos sem workflow ativo">🚀 Disparar workflow (${c.semWorkflow})</button>` : ''}
+                    ${c.estourados ? `<div class="ctrl-kb-col-sla-warn">⚠ ${c.estourados} fora do SLA</div>` : ''}
+                    ${c.semWorkflow ? `<div class="ctrl-kb-col-sem-wf"><svg class="ico ico--danger"><use href="#ico-ban"/></svg> ${c.semWorkflow} sem workflow</div>` : ''}
+                    ${c.semWorkflow > 0 && c.temWorkflowMapeado ? `<button class="btn btn-secondary btn-sm admin-only" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="controllerAplicarWorkflowCategoria('${c.id}')" title="Cria a primeira tarefa do workflow nos ${c.semWorkflow} processos sem workflow ativo"><svg class="ico"><use href="#ico-refresh"/></svg> Disparar workflow (${c.semWorkflow})</button>` : ''}
                   </div>
                   <div class="ctrl-kb-col-body" id="ctrl-kb-body-${c.id}">${
                     c.processos.length === 0
-                      ? `<div class="ctrl-kb-empty">Nenhum processo 🎉</div>`
+                      ? `<div class="ctrl-kb-empty">Nenhum processo <svg class="ico ico--accent"><use href="#ico-sparkles"/></svg></div>`
                       : c.processos.slice(0, 60).map(p => ctrlKbCardHtml(p, c.id)).join('')
                   }${c.processos.length > 60 ? `<div class="ctrl-kb-more">+${c.processos.length - 60} a mais</div>` : ''}</div>
                 </div>`;
@@ -11174,14 +11254,14 @@
         <div class="ctrl-kb-card-tipo">${auuEscapeHtml(p.tipo || '')}${p.cpf ? ' · ' + auuEscapeHtml(p.cpf) : ''}</div>
         <div class="ctrl-kb-card-footer">
           <span class="ctrl-kb-dias${diasClass}">${p.diasParado}d</span>
-          ${p.semWorkflow ? '<span class="ctrl-kb-semwf" title="Sem task pendente — workflow não está rodando neste processo">🚫 sem workflow</span>' : ''}
+          ${p.semWorkflow ? '<span class="ctrl-kb-semwf" title="Sem task pendente — workflow não está rodando neste processo"><svg class="ico ico--danger"><use href="#ico-ban"/></svg> sem workflow</span>' : ''}
           ${safeResp ? `<span class="ctrl-kb-resp">${safeResp}</span>` : ''}
           ${p.responsible_id
             ? `<button class="ctrl-cobrar-btn"
                  data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}"
                  data-cat="${catId}" data-resp="${safeResp}"
                  data-stage="${safeStage}" data-dias="${p.diasParado}"
-                 onclick="event.stopPropagation();controllerCobrar(this)">📢</button>`
+                 onclick="event.stopPropagation();controllerCobrar(this)" aria-label="Cobrar"><svg class="ico"><use href="#ico-megaphone"/></svg></button>`
             : ''}
         </div>
       </div>`;
@@ -11201,10 +11281,10 @@
               </div>
               <div class="ctrl-section__meta">${auuEscapeHtml(c.descricao)} · resp: ${auuEscapeHtml(c.responsavel || '—')} · SLA ${c.slaDias}d</div>
             </div>
-            ${c.estourados ? `<span class="ctrl-card__sla-warn">⚠️ ${c.estourados} fora do SLA</span>` : ''}
+            ${c.estourados ? `<span class="ctrl-card__sla-warn">⚠ ${c.estourados} fora do SLA</span>` : ''}
           </div>
           ${c.total === 0
-            ? `<div class="ctrl-section__empty">Nenhum processo nessa categoria 🎉</div>`
+            ? `<div class="ctrl-section__empty">Nenhum processo nessa categoria <svg class="ico ico--accent"><use href="#ico-sparkles"/></svg></div>`
             : `<table class="ctrl-table">
             <thead><tr>
               <th class="ctrl-th-center" style="width:32px;"><input type="checkbox" onchange="controllerToggleCategoria(this,'${c.id}')" title="Selecionar todos visíveis"></th>
@@ -11225,7 +11305,7 @@
                 <td class="ctrl-cell-notes">${auuEscapeHtml((p.notes||'').slice(0,200))}</td>
                 <td class="ctrl-cell-acao">
                   ${p.responsible_id
-                    ? `<button class="ctrl-cobrar-btn" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox||'')}" data-stage="${(p.stage||'').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onclick="controllerCobrar(this)">📢 Cobrar</button>`
+                    ? `<button class="ctrl-cobrar-btn" data-lawsuit="${p.lawsuit_id}" data-user="${p.responsible_id}" data-cat="${c.id}" data-resp="${auuEscapeHtml(p.responsavel_advbox||'')}" data-stage="${(p.stage||'').replace(/"/g,'&quot;')}" data-dias="${p.diasParado}" onclick="controllerCobrar(this)"><svg class="ico"><use href="#ico-megaphone"/></svg> Cobrar</button>`
                     : '<span class="ctrl-sem-resp">sem resp.</span>'}
                 </td>
               </tr>`).join('')}
@@ -11542,12 +11622,12 @@
           <div class="inad-card-val">soma de todas as parcelas vencidas</div>
         </div>
         <div class="inad-card inad-card--crit">
-          <div class="inad-card-label">🟡 Crítico recente</div>
+          <div class="inad-card-label"><span class="dot dot--yellow"></span> Crítico recente</div>
           <div class="inad-card-num">${t.qtdCriticos}</div>
           <div class="inad-card-val">${fmtMoneyBR(t.valorCriticos)} · ≤60d, 1 parcela</div>
         </div>
         <div class="inad-card inad-card--acum">
-          <div class="inad-card-label">🔴 Acumulado</div>
+          <div class="inad-card-label"><span class="dot dot--red"></span> Acumulado</div>
           <div class="inad-card-num">${t.qtdAcumulados}</div>
           <div class="inad-card-val">${fmtMoneyBR(t.valorAcumulados)} · &gt;60d ou ≥2 e ≥R$1k</div>
         </div>
@@ -11563,7 +11643,7 @@
       if (_inadFilter === 'todos' || _inadFilter === 'acumulado') lista = lista.concat(INAD_DATA.acumulados || []);
       if (_inadFilter === 'todos' || _inadFilter === 'critico')   lista = lista.concat(INAD_DATA.criticosRecentes || []);
       if (!lista.length) {
-        wrap.innerHTML = '<div style="padding:24px;color:#999;font-style:italic;text-align:center;">Nenhum inadimplente nessa categoria 🎉</div>';
+        wrap.innerHTML = '<div style="padding:24px;color:#999;font-style:italic;text-align:center;">Nenhum inadimplente nessa categoria <svg class="ico ico--accent"><use href="#ico-sparkles"/></svg></div>';
         return;
       }
       // Ordena por valor desc dentro do grupo
@@ -11571,7 +11651,7 @@
 
       const rows = lista.map(c => {
         const pillCls = c.categoria === 'acumulado' ? 'inad-pill--acum' : 'inad-pill--crit';
-        const pillTxt = c.categoria === 'acumulado' ? '🔴 Acumulado' : '🟡 Recente';
+        const pillTxt = c.categoria === 'acumulado' ? '<span class="dot dot--red"></span> Acumulado' : '<span class="dot dot--yellow"></span> Recente';
         const lawCells = (c.lawsuits || []).slice(0, 3).map(l =>
           `<a href="https://app.advbox.com.br/lawsuits/${l.id}" target="advbox" rel="noopener">${l.process_number || '#'+l.id}</a>`
         ).join(', ');
@@ -11692,8 +11772,8 @@
       <div style="padding:16px 20px;">
         <textarea id="audrCobrancaText" style="width:100%;height:300px;font-family:monospace;font-size:12px;border:1px solid #e5e5e5;border-radius:8px;padding:10px;resize:vertical;box-sizing:border-box;"></textarea>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-          <button id="audrCobrancaCopyBtn" class="dist-export-btn" style="background:#111;color:#fff;">📋 Copiar</button>
-          <button id="audrCobrancaCsvBtn" class="dist-export-btn">📊 Exportar CSV</button>
+          <button id="audrCobrancaCopyBtn" class="dist-export-btn" style="background:#111;color:#fff;"><svg class="ico"><use href="#ico-clipboard"/></svg> Copiar</button>
+          <button id="audrCobrancaCsvBtn" class="dist-export-btn"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
           <button onclick="document.getElementById('audrCobrancaModal').style.display='none'" class="dist-export-btn" style="background:#f5f5f5;color:#555;">Fechar</button>
         </div>
       </div>
@@ -11705,11 +11785,11 @@
     <div style="background:#fff;border-radius:14px;max-width:680px;margin:0 auto;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #f0f0f0;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:18px;">🔬 Fases reais no AdvBox</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:18px;"><svg class="ico"><use href="#ico-search"/></svg> Fases reais no AdvBox</div>
           <div style="font-size:12px;color:#888;margin-top:2px;" id="stagesModalSub">Somente processos ativos</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="dist-export-btn" onclick="exportStagesCSV()" style="font-size:11px;">📋 Copiar CSV</button>
+          <button class="dist-export-btn" onclick="exportStagesCSV()" style="font-size:11px;"><svg class="ico"><use href="#ico-clipboard"/></svg> Copiar CSV</button>
           <button onclick="closeStagesModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1;">×</button>
         </div>
       </div>
@@ -11758,7 +11838,7 @@
           </div>
         </div>
 
-        <div style="font-size:11px;color:#888;margin-bottom:6px;">⚠️ Linhas em vermelho = falta CPF ou dado inválido. Preenche antes de enviar.</div>
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">⚠ Linhas em vermelho = falta CPF ou dado inválido. Preenche antes de enviar.</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
           <thead>
             <tr style="background:#f0f0f0;text-align:left;">
@@ -11784,7 +11864,7 @@
           style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12.5px;">Fechar</button>
         <button id="cobrEnviarBtn" onclick="enviarCobrancas()"
           style="padding:8px 18px;background:#2C7A4D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600;">
-          ✉️ Gerar cobranças
+          <svg class="ico"><use href="#ico-mail"/></svg> Gerar cobranças
         </button>
       </div>
     </div>
