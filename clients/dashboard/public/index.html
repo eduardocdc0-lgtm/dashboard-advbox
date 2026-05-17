@@ -45,22 +45,22 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      /* ── Cores base ── */
-      --bg:        #FFFFFF;
-      --bg-card:   #FAFAF8;
-      --surface:   #FAFAF8;
-      --surface-2: #FAFAFA;
-      --text:      #000000;
-      --text-2:    #6B6B6B;
-      --text-3:    #767676;  /* WCAG AA: 4.54:1 sobre #FFFFFF */
-      --border:    #D4D4D4;
-      --hover:     #F0F0EE;
-      --success:   #2D5F3F;
-      --warning:   #8B6914;
-      --danger:    #8B2828;
-      /* Azul de ação (Controller, links internos) */
-      --accent:    #1D4ED8;
-      --accent-bg: #EFF6FF;
+      /* ── Cores base — Brand Eduardo Rodrigues ── */
+      --bg:        #F4F1EA;   /* off-white editorial */
+      --bg-card:   #FBFAF5;   /* card sobre o creme */
+      --surface:   #FBFAF5;
+      --surface-2: #F8F5EC;
+      --text:      #2C4A63;   /* azul-aço (não preto) */
+      --text-2:    #5A748B;   /* marinho médio (≈70%) */
+      --text-3:    #8295A8;   /* marinho claro (≈50%) — WCAG AA sobre #F4F1EA */
+      --border:    #D9D1BE;   /* linha sobre o creme */
+      --hover:     #EFE9D8;   /* hover quente */
+      --success:   #4A7757;   /* verde sóbrio */
+      --warning:   #B07A1F;   /* dourado escuro */
+      --danger:    #A13D3D;   /* vinho sóbrio */
+      /* Dourado de acento (Controller, links internos, focus) */
+      --accent:    #C9A35B;   /* dourado/mostarda */
+      --accent-bg: rgba(201,163,91,.10);
 
       /* ── Raios ── */
       --radius-sm: 6px;
@@ -95,7 +95,7 @@
     }
 
     body {
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: 'Inter', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       font-size: 14px;
@@ -163,7 +163,7 @@
       padding: 9px 20px;
       border-radius: var(--radius);
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.01em;
@@ -223,14 +223,14 @@
 
     .logo-block { line-height: 1.1; }
     .logo-name {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 22px;
       font-weight: 400;
       letter-spacing: -0.01em;
       color: var(--text);
     }
     .logo-sub {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 500;
       letter-spacing: 0.15em;
@@ -246,7 +246,7 @@
       padding: 9px 20px;
       border-radius: var(--radius);
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.01em;
@@ -260,7 +260,7 @@
       background: transparent; color: var(--text-2);
       border: 1px solid var(--border); border-radius: var(--radius);
       padding: 7px 14px; cursor: pointer;
-      font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
       transition: all .15s;
     }
     .logout-btn:hover { border-color: var(--text); color: var(--text); }
@@ -547,7 +547,7 @@
       border: none;
       border-bottom: 2px solid transparent;
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13.5px;
       font-weight: 400;
       white-space: nowrap;
@@ -608,7 +608,7 @@
       padding: 20px 22px;
     }
     .stat-card h3 {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 0.05em;
@@ -617,7 +617,7 @@
       margin: 0 0 10px;
     }
     .stat-value {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 30px;
       font-weight: 400;
       color: var(--text);
@@ -647,7 +647,7 @@
       line-height: 1.3;
     }
     .evo-pct-num {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 34px; line-height: 1; letter-spacing: -.015em;
       color: var(--text);
     }
@@ -672,7 +672,7 @@
     @media (max-width: 800px) { .fluxo-cards { grid-template-columns: repeat(2,1fr); } }
     .fluxo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
     .fluxo-card-label { font-size: 11px; color: var(--text-2); margin-bottom: 8px; }
-    .fluxo-card-value { font-family: 'DM Serif Display', serif; font-size: 32px; line-height: 1; }
+    .fluxo-card-value { font-family: 'Playfair Display', serif; font-size: 32px; line-height: 1; }
     .fluxo-card-value.danger { color: #c0392b; }
     .fluxo-card-value.warning { color: #a86000; }
     /* Gargalos */
@@ -726,7 +726,7 @@
       margin-bottom: 10px;
     }
     .metric-value {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: clamp(20px, 2vw, 26px);
       font-weight: 400;
       color: var(--text);
@@ -786,7 +786,7 @@
       margin-bottom: 16px;
     }
     .card-title {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 17px;
       font-weight: 400;
       color: var(--text);
@@ -894,7 +894,7 @@
       opacity: 0.7;
     }
     .empty__title {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px;
       color: var(--text);
       font-weight: 400;
@@ -935,7 +935,7 @@
     /* Base */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1);
-      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      font-family: 'Inter', sans-serif; font-weight: 500;
       border: 1px solid transparent; border-radius: var(--radius);
       cursor: pointer; white-space: nowrap; text-decoration: none;
       transition: opacity .15s, background .12s ease, border-color .12s ease, color .12s ease;
@@ -983,12 +983,12 @@
     .dist-avatar {
       width: 40px; height: 40px; border-radius: 50%;
       background: var(--text); color: var(--bg);
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px; display: flex; align-items: center; justify-content: center;
       margin-bottom: 10px;
     }
     .dist-card-name      { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin-bottom: 4px; }
-    .dist-card-count     { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1; color: var(--text); }
+    .dist-card-count     { font-family: 'Playfair Display', serif; font-size: 36px; line-height: 1; color: var(--text); }
     .dist-card-encerrado { font-size: 11px; color: #c0c0c0; margin-bottom: 10px; margin-top: 3px; }
     .dist-bar-track  { height: 4px; border-radius: 2px; background: var(--border); }
     .dist-bar-fill   { height: 4px; border-radius: 2px; transition: width .3s; }
@@ -1008,7 +1008,7 @@
       border-bottom: 1px solid var(--border);
       gap: 12px; flex-wrap: wrap;
     }
-    .dist-panel-title { font-family: 'DM Serif Display', serif; font-size: 18px; }
+    .dist-panel-title { font-family: 'Playfair Display', serif; font-size: 18px; }
     .dist-panel-close {
       background: none; border: 1px solid var(--border); border-radius: 6px;
       font-size: 18px; cursor: pointer; padding: 2px 10px; color: var(--text);
@@ -1026,14 +1026,14 @@
       background: var(--text); color: var(--bg);
       border: none; border-radius: 6px;
       font-size: 12px; font-weight: 600; padding: 7px 16px; cursor: pointer;
-      font-family: 'DM Sans', sans-serif; letter-spacing: .03em;
+      font-family: 'Inter', sans-serif; letter-spacing: .03em;
     }
     .dist-export-all-btn:hover { opacity: .82; }
     .dist-export-btn {
       background: var(--text); color: var(--bg);
       border: none; border-radius: 6px;
       font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer;
-      font-family: 'DM Sans', sans-serif; letter-spacing: .03em;
+      font-family: 'Inter', sans-serif; letter-spacing: .03em;
       white-space: nowrap;
     }
     .dist-export-btn:hover { opacity: .85; }
@@ -1042,7 +1042,7 @@
       background: var(--bg); color: var(--text);
       border: 1px solid var(--border); border-radius: 5px;
       font-size: 11px; font-weight: 600; padding: 3px 8px; cursor: pointer;
-      font-family: 'DM Sans', sans-serif; opacity: 0;
+      font-family: 'Inter', sans-serif; opacity: 0;
       transition: opacity .15s;
     }
     .dist-card:hover .dist-card-export-btn { opacity: 1; }
@@ -1106,7 +1106,7 @@
       color: var(--text-2);
     }
     .reg-date-input {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13px;
       color: var(--text);
       background: var(--bg);
@@ -1118,7 +1118,7 @@
     }
     .reg-date-input:hover { border-color: #A0A0A0; }
     .reg-filter {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13px;
       color: var(--text);
       background: var(--bg);
@@ -1197,7 +1197,7 @@
     .fin-nav { display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px; }
     .fin-nav-btn { background:none;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:15px;line-height:1; }
     .fin-nav-btn:hover { background:#f5f5f5; }
-    .fin-mes-label { font-family:'DM Serif Display',serif;font-size:1.15rem;min-width:160px;text-align:center; }
+    .fin-mes-label { font-family:'Playfair Display',serif;font-size:1.15rem;min-width:160px;text-align:center; }
     .fin-cols { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0; }
     @media (max-width:800px) { .fin-cols { grid-template-columns:1fr; } }
     .fin-cats { display:flex;flex-direction:column;gap:0; }
@@ -1267,7 +1267,7 @@
     .ar-card-error { background:#fff5f5;border-color:#fcd5d5; }
     .ar-card-ok    { background:#f0faf5;border-color:#bbf0d0; }
     .ar-card-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888; }
-    .ar-card-count { font-family:'DM Serif Display',serif;font-size:2rem;line-height:1; }
+    .ar-card-count { font-family:'Playfair Display',serif;font-size:2rem;line-height:1; }
     .ar-card-total .ar-card-count { color:#333; }
     .ar-card-error .ar-card-count { color:#b02020; }
     .ar-card-ok    .ar-card-count { color:#166534; }
@@ -1300,13 +1300,13 @@
     .garg-card-ext  { background:#f0faf5;border-color:#bbf0d0; }
     .garg-card-icon  { font-size:20px; }
     .garg-card-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888; }
-    .garg-card-count { font-family:'DM Serif Display',serif;font-size:2rem;line-height:1; }
+    .garg-card-count { font-family:'Playfair Display',serif;font-size:2rem;line-height:1; }
     .garg-card-sub   { font-size:12px;color:#888; }
     .garg-card-crit .garg-card-count { color:#b02020; }
     .garg-card-warn .garg-card-count { color:#856404; }
     .garg-card-ext  .garg-card-count { color:#166534; }
     /* Chips */
-    .garg-chip { font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .12s,border-color .12s; }
+    .garg-chip { font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,border-color .12s; }
     .garg-chip:hover { background:#f5f5f5; }
     .garg-chip.active { background:#111;color:#fff;border-color:#111; }
     .garg-chip-fase { background:#333;color:#fff;border-color:#333;display:inline-flex;align-items:center;gap:4px; }
@@ -1358,7 +1358,7 @@
     .audit-sum-head { display:flex;align-items:center;gap:8px;margin-bottom:2px; }
     .audit-sum-icon { font-size:16px;line-height:1; }
     .audit-sum-label { font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#777; }
-    .audit-sum-count { font-family:'DM Serif Display',serif;font-size:2.4rem;line-height:1;letter-spacing:-.01em; }
+    .audit-sum-count { font-family:'Playfair Display',serif;font-size:2.4rem;line-height:1;letter-spacing:-.01em; }
     .audit-sum-val   { font-size:12px;color:#888;margin-top:2px; }
     .audit-sum-crit .audit-sum-count { color:#b02020; }
     .audit-sum-mon  .audit-sum-count { color:#856404; }
@@ -1389,7 +1389,7 @@
     .audit-btn-cobrar {
       background:#111;color:#fff;border:none;border-radius:6px;
       padding:7px 14px;font-size:11.5px;
-      cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;
+      cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;
       transition:background .15s ease;
     }
     .audit-btn-cobrar:hover { background:#333; }
@@ -1425,13 +1425,13 @@
       font-size:16px;flex-shrink:0;
     }
     #auditSecOk > summary .audit-ok-title {
-      font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;color:var(--text);line-height:1.15;
+      font-family:'Playfair Display',serif;font-size:17px;font-weight:400;color:var(--text);line-height:1.15;
     }
     #auditSecOk > summary .audit-ok-sub {
       font-size:11.5px;color:#888;margin-top:2px;
     }
     #auditSecOk > summary .audit-ok-count-pill {
-      font-family:'DM Serif Display',serif;font-size:22px;color:#166534;line-height:1;
+      font-family:'Playfair Display',serif;font-size:22px;color:#166534;line-height:1;
     }
     #auditSecOk > summary .audit-ok-chevron {
       display:inline-flex;align-items:center;justify-content:center;
@@ -1457,7 +1457,7 @@
     .roi-badge-ok    { display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#e8f5e9;color:#2d7a2d;letter-spacing:.04em; }
     .roi-badge-no    { display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#fff3e0;color:#b07800;letter-spacing:.04em; }
     /* ── Caixa Próximos Dias ── */
-    .cf-days-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .cf-days-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'Inter',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
     .cf-days-btn.active { background:#111;color:#fff; }
     .cf-days-btn:hover:not(.active) { background:#e8e8e8; }
     .cf-row-today  { background:#fffbe6; }
@@ -1465,18 +1465,18 @@
     .cf-badge-overdue { display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:#c0392b;color:#fff;letter-spacing:.04em;vertical-align:middle;margin-left:4px; }
     .cf-badge-today   { display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:#e6a817;color:#fff;letter-spacing:.04em;vertical-align:middle;margin-left:4px; }
     /* ── Petições ── */
-    .pet-period-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .pet-period-btn { border:none;background:transparent;padding:7px 14px;font-size:12px;font-family:'Inter',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
     .pet-period-btn.active { background:#111;color:#fff; }
     .pet-period-btn:hover:not(.active) { background:#e8e8e8; }
     .pet-person-card { background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px 16px;cursor:pointer;transition:box-shadow .15s,border-color .15s; }
     .pet-person-card:hover,.pet-person-card.selected { border-color:#111;box-shadow:0 4px 14px rgba(0,0,0,.09); }
-    .pet-person-initial { width:42px;height:42px;border-radius:50%;background:#111;color:#fff;font-family:'DM Serif Display',serif;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0; }
+    .pet-person-initial { width:42px;height:42px;border-radius:50%;background:#111;color:#fff;font-family:'Playfair Display',serif;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0; }
     .pet-person-name { font-weight:700;font-size:13px;margin-bottom:4px; }
-    .pet-person-count { font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;line-height:1;color:#111; }
+    .pet-person-count { font-family:'Playfair Display',serif;font-size:36px;font-weight:400;line-height:1;color:#111; }
     .pet-type-badge { display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;background:#f0f0f0;color:#555;margin:2px 2px 0 0;font-weight:600; }
     /* ── View toggle ── */
     .audr-view-toggle { display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#f5f5f5; }
-    .audr-view-btn { border:none;background:transparent;padding:7px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
+    .audr-view-btn { border:none;background:transparent;padding:7px 16px;font-size:12px;font-family:'Inter',sans-serif;font-weight:600;cursor:pointer;color:#555;transition:all .15s; }
     .audr-view-btn.active { background:#111;color:#fff; }
     .audr-view-btn:hover:not(.active) { background:#e8e8e8; }
     /* ── Kanban ── */
@@ -1489,7 +1489,7 @@
     .audr-kanban-col-header { padding:12px 14px;background:#fff;border-radius:10px 10px 0 0;border-bottom:1px solid #eee;flex-shrink:0; }
     .audr-kanban-col-title { display:flex;justify-content:space-between;align-items:center; }
     .audr-kanban-col-name { font-weight:700;font-size:13px; }
-    .audr-kanban-col-count { font-family:'DM Serif Display',serif;font-size:1.15rem;color:#b02020; }
+    .audr-kanban-col-count { font-family:'Playfair Display',serif;font-size:1.15rem;color:#b02020; }
     .audr-kanban-col-body { overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;flex:1; }
     .audr-kanban-col-body::-webkit-scrollbar { width:4px; }
     .audr-kanban-col-body::-webkit-scrollbar-thumb { background:#ddd;border-radius:4px; }
@@ -1501,11 +1501,11 @@
     .audr-kanban-card-fase { font-size:10.5px;font-weight:600;margin:4px 0 3px;padding:2px 6px;background:#fff3f3;border-radius:4px;color:#b02020;display:inline-block; }
     .audr-kanban-card-dest { font-size:10.5px;margin-top:3px; }
     .audr-kanban-card-actions { margin-top:7px;display:flex;gap:5px; }
-    .audr-kb-btn-ok { border:1px solid #bbf0d0;background:#f0faf5;color:#166534;border-radius:5px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600; }
+    .audr-kb-btn-ok { border:1px solid #bbf0d0;background:#f0faf5;color:#166534;border-radius:5px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600; }
     .audr-kb-btn-ok:hover { background:#dcfce7; }
     .audr-kb-btn-link { font-size:10.5px;color:#555;text-decoration:none;border:1px solid #ddd;padding:3px 7px;border-radius:5px;background:#f9f9f9; }
     .audr-kanban-col-footer { padding:8px 10px;border-top:1px solid #eee;background:#fff;border-radius:0 0 10px 10px;flex-shrink:0; }
-    .audr-kb-btn-cobrar { width:100%;border:none;background:#111;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600; }
+    .audr-kb-btn-cobrar { width:100%;border:none;background:#111;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600; }
     .audr-kb-btn-cobrar:hover { background:#333; }
     .audr-kanban-empty { padding:32px;text-align:center;color:#aaa;font-size:13px;width:100%; }
     .audr-zone-MARILIA { color:#166534;background:#dcfce7;border-color:#bbf0d0; }
@@ -1548,7 +1548,7 @@
       font-size:13.5px;font-weight:600;letter-spacing:-.005em;color:var(--text);
       margin:0 0 5px;line-height:1.2;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      font-family:'DM Sans',sans-serif;
+      font-family:'Inter',sans-serif;
     }
     .audit-mon-row__phase {
       font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
@@ -1607,13 +1607,13 @@
       border:1px solid var(--border);
     }
     .inad-card-label { font-size:var(--text-xs); color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; }
-    .inad-card-num { font-family:'DM Serif Display', serif; font-size:32px; font-weight:400; margin:6px 0 2px; line-height:1; }
+    .inad-card-num { font-family:'Playfair Display', serif; font-size:32px; font-weight:400; margin:6px 0 2px; line-height:1; }
     .inad-card-val { font-size:var(--text-sm); color:var(--text-secondary); }
     .inad-card--crit .inad-card-num { color:#d97706; }
     .inad-card--acum .inad-card-num { color:#dc2626; }
     .inad-fbtn {
       padding:6px 12px; border:none; border-radius:6px; background:transparent;
-      font-size:13px; cursor:pointer; color:var(--text-secondary); font-family:'DM Sans',sans-serif;
+      font-size:13px; cursor:pointer; color:var(--text-secondary); font-family:'Inter',sans-serif;
     }
     .inad-fbtn--active { background:var(--surface-2); color:var(--text-primary); font-weight:600; }
     .inad-tabela { border-collapse:collapse; width:100%; font-size:13px; }
@@ -1640,7 +1640,7 @@
       font-size:24px; line-height:1;
     }
     .ctrl-ranking-card .rk-titulo {
-      font-family:'DM Serif Display', serif; font-size:var(--text-xl);
+      font-family:'Playfair Display', serif; font-size:var(--text-xl);
       color:var(--rk-color, var(--text-primary)); margin-bottom:var(--space-2);
     }
     .ctrl-ranking-card .rk-score {
@@ -1710,7 +1710,7 @@
     .ctrl-cobrar-btn {
       padding:5px 12px;border:1px solid var(--accent);border-radius:var(--radius-sm);
       background:var(--bg);color:var(--accent);cursor:pointer;font-size:11.5px;
-      font-family:'DM Sans',sans-serif;font-weight:600;
+      font-family:'Inter',sans-serif;font-weight:600;
       transition:background .12s ease;white-space:nowrap;
     }
     .ctrl-cobrar-btn:hover { background:var(--accent-bg); }
@@ -1756,7 +1756,7 @@
     }
     .ctrl-kb-col-label { font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:2px; }
     .ctrl-kb-col-title { font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2; }
-    .ctrl-kb-col-count { font-family:'DM Serif Display',serif;font-size:26px;line-height:1;margin-top:4px; }
+    .ctrl-kb-col-count { font-family:'Playfair Display',serif;font-size:26px;line-height:1;margin-top:4px; }
     .ctrl-kb-col-sla-warn { font-size:var(--text-sm);color:var(--danger);font-weight:600;margin-top:2px; }
     .ctrl-kb-col-sem-wf { font-size:var(--text-sm);color:#9a3412;font-weight:600;margin-top:2px; }
     .ctrl-kb-col--urgent { border-top:3px solid var(--danger); }
@@ -1794,7 +1794,7 @@
     .ctrl-kb-more  { padding:6px 8px;text-align:center;font-size:11px;color:var(--text-3);font-style:italic;border-top:1px solid var(--border);flex-shrink:0; }
     /* Toggle Lista/Kanban */
     .ctrl-view-toggle { display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden; }
-    .ctrl-view-btn { padding:7px 14px;background:var(--bg);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s; }
+    .ctrl-view-btn { padding:7px 14px;background:var(--bg);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s; }
     .ctrl-view-btn.active { background:var(--text);color:#fff; }
     .ctrl-view-btn:hover:not(.active) { background:var(--hover);color:var(--text); }
 
@@ -1897,7 +1897,7 @@
     }
 
     .export-btn {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 13px;
       font-weight: 500;
       color: var(--text);
@@ -1936,7 +1936,7 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
     }
-    .ar-modal-header h2 { font-family: 'DM Serif Display', serif; font-size: 18px; margin: 0; }
+    .ar-modal-header h2 { font-family: 'Playfair Display', serif; font-size: 18px; margin: 0; }
     .ar-modal-close {
       background: none; border: none; font-size: 22px; cursor: pointer;
       color: var(--text-2); line-height: 1; padding: 2px 6px; border-radius: 4px;
@@ -1952,7 +1952,7 @@
       padding: 8px 22px 10px; border-bottom: 1px solid var(--border);
     }
     .ar-search input {
-      width: 100%; padding: 7px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+      width: 100%; padding: 7px 12px; font-size: 13px; font-family: 'Inter', sans-serif;
       border: 1px solid var(--border); border-radius: 6px; background: var(--hover);
       color: var(--text); outline: none;
     }
@@ -1984,7 +1984,7 @@
       flex-shrink: 0; letter-spacing: 0;
     }
     .hoje-card-count {
-      font-size: 36px; font-weight: 400; font-family: 'DM Serif Display', serif;
+      font-size: 36px; font-weight: 400; font-family: 'Playfair Display', serif;
       line-height: 1; letter-spacing: -.02em; color: var(--text);
     }
     .hoje-card-count.zero { color: #d4d4d4; }
@@ -2029,7 +2029,7 @@
       overflow-y: auto; overflow-x: hidden;
       z-index: 100;
       transition: width 0.2s ease;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
     }
     body.sidebar-collapsed .sidebar { width: 56px; }
 
@@ -2041,7 +2041,7 @@
     }
     .sidebar-brand-text { line-height: 1.1; overflow: hidden; }
     .sidebar-brand-name {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px; color: var(--text); white-space: nowrap;
     }
     .sidebar-brand-sub {
@@ -2131,7 +2131,7 @@
       border-radius: var(--radius); padding: 12px 14px;
     }
     .es-stat-label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .es-stat-value { font-size: 20px; font-weight: 500; font-family: 'DM Serif Display', serif; color: var(--text); }
+    .es-stat-value { font-size: 20px; font-weight: 500; font-family: 'Playfair Display', serif; color: var(--text); }
     .es-stat-value.success { color: var(--success); }
     .es-stat-value.danger  { color: var(--danger); }
 
@@ -2215,7 +2215,7 @@
     }
     .es-main-value {
       font-size: 16px; font-weight: 500;
-      font-family: 'DM Serif Display', serif; color: var(--text);
+      font-family: 'Playfair Display', serif; color: var(--text);
     }
 
     .es-card-foot {
@@ -2254,7 +2254,7 @@
     }
     .es-mn-arrow:hover { background: var(--hover); }
     .es-mn-label {
-      font-family: 'DM Serif Display', serif; font-size: 16px;
+      font-family: 'Playfair Display', serif; font-size: 16px;
       color: var(--text); padding: 0 14px; min-width: 130px; text-align: center;
       text-transform: capitalize;
     }
@@ -2292,7 +2292,7 @@
       gap: 18px; flex-wrap: wrap; margin-bottom: 24px;
     }
     .ov-page-title {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 28px; line-height: 1.05; letter-spacing: -.01em;
       color: var(--text); margin: 0;
     }
@@ -2311,7 +2311,7 @@
       letter-spacing: .08em; color: #999;
     }
     .ov-section-head__title {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px; font-weight: 400; line-height: 1.1;
       color: var(--text); margin: 0;
     }
@@ -2334,7 +2334,7 @@
     }
     .ov-arrow:hover { background: var(--hover); }
     .ov-month-label {
-      font-family: 'DM Serif Display', serif; font-size: 16px;
+      font-family: 'Playfair Display', serif; font-size: 16px;
       color: var(--text); padding: 0 14px; min-width: 130px; text-align: center;
       text-transform: capitalize;
     }
@@ -2413,13 +2413,13 @@
       min-width: 0; overflow: hidden;
     }
     .ov-row-value {
-      font-size: 22px; font-family: 'DM Serif Display', serif;
+      font-size: 22px; font-family: 'Playfair Display', serif;
       font-weight: 400; color: var(--text); white-space: nowrap; line-height: 1;
     }
     .ov-row-value.danger { color: var(--danger); }
     .ov-row-value.success { color: var(--success); }
     .ov-row-money {
-      font-size: 14px; font-family: 'DM Serif Display', serif;
+      font-size: 14px; font-family: 'Playfair Display', serif;
       font-weight: 400; color: var(--text); white-space: nowrap;
     }
     .ov-row-money.danger { color: var(--danger); }
@@ -2495,7 +2495,7 @@
       border-radius: var(--radius); padding: 10px 12px;
     }
     .fc-stat-label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
-    .fc-stat-value { font-size: 18px; font-weight: 500; font-family: 'DM Serif Display', serif; color: var(--text); margin-top: 2px; }
+    .fc-stat-value { font-size: 18px; font-weight: 500; font-family: 'Playfair Display', serif; color: var(--text); margin-top: 2px; }
     .fc-stat-value.success { color: var(--success); }
 
     .fc-actions { display: flex; gap: 8px; }
@@ -2515,7 +2515,7 @@
     }
     .fc-nav-arrow:hover { background: var(--hover); border-color: var(--text); }
     .fc-nav-label {
-      font-family: 'DM Serif Display', serif; font-size: 16px;
+      font-family: 'Playfair Display', serif; font-size: 16px;
       color: var(--text); padding: 0 8px; min-width: 180px; text-align: center;
     }
     .fc-nav-spacer { flex: 1; }
@@ -2608,7 +2608,7 @@
       margin-bottom: 18px;
     }
     .fc-modal-hdr h3 {
-      margin: 0; font-family: 'DM Serif Display', serif;
+      margin: 0; font-family: 'Playfair Display', serif;
       font-size: 22px; font-weight: 400; color: var(--text);
     }
     .fc-modal-close {
@@ -2704,7 +2704,7 @@
     .dot--red    { color: var(--danger); }
     .dot--yellow { color: var(--warning); }
     .dot--green  { color: var(--success); }
-    .dot--blue   { color: var(--accent); }
+    .dot--blue   { color: #4A6FA5; }
     .dot--purple { color: #6B46C1; }
     .dot--gray   { color: var(--text-3); }
     .dot--white  { color: #fff; border: 1px solid var(--border); }
@@ -3180,11 +3180,11 @@
         <header class="section-header">
           <div>
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">Resultados</div>
-            <h2 id="placarTitle" style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Placar de Sentenças</h2>
+            <h2 id="placarTitle" style="font-family:'Playfair Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Placar de Sentenças</h2>
             <div id="placarSub" style="font-size:11.5px;color:#999;margin-top:2px;">Processos que viraram procedentes / improcedentes / parciais no período</div>
           </div>
           <div style="text-align:right;">
-            <div id="placarTotalAno" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
+            <div id="placarTotalAno" class="mask-target" style="font-family:'Playfair Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;color:#999;">sentenças no ano</div>
           </div>
         </header>
@@ -3195,15 +3195,15 @@
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Hoje</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
-                <div id="placarHojeProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div id="placarHojeProc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
-                <div id="placarHojeImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div id="placarHojeImproc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
-                <div id="placarHojeParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div id="placarHojeParcial" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
@@ -3213,15 +3213,15 @@
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Mês</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
-                <div id="placarMesProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div id="placarMesProc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
-                <div id="placarMesImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div id="placarMesImproc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
-                <div id="placarMesParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div id="placarMesParcial" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
@@ -3231,15 +3231,15 @@
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Ano</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
               <div>
-                <div id="placarAnoProc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
+                <div id="placarAnoProc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#2C7A4D;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✓ Procedente</div>
               </div>
               <div>
-                <div id="placarAnoImproc" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
+                <div id="placarAnoImproc" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#B53A2C;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">✗ Improcedente</div>
               </div>
               <div>
-                <div id="placarAnoParcial" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
+                <div id="placarAnoParcial" class="mask-target" style="font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:#C08B27;">—</div>
                 <div style="font-size:10px;color:#666;margin-top:4px;">⚠ Parcial</div>
               </div>
             </div>
@@ -3275,7 +3275,7 @@
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-receipt"/></svg> Petições</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-receipt"/></svg> Petições</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="petUpdatedAt">Produtividade jurídica por responsável</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -3293,7 +3293,7 @@
 
       <!-- KPI total -->
       <div style="text-align:center;margin-bottom:28px;">
-        <div id="petTotalNum" style="font-family:'DM Serif Display',serif;font-size:64px;font-weight:400;line-height:1;color:#111;">—</div>
+        <div id="petTotalNum" style="font-family:'Playfair Display',serif;font-size:64px;font-weight:400;line-height:1;color:#111;">—</div>
         <div style="font-size:13px;color:#888;margin-top:6px;" id="petTotalLbl">petições no período</div>
       </div>
 
@@ -3303,7 +3303,7 @@
         <!-- Filtro de responsável (team vê apenas o próprio nome) -->
         <div class="admin-only" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <label style="font-size:12px;color:#555;font-weight:600;">Filtrar por responsável:</label>
-          <select id="petRespFilter" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:#fff;" onchange="petApplyFilter()">
+          <select id="petRespFilter" style="font-family:'Inter',sans-serif;font-size:12px;padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:#fff;" onchange="petApplyFilter()">
             <option value="">Todos</option>
           </select>
         </div>
@@ -3349,11 +3349,11 @@
       <header class="section-header">
         <div>
           <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Radar</div>
-          <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin:0;line-height:1.1;color:var(--text);"><svg class="ico"><use href="#ico-news"/></svg> Publicações da semana</h2>
+          <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;margin:0;line-height:1.1;color:var(--text);"><svg class="ico"><use href="#ico-news"/></svg> Publicações da semana</h2>
           <div style="font-size:12px;color:var(--text-2);margin-top:3px;">Movimentos processuais capturados dos diários da justiça nos últimos N dias.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <select id="pubDaysSel" onchange="publicationsLoad()" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+          <select id="pubDaysSel" onchange="publicationsLoad()" style="font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
             <option value="7" selected>Últimos 7 dias</option>
             <option value="14">Últimos 14 dias</option>
             <option value="30">Últimos 30 dias</option>
@@ -3364,7 +3364,7 @@
 
       <!-- KPI total -->
       <div style="text-align:center;margin:8px 0 24px;">
-        <div id="pubTotalNum" style="font-family:'DM Serif Display',serif;font-size:64px;font-weight:400;line-height:1;color:var(--text);">—</div>
+        <div id="pubTotalNum" style="font-family:'Playfair Display',serif;font-size:64px;font-weight:400;line-height:1;color:var(--text);">—</div>
         <div id="pubTotalLbl" style="font-size:13px;color:var(--text-2);margin-top:6px;">publicações no período</div>
       </div>
 
@@ -3419,14 +3419,14 @@
               <button class="cf-days-btn" onclick="cfSetDays(15, this)">15 dias</button>
               <button class="cf-days-btn" onclick="cfSetDays(30, this)">30 dias</button>
             </div>
-            <button onclick="cfExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
-            <button onclick="loadCashFlow(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
+            <button onclick="cfExportCSV()" style="background:#111;color:#fff;border:none;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'Inter',sans-serif;font-weight:600;"><svg class="ico"><use href="#ico-bars"/></svg> Exportar CSV</button>
+            <button onclick="loadCashFlow(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'Inter',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
           </div>
         </div>
 
         <!-- KPI -->
         <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:20px;flex-wrap:wrap;">
-          <div id="cfTotalNum" style="font-family:'DM Serif Display',serif;font-size:52px;font-weight:400;line-height:1;color:#111;">—</div>
+          <div id="cfTotalNum" style="font-family:'Playfair Display',serif;font-size:52px;font-weight:400;line-height:1;color:#111;">—</div>
           <div>
             <div id="cfTotalLbl" style="font-size:13px;font-weight:600;color:#555;"></div>
             <div id="cfCountLbl" style="font-size:12px;color:#aaa;margin-top:2px;"></div>
@@ -3492,11 +3492,11 @@
         <header class="section-header">
           <div>
             <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">Índice</div>
-            <h2 id="inadTitle" style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Inadimplência do mês</h2>
+            <h2 id="inadTitle" style="font-family:'Playfair Display',serif;font-size:18px;font-weight:400;margin:0;line-height:1.1;color:var(--text);">Inadimplência do mês</h2>
             <div id="inadSub" style="font-size:11.5px;color:#999;margin-top:2px;">% das parcelas com vencimento no mês que não foram pagas</div>
           </div>
           <div style="text-align:right;">
-            <div id="inadTaxa" class="mask-target" style="font-family:'DM Serif Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
+            <div id="inadTaxa" class="mask-target" style="font-family:'Playfair Display',serif;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--text);">—</div>
             <div id="inadEstadoBadge" style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;color:#999;">aguardando</div>
           </div>
         </header>
@@ -3505,17 +3505,17 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">
           <div style="padding:12px 14px;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
             <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;">Devido no mês</div>
-            <div class="mask-target" id="inadDevido" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums;">—</div>
+            <div class="mask-target" id="inadDevido" style="font-family:'Playfair Display',serif;font-size:20px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums;">—</div>
             <div id="inadDevidoQtd" style="font-size:11px;color:#999;margin-top:2px;">— parcelas</div>
           </div>
           <div style="padding:12px 14px;background:#f0faf5;border:1px solid #bbf0d0;border-radius:8px;">
             <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#166534;">Pago</div>
-            <div class="mask-target" id="inadPago" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#166534;font-variant-numeric:tabular-nums;">—</div>
+            <div class="mask-target" id="inadPago" style="font-family:'Playfair Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#166534;font-variant-numeric:tabular-nums;">—</div>
             <div id="inadPagoQtd" style="font-size:11px;color:#166534;margin-top:2px;opacity:.8;">— parcelas</div>
           </div>
           <div style="padding:12px 14px;background:#fff5f5;border:1px solid #fcd5d5;border-radius:8px;">
             <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#b02020;">Em atraso</div>
-            <div class="mask-target" id="inadAtraso" style="font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#b02020;font-variant-numeric:tabular-nums;">—</div>
+            <div class="mask-target" id="inadAtraso" style="font-family:'Playfair Display',serif;font-size:20px;line-height:1.1;margin-top:4px;color:#b02020;font-variant-numeric:tabular-nums;">—</div>
             <div id="inadAtrasoQtd" style="font-size:11px;color:#b02020;margin-top:2px;opacity:.8;">— parcelas</div>
           </div>
         </div>
@@ -3539,14 +3539,14 @@
         <div class="card" style="margin-bottom:0">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:baseline;">
             Receitas por categoria
-            <span id="finReceitasTotalLabel" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#2d7a2d;"></span>
+            <span id="finReceitasTotalLabel" style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#2d7a2d;"></span>
           </div>
           <div id="finReceitas"><div class="loading" style="padding:20px 0;">Carregando...</div></div>
         </div>
         <div class="card" style="margin-bottom:0">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:baseline;">
             Despesas por categoria
-            <span id="finDespesasTotalLabel" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#c0392b;"></span>
+            <span id="finDespesasTotalLabel" style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#c0392b;"></span>
           </div>
           <div id="finDespesas"><div class="loading" style="padding:20px 0;">Carregando...</div></div>
         </div>
@@ -3554,7 +3554,7 @@
       <!-- Lista de lançamentos -->
       <div class="card" style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-          <div class="card-title" style="margin-bottom:0;">Lançamentos do mês <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;">Kanban por status</span></div>
+          <div class="card-title" style="margin-bottom:0;">Lançamentos do mês <span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;">Kanban por status</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <select id="finCatFilter" class="reg-filter" onchange="renderFinanceiro()" style="font-size:12px;">
               <option value="">Todas categorias</option>
@@ -3574,7 +3574,7 @@
     <div id="inadimplentes" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--danger"><use href="#ico-receipt"/></svg> Inadimplentes</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--danger"><use href="#ico-receipt"/></svg> Inadimplentes</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="inadMeta">Carregando...</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -3591,7 +3591,7 @@
           <button class="inad-fbtn" data-filter="critico" onclick="inadimplentesSetFilter(this)"><span class="dot dot--yellow"></span> Crítico recente</button>
           <button class="inad-fbtn" data-filter="acumulado" onclick="inadimplentesSetFilter(this)"><span class="dot dot--red"></span> Acumulado</button>
         </div>
-        <input id="inadBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por nome, CPF, processo..." oninput="inadimplentesFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:340px;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <input id="inadBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por nome, CPF, processo..." oninput="inadimplentesFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:340px;font-size:14px;font-family:'Inter',sans-serif;">
       </div>
 
       <div id="inadTabelaWrap"></div>
@@ -3655,7 +3655,7 @@
       <div class="card" id="auditSecCriticos">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
           <div class="card-title" style="color:#b02020;margin-bottom:0;"><span class="dot dot--red"></span> Alertas Críticos
-            <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
+            <span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fase parcelada sem lançamento no mês</span>
           </div>
           <button id="auditCobrarTodosBtn" class="audit-btn-cobrar" onclick="auditCobrarTodos(this)" style="font-size:12px;padding:8px 14px;display:none;"><svg class="ico"><use href="#ico-clipboard"/></svg> Cobrar Cau (todos)</button>
         </div>
@@ -3665,7 +3665,7 @@
       <!-- Em Monitoramento -->
       <div class="card" id="auditSecMonitoramento" style="margin-top:14px;">
         <div class="card-title" style="margin-bottom:12px;color:#856404;"><span class="dot dot--yellow"></span> Em Monitoramento
-          <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fases aguardando lançamento futuro</span>
+          <span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:#bbb;letter-spacing:0;margin-left:8px;">processos em fases aguardando lançamento futuro</span>
         </div>
         <div class="audit-section-toolbar">
           <div class="audit-section-toolbar-left">
@@ -3842,7 +3842,7 @@
     <div id="auditresp" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-search"/></svg> Auditoria de Responsável</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-search"/></svg> Auditoria de Responsável</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="audrSummaryBadge">Fases × quem deveria ser responsável — clique ↺ Atualizar para carregar</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -3863,7 +3863,7 @@
       <div class="admin-only" style="margin-bottom:16px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:14px 16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div style="font-weight:700;font-size:13px;">⚠ Erros por Responsável <span id="audrByPersonTitle" style="font-weight:400;font-size:11px;color:#888;"></span></div>
-          <button onclick="audrGerarCobrancaGeral()" style="font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;"><svg class="ico"><use href="#ico-clipboard"/></svg> Gerar lista de cobrança geral</button>
+          <button onclick="audrGerarCobrancaGeral()" style="font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;font-family:'Inter',sans-serif;"><svg class="ico"><use href="#ico-clipboard"/></svg> Gerar lista de cobrança geral</button>
         </div>
         <div id="audrByPerson"></div>
       </div>
@@ -4036,12 +4036,12 @@
     <!-- MODAL: Cobrar responsável -->
     <div id="auuCobrarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
       <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:10px;"><svg class="ico"><use href="#ico-bell"/></svg> Cobrar responsável</div>
+        <div style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:10px;"><svg class="ico"><use href="#ico-bell"/></svg> Cobrar responsável</div>
         <div id="auuCobrarBody" style="font-size:13px;color:#444;line-height:1.6;margin-bottom:20px;"></div>
         <div id="auuCobrarErr" style="display:none;background:#fff5f5;border:1px solid #fcd;color:#b02020;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:14px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="auuCobrarFechar()" style="padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
-          <button id="auuCobrarConfirmar" onclick="auuCobrarConfirmar()" style="padding:8px 16px;border:none;border-radius:6px;background:#1a1a2e;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Confirmar</button>
+          <button onclick="auuCobrarFechar()" style="padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-family:'Inter',sans-serif;">Cancelar</button>
+          <button id="auuCobrarConfirmar" onclick="auuCobrarConfirmar()" style="padding:8px 16px;border:none;border-radius:6px;background:#1a1a2e;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;">Confirmar</button>
         </div>
       </div>
     </div>
@@ -4053,7 +4053,7 @@
     <div id="controller" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-sliders"/></svg> Controller — Esteira</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-sliders"/></svg> Controller — Esteira</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="ctrlMeta">Carregando...</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -4071,7 +4071,7 @@
       <div id="ctrlCards" class="ctrl-cards-row"></div>
 
       <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-        <input id="ctrlBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por cliente, CPF, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:360px;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <input id="ctrlBusca" placeholder="<svg class="ico"><use href="#ico-search"/></svg> Filtrar por cliente, CPF, fase, responsável..." oninput="controllerFiltrar()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);width:360px;font-size:14px;font-family:'Inter',sans-serif;">
         <div id="ctrlBulkBar" style="display:none;align-items:center;gap:10px;padding:8px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;">
           <span style="font-weight:600;color:#3730a3;font-size:13px;"><span id="ctrlBulkCount">0</span> selecionado(s)</span>
           <button onclick="controllerCobrarSelecionados()" id="ctrlBulkBtn" style="padding:6px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;"><svg class="ico"><use href="#ico-megaphone"/></svg> Cobrar selecionados</button>
@@ -4088,7 +4088,7 @@
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--warning"><use href="#ico-cone"/></svg> Gargalos — Processos com Ação Pendente</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico ico--warning"><use href="#ico-cone"/></svg> Gargalos — Processos com Ação Pendente</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="gargalosUpdatedAt"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -4240,7 +4240,7 @@
               <option value="last_30d">Últimos 30 dias</option>
               <option value="last_90d">Últimos 90 dias</option>
             </select>
-            <button onclick="loadCampaignRoi(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
+            <button onclick="loadCampaignRoi(true)" style="background:transparent;border:1px solid #ddd;cursor:pointer;font-size:12px;padding:7px 14px;border-radius:8px;font-family:'Inter',sans-serif;font-weight:600;color:#555;">↺ Atualizar</button>
           </div>
         </div>
 
@@ -4419,7 +4419,7 @@
     <div id="leads" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">Leads</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;">Leads</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="leadsUpdatedAt">—</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -4481,7 +4481,7 @@
 
         <label for="dmContent" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:6px;">Mensagem</label>
         <textarea id="dmContent" rows="5" placeholder="Digite sua mensagem... markdown do Discord funciona (**negrito**, *itálico*, `código`)"
-          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;"></textarea>
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;resize:vertical;box-sizing:border-box;"></textarea>
 
         <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
           <div role="radiogroup" aria-label="Quando enviar" style="display:flex;gap:14px;align-items:center;">
@@ -4557,7 +4557,7 @@
     <div id="admin" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;">Painel Administrativo</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;">Painel Administrativo</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="adminUpdatedAt">—</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -4604,7 +4604,7 @@
     <div id="aniversarios" class="tab-content">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-gift"/></svg> Aniversários</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;"><svg class="ico"><use href="#ico-gift"/></svg> Aniversários</div>
           <div style="font-size:12px;color:#888;margin-top:3px;" id="bdUpdatedAt">—</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -6118,7 +6118,7 @@
             <td style="padding:8px 10px;font-size:11px;color:#888;">${destinos || '—'}</td>
             <td style="padding:8px 10px;text-align:right;">
               <button onclick="audrGerarCobranca(${JSON.stringify(p.responsible)}, ${JSON.stringify(erradosItems)})"
-                style="font-size:11px;padding:4px 10px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                style="font-size:11px;padding:4px 10px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;cursor:pointer;font-family:'Inter',sans-serif;">
                 <svg class="ico"><use href="#ico-clipboard"/></svg> Lista
               </button>
             </td>
@@ -6324,7 +6324,7 @@
 
     function audrOpenDetailModal(item) {
       const html = `<div style="padding:4px;">
-        <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:12px;">${item.cliente}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:12px;">${item.cliente}</div>
         <table style="width:100%;font-size:13px;border-collapse:collapse;">
           ${[['Tipo',item.tipo||'—'],['Nº Processo',item.numero||'—'],['Fase Atual',item.stage||'—'],['Responsável Atual',item.responsible||'—'],['Deveria ir para',item.expectedRespLabel||'—'],['Status',item.status]].map(([k,v])=>`<tr><td style="padding:6px 4px;color:#888;font-size:12px;white-space:nowrap;">${k}</td><td style="padding:6px 4px;font-weight:500;">${v}</td></tr>`).join('')}
         </table>
@@ -6894,7 +6894,7 @@
       Object.assign(ta.style, {
         position: 'fixed', top: '40%', left: '50%', transform: 'translate(-50%,-50%)',
         width: '420px', height: '140px', zIndex: '9999', padding: '12px',
-        fontFamily: 'DM Sans, sans-serif', fontSize: '13px', borderRadius: '8px', border: '1px solid #ddd'
+        fontFamily: 'Inter, sans-serif', fontSize: '13px', borderRadius: '8px', border: '1px solid #ddd'
       });
       document.body.appendChild(ta);
       ta.select();
@@ -7021,11 +7021,11 @@
             scales: {
               y: {
                 beginAtZero: true,
-                ticks: { color: '#6B6B6B', font: { family: 'DM Sans', size: 11 } },
+                ticks: { color: '#6B6B6B', font: { family: 'Inter', size: 11 } },
                 grid: { color: '#EBEBEB' }
               },
               x: {
-                ticks: { color: '#6B6B6B', font: { family: 'DM Sans', size: 11 } },
+                ticks: { color: '#6B6B6B', font: { family: 'Inter', size: 11 } },
                 grid: { display: false }
               }
             }
@@ -9365,7 +9365,7 @@
           <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#888;margin-bottom:10px;">
             Variação ${p.variacao}
           </div>
-          <pre style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#222;margin:0;">${p.texto}</pre>
+          <pre style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#222;margin:0;">${p.texto}</pre>
         </div>
       `).join('');
     }
@@ -9461,8 +9461,8 @@
             tooltip: { callbacks: { label: c => ' ' + formatMoney(c.parsed.y) } }
           },
           scales: {
-            x: { ticks: { font: { family: 'DM Sans', size: 11 } }, grid: { display: false } },
-            y: { beginAtZero: true, ticks: { callback: v => 'R$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v), font: { family: 'DM Sans', size: 10 } }, grid: { color: '#f0f0f0' } }
+            x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { callback: v => 'R$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v), font: { family: 'Inter', size: 10 } }, grid: { color: '#f0f0f0' } }
           }
         }
       });
@@ -9888,8 +9888,8 @@
             label: ctx => ` ${ctx.parsed.x} petição${ctx.parsed.x !== 1 ? 'ões' : ''}`
           }}},
           scales: {
-            x: { beginAtZero: true, max: Math.ceil(max * 1.2), ticks: { stepSize: 1, font: { family: 'DM Sans' } }, grid: { color: '#f0f0f0' } },
-            y: { ticks: { font: { family: 'DM Sans', weight: '600' } }, grid: { display: false } }
+            x: { beginAtZero: true, max: Math.ceil(max * 1.2), ticks: { stepSize: 1, font: { family: 'Inter' } }, grid: { color: '#f0f0f0' } },
+            y: { ticks: { font: { family: 'Inter', weight: '600' } }, grid: { display: false } }
           }
         }
       });
@@ -11755,7 +11755,7 @@
   <div id="audrDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)document.getElementById('audrDetailModal').style.display='none'">
     <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0;">
-        <div style="font-family:'DM Serif Display',serif;font-size:17px;">Detalhe do Processo</div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px;">Detalhe do Processo</div>
         <button onclick="document.getElementById('audrDetailModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1;">×</button>
       </div>
       <div id="audrDetailModalBody" style="padding:18px 20px;"></div>
@@ -11785,7 +11785,7 @@
     <div style="background:#fff;border-radius:14px;max-width:680px;margin:0 auto;box-shadow:0 8px 40px rgba(0,0,0,.22);overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #f0f0f0;">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:18px;"><svg class="ico"><use href="#ico-search"/></svg> Fases reais no AdvBox</div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;"><svg class="ico"><use href="#ico-search"/></svg> Fases reais no AdvBox</div>
           <div style="font-size:12px;color:#888;margin-top:2px;" id="stagesModalSub">Somente processos ativos</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -11795,7 +11795,7 @@
       </div>
       <div style="padding:14px 22px 6px;">
         <input id="stagesSearch" type="text" placeholder="Filtrar fase..." oninput="filterStages(this.value)"
-          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #e5e5e5;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #e5e5e5;border-radius:7px;font-size:13px;font-family:'Inter',sans-serif;">
       </div>
       <div id="stagesModalBody" style="padding:8px 22px 22px;max-height:60vh;overflow-y:auto;">
         <div style="text-align:center;padding:32px;color:#aaa;">Carregando…</div>
@@ -11810,7 +11810,7 @@
       <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;">ASAAS · sandbox</div>
-          <h2 style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;margin:0;line-height:1.1;">Cobrança em lote</h2>
+          <h2 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:400;margin:0;line-height:1.1;">Cobrança em lote</h2>
           <div style="font-size:11.5px;color:#888;margin-top:2px;"><span id="cobrCount">0</span> inadimplente(s) selecionado(s)</div>
         </div>
         <button onclick="document.getElementById('cobrancaLoteModal').style.display='none'" style="background:none;border:none;font-size:24px;cursor:pointer;color:#aaa;">×</button>
