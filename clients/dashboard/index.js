@@ -107,24 +107,28 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // ── Auth: login / logout / me ────────────────────────────────────────────────
-const USERS = {
-  [config.users.admin.username]: { password: config.users.admin.password, role: 'admin' },
-  [config.users.team.username]:  { password: config.users.team.password,  role: 'team'  },
+// Perfis genéricos (admin/team) — sobrevivem da época pré-multi-user. Senha
+// pode vir como hash bcrypt (preferido) ou texto puro (fallback).
+const GENERIC_USERS = {
+  [config.users.admin.username]: {
+    plain: config.users.admin.password,
+    hash:  config.users.admin.passwordHash,
+    role:  'admin',
+  },
+  [config.users.team.username]: {
+    plain: config.users.team.password,
+    hash:  config.users.team.passwordHash,
+    role:  'team',
+  },
 };
 
-const { findTeamUser } = require('../../services/team-users');
+const { findTeamUser, verifyPassword } = require('../../services/team-users');
 
 app.post('/api/login', loginLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body || {};
 
-  // 1) Tenta usuário individual do time (advogados) — sempre roda pra timing-safe
-  const teamUser = findTeamUser(username, String(password || ''));
-
-  // 2) Fallback nos perfis genéricos antigos (admin/team)
-  const user = USERS[username];
-  const expected = user?.password || '';
-  const genericOk = !!user && expected.length > 0 && safeCompare(String(password || ''), expected);
-
+  // 1) Usuário individual da equipe (advogados). Já é timing-safe internamente.
+  const teamUser = await findTeamUser(username, String(password || ''));
   if (teamUser) {
     req.session.user = {
       username: teamUser.username,
@@ -134,7 +138,15 @@ app.post('/api/login', loginLimiter, asyncHandler(async (req, res) => {
     };
     return res.json({ ok: true, role: teamUser.role });
   }
-  if (!genericOk) throw new AuthenticationError('Usuário ou senha incorretos.');
+
+  // 2) Fallback perfis genéricos antigos (admin/team).
+  const user = GENERIC_USERS[username];
+  const genericOk = !!user && await verifyPassword(password, user.plain, user.hash);
+  if (genericOk && (user.hash ? false : !!user.plain)) {
+    logger.warn({ username }, '[Auth] Login genérico usando senha em TEXTO PURO — defina *_PASS_HASH e migre');
+  }
+
+  if (!user || !genericOk) throw new AuthenticationError('Usuário ou senha incorretos.');
   req.session.user = { username, role: user.role };
   res.json({ ok: true, role: user.role });
 }));

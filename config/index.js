@@ -59,9 +59,19 @@ const config = Object.freeze({
   })(),
 
   // ── Usuários ────────────────────────────────────────────────────────────────
+  // Preferência: *_PASS_HASH (bcrypt). Fallback: *_PASS (texto puro, com warning).
+  // Migração: `node scripts/hash-password.js`.
   users: {
-    admin: { username: optional('ADMIN_USER', 'eduardo'), password: optional('ADMIN_PASS', '') },
-    team:  { username: optional('TEAM_USER',  'time'),    password: optional('TEAM_PASS',  '') },
+    admin: {
+      username:     optional('ADMIN_USER', 'eduardo'),
+      password:     optional('ADMIN_PASS', ''),
+      passwordHash: optional('ADMIN_PASS_HASH', ''),
+    },
+    team: {
+      username:     optional('TEAM_USER', 'time'),
+      password:     optional('TEAM_PASS', ''),
+      passwordHash: optional('TEAM_PASS_HASH', ''),
+    },
   },
 
   // ── API Key (acesso somente-leitura admin) ──────────────────────────────────
