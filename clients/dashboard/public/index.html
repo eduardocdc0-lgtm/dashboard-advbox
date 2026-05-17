@@ -2670,9 +2670,127 @@
         box-shadow: 4px 0 16px rgba(0,0,0,0.08);
       }
     }
+
+    /* ── ÍCONES SVG EDITORIAIS (substituem emojis) ─────────────────────
+       Uso: <svg class="ico"><use href="#ico-clipboard"/></svg>
+       Tamanho herda do font-size do pai; cor herda do color.
+       ───────────────────────────────────────────────────────────────── */
+    .ico {
+      display: inline-block;
+      width: 1.05em; height: 1.05em;
+      vertical-align: -0.18em;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .ico--sm { width: 0.95em; height: 0.95em; }
+    .ico--lg { width: 1.3em;  height: 1.3em;  }
+    .ico--danger  { color: var(--danger); }
+    .ico--warning { color: var(--warning); }
+    .ico--success { color: var(--success); }
+    .ico--accent  { color: var(--accent); }
+    .ov-col-icon  { font-size: 16px; line-height: 1; color: var(--text-2); }
   </style>
 </head>
 <body>
+
+  <!-- ═══ BIBLIOTECA DE ÍCONES (SVG symbols, traço fino editorial) ═══ -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="ico-clipboard" viewBox="0 0 24 24">
+      <rect x="5" y="4" width="14" height="17" rx="1.5"/>
+      <rect x="9" y="2.5" width="6" height="4" rx="1"/>
+      <path d="M9 11h6M9 15h6M9 18h4"/>
+    </symbol>
+    <symbol id="ico-gavel" viewBox="0 0 24 24">
+      <path d="M12 3v18M5 21h14"/>
+      <path d="M6 8.5L4 13h4z M18 8.5L16 13h4z"/>
+      <path d="M5 6h14"/>
+    </symbol>
+    <symbol id="ico-coins" viewBox="0 0 24 24">
+      <ellipse cx="9" cy="7" rx="6" ry="2.5"/>
+      <path d="M3 7v4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V7"/>
+      <path d="M3 11v4c0 1.4 2.7 2.5 6 2.5"/>
+      <ellipse cx="15" cy="16" rx="6" ry="2.5"/>
+      <path d="M9 19c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-3"/>
+    </symbol>
+    <symbol id="ico-receipt" viewBox="0 0 24 24">
+      <path d="M5 2h14v20l-2.5-1.5L14 22l-2-1.5L10 22l-2.5-1.5L5 22z"/>
+      <path d="M9 7h6M9 11h6M9 15h4"/>
+    </symbol>
+    <symbol id="ico-alert" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.2"/>
+      <path d="M12 7.5v5.5M12 16.5v.01"/>
+    </symbol>
+    <symbol id="ico-warning" viewBox="0 0 24 24">
+      <path d="M12 3L22 20.5H2z"/>
+      <path d="M12 10v5M12 18v.01"/>
+    </symbol>
+    <symbol id="ico-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.2"/>
+      <path d="M15 15l5 5"/>
+    </symbol>
+    <symbol id="ico-gift" viewBox="0 0 24 24">
+      <rect x="3" y="9" width="18" height="12" rx="1"/>
+      <path d="M3 14h18M12 9v12"/>
+      <path d="M12 9c0-3-3-3-3-5 0-1 .8-1.2 1.5-1 1 .3 1.5 2 1.5 3 0-1 .5-2.7 1.5-3 .7-.2 1.5 0 1.5 1 0 2-3 2-3 5z"/>
+    </symbol>
+    <symbol id="ico-cog" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3M12 19v3M22 12h-3M5 12H2M19.07 4.93l-2.12 2.12M7.05 16.95l-2.12 2.12M19.07 19.07l-2.12-2.12M7.05 7.05L4.93 4.93"/>
+    </symbol>
+    <symbol id="ico-eye" viewBox="0 0 24 24">
+      <path d="M2 12c2.5-5 6-7.5 10-7.5s7.5 2.5 10 7.5c-2.5 5-6 7.5-10 7.5S4.5 17 2 12z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="ico-eye-off" viewBox="0 0 24 24">
+      <path d="M3 3l18 18"/>
+      <path d="M10.5 6.2C11 6.1 11.5 6 12 6c4 0 7.5 2.5 10 6-.7 1-1.5 2-2.4 2.7"/>
+      <path d="M4.4 7.7C3.5 8.6 2.7 9.7 2 12c2.5 5 6 7.5 10 7.5 1.5 0 2.8-.3 4-.8"/>
+      <path d="M9.5 9.7A3 3 0 0014 14.3"/>
+    </symbol>
+    <symbol id="ico-refresh" viewBox="0 0 24 24">
+      <path d="M21 12a9 9 0 11-2.7-6.4"/>
+      <path d="M21 3v5h-5"/>
+    </symbol>
+    <symbol id="ico-home" viewBox="0 0 24 24">
+      <path d="M3 11l9-8 9 8M5 10v11h14V10"/>
+    </symbol>
+    <symbol id="ico-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3.5"/>
+      <path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      <circle cx="17" cy="9" r="2.8"/>
+      <path d="M16 15c2.8 0 5 2 5 5"/>
+    </symbol>
+    <symbol id="ico-chart" viewBox="0 0 24 24">
+      <path d="M3 3v18h18"/>
+      <path d="M7 14l4-4 4 4 5-6"/>
+    </symbol>
+    <symbol id="ico-bars" viewBox="0 0 24 24">
+      <rect x="4"  y="11" width="3" height="9"/>
+      <rect x="10" y="6"  width="3" height="14"/>
+      <rect x="16" y="14" width="3" height="6"/>
+    </symbol>
+    <symbol id="ico-news" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="1.5"/>
+      <path d="M7 8h6M7 12h10M7 16h10"/>
+    </symbol>
+    <symbol id="ico-wallet" viewBox="0 0 24 24">
+      <rect x="3" y="6" width="18" height="13" rx="1.5"/>
+      <path d="M3 10h18M16 14h2"/>
+    </symbol>
+    <symbol id="ico-sliders" viewBox="0 0 24 24">
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/>
+      <circle cx="16" cy="6" r="2"/>
+      <circle cx="10" cy="12" r="2"/>
+      <circle cx="18" cy="18" r="2"/>
+    </symbol>
+    <symbol id="ico-chat" viewBox="0 0 24 24">
+      <path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z"/>
+    </symbol>
+    <symbol id="ico-pulse" viewBox="0 0 24 24">
+      <path d="M3 12h4l3-8 4 16 3-8h4"/>
+    </symbol>
+  </svg>
 
   <!-- LOGIN OVERLAY — Editorial / Brand ER -->
   <div id="loginOverlay">
@@ -2739,7 +2857,7 @@
       <!-- Início -->
       <div class="nav-group" data-group="inicio">
         <button class="nav-group-header" onclick="toggleGroup('inicio')">
-          <span class="nav-group-icon">🏠</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-home"/></svg></span>
           <span class="nav-group-label">Início</span>
           <span class="nav-group-chevron">▾</span>
         </button>
@@ -2751,13 +2869,13 @@
       <!-- Operação Jurídica -->
       <div class="nav-group" data-group="operacao">
         <button class="nav-group-header" onclick="toggleGroup('operacao')">
-          <span class="nav-group-icon">⚖️</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-gavel"/></svg></span>
           <span class="nav-group-label">Operação Jurídica</span>
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
-          <button class="nav-item tab" onclick="showTab('petitions', event)">🧾 Petições</button>
-          <button class="nav-item tab" onclick="showTab('publications', event); publicationsLoad();">📰 Publicações</button>
+          <button class="nav-item tab" onclick="showTab('petitions', event)"><svg class="ico"><use href="#ico-receipt"/></svg> Petições</button>
+          <button class="nav-item tab" onclick="showTab('publications', event); publicationsLoad();"><svg class="ico"><use href="#ico-news"/></svg> Publicações</button>
           <button class="nav-item tab" onclick="showTab('distribuicao', event)">Distribuição</button>
         </div>
       </div>
@@ -2765,14 +2883,14 @@
       <!-- Clientes -->
       <div class="nav-group" data-group="clientes">
         <button class="nav-group-header" onclick="toggleGroup('clientes')">
-          <span class="nav-group-icon">👥</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-users"/></svg></span>
           <span class="nav-group-label">Clientes</span>
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab" onclick="showTab('clients', event)">Lista de clientes</button>
           <button class="nav-item tab" onclick="showTab('registrations', event)">Cadastros pendentes</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('aniversarios', event)">🎂 Aniversários</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('aniversarios', event)"><svg class="ico"><use href="#ico-gift"/></svg> Aniversários</button>
           <button class="nav-item tab" onclick="showTab('canais', event)">Canais</button>
         </div>
       </div>
@@ -2780,7 +2898,7 @@
       <!-- Marketing -->
       <div class="nav-group" data-group="marketing">
         <button class="nav-group-header" onclick="toggleGroup('marketing')">
-          <span class="nav-group-icon">📈</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-chart"/></svg></span>
           <span class="nav-group-label">Marketing</span>
           <span class="nav-group-chevron">▾</span>
         </button>
@@ -2794,42 +2912,42 @@
       <!-- Financeiro -->
       <div class="nav-group" data-group="financeiro">
         <button class="nav-group-header" onclick="toggleGroup('financeiro')">
-          <span class="nav-group-icon">💰</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-wallet"/></svg></span>
           <span class="nav-group-label">Financeiro</span>
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('inadimplentes', event); inadimplentesLoad();">💸 Inadimplentes</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('inadimplentes', event); inadimplentesLoad();"><svg class="ico ico--danger"><use href="#ico-receipt"/></svg> Inadimplentes</button>
         </div>
       </div>
 
       <!-- Auditoria -->
       <div class="nav-group" data-group="auditoria">
         <button class="nav-group-header" onclick="toggleGroup('auditoria')">
-          <span class="nav-group-icon">🔍</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-search"/></svg></span>
           <span class="nav-group-label">Auditoria</span>
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
-          <button class="nav-item tab" id="auditTab" onclick="showTab('auditoria', event)">🚨 Auditoria geral</button>
+          <button class="nav-item tab" id="auditTab" onclick="showTab('auditoria', event)"><svg class="ico ico--danger"><use href="#ico-alert"/></svg> Auditoria geral</button>
           <button class="nav-item tab admin-tab" onclick="showTab('auditresp', event)">Por responsável</button>
-          <button class="nav-item tab" onclick="showTab('auditusage', event)">📊 Auditoria de uso</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('controller', event); controllerLoad();">🎛️ Controller</button>
+          <button class="nav-item tab" onclick="showTab('auditusage', event)"><svg class="ico"><use href="#ico-bars"/></svg> Auditoria de uso</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('controller', event); controllerLoad();"><svg class="ico"><use href="#ico-sliders"/></svg> Controller</button>
         </div>
       </div>
 
       <!-- Sistema -->
       <div class="nav-group" data-group="sistema">
         <button class="nav-group-header" onclick="toggleGroup('sistema')">
-          <span class="nav-group-icon">⚙️</span>
+          <span class="nav-group-icon"><svg class="ico"><use href="#ico-cog"/></svg></span>
           <span class="nav-group-label">Sistema</span>
           <span class="nav-group-chevron">▾</span>
         </button>
         <div class="nav-group-items">
           <button class="nav-item tab admin-tab" onclick="showTab('admin', event)">Admin</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('discordMsgs', event); discordLoadList();">💬 Mensagens (Discord)</button>
-          <button class="nav-item tab admin-tab" onclick="showTab('diagnostico', event); loadDiagnostico();">🩺 Diagnóstico</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('discordMsgs', event); discordLoadList();"><svg class="ico"><use href="#ico-chat"/></svg> Mensagens (Discord)</button>
+          <button class="nav-item tab admin-tab" onclick="showTab('diagnostico', event); loadDiagnostico();"><svg class="ico"><use href="#ico-pulse"/></svg> Diagnóstico</button>
         </div>
       </div>
 
@@ -2856,22 +2974,22 @@
       <button class="tab active admin-tab" onclick="showTab('overview', event)">Visão geral</button>
       <button class="tab admin-tab" onclick="showTab('processes', event)">Processos</button>
       <button class="tab admin-tab" onclick="showTab('movements', event)">Movimentações</button>
-      <button class="tab" onclick="showTab('petitions', event)">🧾 Petições</button>
+      <button class="tab" onclick="showTab('petitions', event)"><svg class="ico"><use href="#ico-receipt"/></svg> Petições</button>
       <button class="tab admin-tab" onclick="showTab('financial', event)">Financeiro</button>
-      <button class="tab" onclick="showTab('auditoria', event)">🚨 Auditoria</button>
-      <button class="tab" onclick="showTab('fluxo', event)">🚧 Gargalos</button>
+      <button class="tab" id="auditTab" onclick="showTab('auditoria', event)"><svg class="ico ico--danger"><use href="#ico-alert"/></svg> Auditoria</button>
+      <button class="tab" onclick="showTab('fluxo', event)"><svg class="ico ico--warning"><use href="#ico-warning"/></svg> Gargalos</button>
       <span class="tab-sep"></span>
       <button class="tab" onclick="showTab('clients', event)">Clientes</button>
       <button class="tab" onclick="showTab('registrations', event)">Cadastros Pendentes</button>
       <button class="tab" onclick="showTab('canais', event)">Canais</button>
       <button class="tab" onclick="showTab('distribuicao', event)">Distribuição</button>
       <span class="tab-sep"></span>
-      <button class="tab admin-tab" onclick="showTab('auditresp', event)">🔍 Auditoria Resp.</button>
+      <button class="tab admin-tab" onclick="showTab('auditresp', event)"><svg class="ico"><use href="#ico-search"/></svg> Auditoria Resp.</button>
       <button class="tab admin-tab" onclick="showTab('metaads', event)">Meta Ads</button>
       <button class="tab admin-tab" onclick="showTab('evolucao', event)">Evolução</button>
       <button class="tab admin-tab" onclick="showTab('leads', event)">Leads</button>
-      <button class="tab admin-tab" onclick="showTab('aniversarios', event)">🎂 Aniversários</button>
-      <button class="tab admin-tab" onclick="showTab('admin', event)">⚙ Admin</button>
+      <button class="tab admin-tab" onclick="showTab('aniversarios', event)"><svg class="ico"><use href="#ico-gift"/></svg> Aniversários</button>
+      <button class="tab admin-tab" onclick="showTab('admin', event)"><svg class="ico"><use href="#ico-cog"/></svg> Admin</button>
     </div>
 
     <!-- ABA 1: VISÃO GERAL -->
@@ -2890,9 +3008,9 @@
             <button class="ov-today" onclick="ovGoToday()">hoje</button>
           </div>
           <button class="mask-toggle" id="maskToggleBtn" onclick="toggleMaskValues()" aria-pressed="false" aria-label="Ocultar valores monetários" title="Esconder/mostrar valores">
-            <span id="maskToggleIcon">👁</span><span id="maskToggleLabel">Ocultar</span>
+            <svg class="ico" id="maskToggleIcon"><use href="#ico-eye"/></svg><span id="maskToggleLabel">Ocultar</span>
           </button>
-          <button class="btn-link" onclick="loadOverview(true)" aria-label="Atualizar dados">↻ Atualizar</button>
+          <button class="btn-link" onclick="loadOverview(true)" aria-label="Atualizar dados"><svg class="ico"><use href="#ico-refresh"/></svg> Atualizar</button>
         </div>
       </header>
 
@@ -6465,15 +6583,16 @@
       // Badge no header
       const badge = document.getElementById('auditBadge');
       if (filtCrit.length > 0) {
-        badge.textContent = `🚨 ${filtCrit.length} alerta${filtCrit.length > 1 ? 's' : ''} crítico${filtCrit.length > 1 ? 's' : ''}`;
-        badge.style.display = 'inline-block';
+        badge.innerHTML = `<svg class="ico" style="color:#fff;margin-right:4px;"><use href="#ico-alert"/></svg>${filtCrit.length} alerta${filtCrit.length > 1 ? 's' : ''} crítico${filtCrit.length > 1 ? 's' : ''}`;
+        badge.style.display = 'inline-flex';
+        badge.style.alignItems = 'center';
         const tabBtn = document.getElementById('auditTab');
         if (tabBtn) tabBtn.innerHTML =
-          `🚨 Auditoria <span style="background:#c0392b;color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;">${filtCrit.length}</span>`;
+          `<svg class="ico ico--danger"><use href="#ico-alert"/></svg> Auditoria <span style="background:#c0392b;color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;">${filtCrit.length}</span>`;
       } else {
         badge.style.display = 'none';
         const tabBtn = document.getElementById('auditTab');
-        if (tabBtn) tabBtn.textContent = '🚨 Auditoria';
+        if (tabBtn) tabBtn.innerHTML = `<svg class="ico ico--danger"><use href="#ico-alert"/></svg> Auditoria`;
       }
 
       // Visibilidade das seções por filtro
@@ -10313,7 +10432,7 @@
       const icon  = document.getElementById('maskToggleIcon');
       const label = document.getElementById('maskToggleLabel');
       const btn   = document.getElementById('maskToggleBtn');
-      if (icon)  icon.textContent  = masked ? '🙈' : '👁';
+      if (icon)  icon.innerHTML    = `<use href="#ico-${masked ? 'eye-off' : 'eye'}"/>`;
       if (label) label.textContent = masked ? 'Mostrar' : 'Ocultar';
       if (btn)   btn.setAttribute('aria-pressed', masked ? 'true' : 'false');
     }
@@ -10389,7 +10508,7 @@
       const html = `
         <!-- Processos ADM -->
         <details class="ov-col">
-          <summary class="ov-col-hdr"><span class="ov-col-icon">📋</span><span class="ov-col-name">Processos ADM</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <summary class="ov-col-hdr"><span class="ov-col-icon"><svg class="ico"><use href="#ico-clipboard"/></svg></span><span class="ov-col-name">Processos ADM</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
           <div class="ov-col-body">
             <div class="ov-section">
               <div class="ov-row" onclick="ovToggleRow(this)">
@@ -10404,7 +10523,7 @@
 
         <!-- Judicial -->
         <details class="ov-col">
-          <summary class="ov-col-hdr"><span class="ov-col-icon">⚖️</span><span class="ov-col-name">Judicial</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <summary class="ov-col-hdr"><span class="ov-col-icon"><svg class="ico"><use href="#ico-gavel"/></svg></span><span class="ov-col-name">Judicial</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
           <div class="ov-col-body">
             <div class="ov-section">
               <div class="ov-row" onclick="ovToggleRow(this)">
@@ -10433,7 +10552,7 @@
 
         <!-- Financeiro (Críticos) -->
         <details class="ov-col">
-          <summary class="ov-col-hdr"><span class="ov-col-icon">🚨</span><span class="ov-col-name">Financeiro</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <summary class="ov-col-hdr"><span class="ov-col-icon ico--danger"><svg class="ico"><use href="#ico-alert"/></svg></span><span class="ov-col-name">Financeiro</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
           <div class="ov-col-body">
             <div class="ov-section">
               <div class="ov-row" onclick="ovToggleRow(this)">
@@ -10448,7 +10567,7 @@
 
         <!-- Receitas -->
         <details class="ov-col">
-          <summary class="ov-col-hdr"><span class="ov-col-icon">💰</span><span class="ov-col-name">Receitas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <summary class="ov-col-hdr"><span class="ov-col-icon ico--success"><svg class="ico"><use href="#ico-coins"/></svg></span><span class="ov-col-name">Receitas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
           <div class="ov-col-body">
             <div class="ov-section">
               <div class="ov-row">
@@ -10470,7 +10589,7 @@
 
         <!-- Despesas -->
         <details class="ov-col">
-          <summary class="ov-col-hdr"><span class="ov-col-icon">💸</span><span class="ov-col-name">Despesas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
+          <summary class="ov-col-hdr"><span class="ov-col-icon ico--danger"><svg class="ico"><use href="#ico-receipt"/></svg></span><span class="ov-col-name">Despesas</span><span class="ov-col-chevron" aria-hidden="true">▾</span></summary>
           <div class="ov-col-body">
             <div class="ov-section">
               <div class="ov-row">
