@@ -61,11 +61,6 @@ async function ensureTables() {
 
 // ── Acesso ao snapshot ──────────────────────────────────────────────────────
 
-async function getPreviousStage(lawsuitId) {
-  const res = await query('SELECT stage FROM lawsuit_stage_snapshot WHERE lawsuit_id = $1', [lawsuitId]);
-  return res.rows[0]?.stage || null;
-}
-
 async function updateSnapshot(lawsuitId, stage) {
   await query(`
     INSERT INTO lawsuit_stage_snapshot (lawsuit_id, stage, updated_at)
@@ -74,42 +69,46 @@ async function updateSnapshot(lawsuitId, stage) {
   `, [lawsuitId, stage]);
 }
 
-async function alreadyDispatched(lawsuitId, workflowName) {
-  // Considera "já feito" só quando NÃO houve erro. Tentativas falhadas
-  // permitem retry no próximo ciclo.
-  const res = await query(`
-    SELECT 1 FROM workflow_dispatched
-    WHERE lawsuit_id = $1 AND workflow_name = $2 AND error_message IS NULL
-  `, [lawsuitId, workflowName]);
-  return res.rows.length > 0;
+// ── Batch preload pra eliminar N+1 dentro do loop ───────────────────────────
+// O ciclo varre ~500 lawsuits. Antes: 3 queries por iteração (getPreviousStage
+// + alreadyDispatched + getAlreadyCreatedTaskIds) = ~1500 round-trips/ciclo
+// (cron horário batia o Postgres do Replit). Agora 2 queries no boot do ciclo
+// e o loop só consulta estruturas em memória.
+//
+// Tamanhos: stage_snapshot ≈ N processos ativos (~500), workflow_dispatched ≈
+// total de workflows já tentados (~500-5000). Negligível pra carregar inteiro.
+
+async function loadStageSnapshotMap() {
+  const res = await query('SELECT lawsuit_id, stage FROM lawsuit_stage_snapshot');
+  const map = new Map();
+  for (const row of res.rows) map.set(Number(row.lawsuit_id), row.stage);
+  return map;
 }
 
-/**
- * Pra retry de workflow que falhou no meio: retorna Set<tasks_id> das tarefas
- * que JÁ foram criadas com sucesso em tentativa anterior. Permite o retry
- * pular essas e só tentar as que faltaram. Sem isso, retry recria tudo e
- * gera duplicação na cabeça da equipe (queixa real da Letícia).
- */
-async function getAlreadyCreatedTaskIds(lawsuitId, workflowName) {
-  const res = await query(`
-    SELECT posts_created FROM workflow_dispatched
-    WHERE lawsuit_id = $1 AND workflow_name = $2
-    LIMIT 1
-  `, [lawsuitId, workflowName]);
-  if (!res.rows.length) return new Set();
-  const pc = res.rows[0].posts_created;
-  if (!pc) return new Set();
-  // Formato novo: { created: [...], skipped: [...] }
-  // Formato antigo (legado): array direto [...]
-  const arr = Array.isArray(pc) ? pc : (Array.isArray(pc.created) ? pc.created : []);
-  const ids = new Set();
-  for (const item of arr) {
-    const tid = Number(item?.tasks_id);
-    // O formato antigo não salvava tasks_id — só task name + post_id. Não tem
-    // como inferir. O formato novo (introduzido nesta onda) salva tasks_id.
-    if (tid) ids.add(tid);
+async function loadDispatchedIndex() {
+  const res = await query(
+    'SELECT lawsuit_id, workflow_name, posts_created, error_message FROM workflow_dispatched'
+  );
+  const dispatchedKeys = new Set();      // só sucessos (alreadyDispatched semantics)
+  const createdIdsByKey = new Map();     // TUDO (sucessos + falhas) — retry usa pra pular criadas
+
+  for (const row of res.rows) {
+    const key = `${row.lawsuit_id}:${row.workflow_name}`;
+    if (row.error_message == null) dispatchedKeys.add(key);
+
+    const pc = row.posts_created;
+    if (!pc) continue;
+    // Formato novo: { created: [...], skipped: [...] }
+    // Formato antigo (legado): array direto [...] — sem tasks_id, ids vão vazios.
+    const arr = Array.isArray(pc) ? pc : (Array.isArray(pc.created) ? pc.created : []);
+    const ids = new Set();
+    for (const item of arr) {
+      const tid = Number(item?.tasks_id);
+      if (tid) ids.add(tid);
+    }
+    if (ids.size > 0) createdIdsByKey.set(key, ids);
   }
-  return ids;
+  return { dispatchedKeys, createdIdsByKey };
 }
 
 async function markDispatched(lawsuitId, workflowName, stage, postsCreated, errorMessage) {
@@ -316,8 +315,19 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
   if (onlyLawsuitId) lawsuits = lawsuits.filter(l => Number(l.id) === Number(onlyLawsuitId));
   logger.info(`[Auto-Workflow] Analisando ${lawsuits.length} lawsuits${force ? ' (force=1)' : ''}...`);
 
-  // Pré-carrega índice de tarefas recentes (Justino, manual, etc) pra dedup
-  const recentIdx = await buildRecentPostsIndex(logger);
+  // Pré-carrega TUDO de Postgres em paralelo. Loop abaixo não vai mais ao DB
+  // pra consultar snapshot/dispatched/created — só pra escrever (markDispatched
+  // e updateSnapshot, que são por-iteração mesmo).
+  const [recentIdx, stageSnapshotMap, dispatchedIdx] = await Promise.all([
+    buildRecentPostsIndex(logger),                  // dedup global (AdvBox posts ~7d)
+    loadStageSnapshotMap(),                          // ex-getPreviousStage
+    loadDispatchedIndex(),                           // ex-alreadyDispatched + getAlreadyCreatedTaskIds
+  ]);
+  logger.info(
+    `[Auto-Workflow] Preload: ${stageSnapshotMap.size} snapshots, ` +
+    `${dispatchedIdx.dispatchedKeys.size} workflows com sucesso, ` +
+    `${dispatchedIdx.createdIdsByKey.size} workflows com tasks criadas anteriormente`
+  );
 
   let novos = 0;
   let criados = 0;
@@ -332,7 +342,7 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
     const newStage = normStr(law.stage);
     if (!newStage) continue;
 
-    const prevStage = await getPreviousStage(lawId);
+    const prevStage = stageSnapshotMap.get(Number(lawId)) || null;
     const mudou = prevStage !== newStage;
 
     // SAFETY: na primeira vez que vemos um processo (prevStage === null),
@@ -358,7 +368,8 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
 
     if (deveDisparar) {
       const tpl = TEMPLATES[newStage];
-      if (!(await alreadyDispatched(lawId, tpl.name))) {
+      const dispatchKey = `${lawId}:${tpl.name}`;
+      if (!dispatchedIdx.dispatchedKeys.has(dispatchKey)) {
         novos++;
         if (dryRun) {
           detalhes.push({ lawId, stage: newStage, workflow: tpl.name, dryRun: true });
@@ -369,7 +380,7 @@ async function _runCycleLocked({ logger, dryRun, forceRefresh, force, onlyLawsui
           //  2. Dedup global: pula tasks que existem nas últimas 168h por
           //     qualquer fonte (Justino, manual, outro workflow)
           //  3. Atualização incremental do índice intra-ciclo
-          const alreadyCreatedIds = await getAlreadyCreatedTaskIds(lawId, tpl.name);
+          const alreadyCreatedIds = dispatchedIdx.createdIdsByKey.get(dispatchKey) || new Set();
           const created = [];
           const skipped = [];
           let firstError = null;
