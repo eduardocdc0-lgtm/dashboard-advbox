@@ -34,18 +34,14 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
-[userenv]
-
-[userenv.shared]
-ADMIN_USER = "eduardorodrigues14"
-TEAM_USER = "colaboradores"
-META_AD_ACCOUNT = "act_654132083965752"
-CHATGURU_BASE_URL = "https://s22.chatguru.app/api/v1"
-CHATGURU_ACCOUNT_ID = "68556125935dd1f4daa66113"
-CHATGURU_PHONE_ID = "685583d868af7cad8a92d601"
-CHATGURU_SENDER_NUMBER = "5581999304526"
-CHATGURU_API_KEY = "ADXKASEXXTAKDOB1DOR5A1J5OS0Q84GTIO59BAZGEX5DOV4XDQO528FLKHFY7CJJ"
-READ_API_KEY = "ltIXQNDoDCYCAAvGiKpeIEAE0s6fB1AOvP8Lo3wGGMS5a6u8"
+# ── IMPORTANTE ──────────────────────────────────────────────────────────────
+# NUNCA adicionar seção [userenv.shared] aqui — este arquivo vai pro Git.
+# Variáveis de ambiente (CHATGURU_API_KEY, READ_API_KEY, ADMIN_USER, etc) ficam
+# em Replit Secrets (Tools → Secrets). Boot lê via process.env normalmente.
+#
+# Histórico: este arquivo já teve tokens commitados — todos rotacionados em
+# 2026-05-16 após audit de segurança. Histórico mantido para referência.
+# ────────────────────────────────────────────────────────────────────────────
 
 [deployment]
 deploymentTarget = "autoscale"
