@@ -101,9 +101,12 @@ const config = Object.freeze({
   },
 
   // ── Banco ───────────────────────────────────────────────────────────────────
+  // poolMax default 5: Replit small tem RAM/CPU limitada e o auto-workflow
+  // pega 1 conexão dedicada pro advisory lock — 5 deixa margem confortável
+  // sem estourar. Setar DB_POOL_MAX=10 ou mais se sair de container pequeno.
   db: {
     url:     optional('DATABASE_URL', ''),
-    poolMax: intOpt('DB_POOL_MAX', 10),
+    poolMax: intOpt('DB_POOL_MAX', 5),
   },
 
   // ── Limites ─────────────────────────────────────────────────────────────────

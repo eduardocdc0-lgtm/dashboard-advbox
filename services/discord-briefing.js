@@ -16,6 +16,14 @@
 const fetch = require('node-fetch');
 const { fetchAllPosts, fetchTransactions } = require('./data');
 
+// Helper de fuso horário — Recife é America/Recife (UTC-3, sem DST).
+// toISOString() retorna UTC: entre 21h e 00h local, o "dia" UTC já mudou
+// e o briefing passa a olhar o dia seguinte como "hoje". Usar sv-SE
+// dá formato YYYY-MM-DD compatível com a comparação por string.
+function ymdRecife(d = new Date()) {
+  return new Date(d).toLocaleDateString('sv-SE', { timeZone: 'America/Recife' });
+}
+
 const COLORS = {
   green:  0x166534,
   yellow: 0xB45309,
@@ -57,8 +65,8 @@ async function buildBriefing() {
   ]);
 
   const agora = Date.now();
-  const hojeStr = new Date().toISOString().slice(0,10);
-  const amanha = new Date(agora + 86400000).toISOString().slice(0,10);
+  const hojeStr = ymdRecife();
+  const amanha = ymdRecife(agora + 86400000);
 
   // ── Tarefas vencidas ────────────────────────────────────────────────────
   const vencidas = posts
@@ -70,7 +78,7 @@ async function buildBriefing() {
       if (concluido) return false;
       // Se tem date (data do evento) no futuro, não é vencida real
       if (t.date && new Date(t.date).getTime() >= agora) return false;
-      return new Date(prazo).getTime() < agora && new Date(prazo).toISOString().slice(0,10) !== hojeStr;
+      return new Date(prazo).getTime() < agora && ymdRecife(prazo) !== hojeStr;
     })
     .map(t => ({
       id: t.id,
@@ -87,13 +95,13 @@ async function buildBriefing() {
       const u = (t.users || [])[0];
       const concluido = u && (u.completed != null && u.completed !== false && u.completed !== 0);
       if (concluido) return false;
-      const prazoStr = t.date_deadline ? new Date(t.date_deadline).toISOString().slice(0,10) : null;
+      const prazoStr = t.date_deadline ? ymdRecife(t.date_deadline) : null;
       return prazoStr === hojeStr || prazoStr === amanha;
     })
     .map(t => ({
       task: t.task || 'tarefa',
       responsavel: nomeUsuario(t),
-      prazo: t.date_deadline ? new Date(t.date_deadline).toISOString().slice(0,10) : '',
+      prazo: t.date_deadline ? ymdRecife(t.date_deadline) : '',
     }))
     .slice(0, 10);
 
@@ -133,7 +141,7 @@ async function buildBriefing() {
   ).reduce((s,t) => s + Number(t.amount || 0), 0);
 
   // ── A pagar (expense próximos 30 dias) ──────────────────────────────────
-  const em30 = new Date(agora + 30*86400000).toISOString().slice(0,10);
+  const em30 = ymdRecife(agora + 30*86400000);
   const aPagar = transactions.filter(t =>
     t.entry_type === 'expense' && !t.date_payment &&
     t.date_due && t.date_due <= em30 && t.date_due >= hojeStr

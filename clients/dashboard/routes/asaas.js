@@ -287,15 +287,23 @@ router.post('/asaas/webhook', async (req, res) => {
         console.warn('[ASAAS webhook] sync abortado: sem data', { payment_id: payment.id });
       } else if (txId && process.env.ADVBOX_TOKEN) {
         try {
-          const r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${process.env.ADVBOX_TOKEN}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: JSON.stringify({ date_payment: dataPagamento }),
-          });
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 10_000);
+          let r;
+          try {
+            r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${process.env.ADVBOX_TOKEN}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({ date_payment: dataPagamento }),
+              signal: ctrl.signal,
+            });
+          } finally {
+            clearTimeout(timer);
+          }
           if (r.ok) {
             synced = true;
             // Invalida cache de inadimplência — sem isso, Cau/Letícia podem
