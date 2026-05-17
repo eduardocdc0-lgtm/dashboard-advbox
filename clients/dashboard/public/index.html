@@ -5188,7 +5188,7 @@
       };
 
       const taskRow = t => {
-        const link = t.lawsuits_id ? `https://app.advbox.com.br/lawsuit/${t.lawsuits_id}` : '';
+        const link = t.lawsuits_id ? `https://app.advbox.com.br/lawsuits/${t.lawsuits_id}` : '';
         const hora = parseHora(t.completed);
         return `<div class="hoje-task-row">
           <div>
@@ -5644,7 +5644,7 @@
 
       const sevLabel = { crit: '<span class="dot dot--red"></span>', warn: '<span class="dot dot--yellow"></span>', ok: '<span class="dot dot--green"></span>', ext: '<span class="dot dot--green"></span>' };
       const rows = visible.map(l => {
-        const link = `https://app.advbox.com.br/lawsuit/${l.id}`;
+        const link = `https://app.advbox.com.br/lawsuits/${l.id}`;
         const nome = clientName(l);
         const dias = l.diasParado !== null ? l.diasParado + 'd' : '—';
         const rowCls = l.sev === 'crit' ? 'garg-row-crit' : l.sev === 'warn' ? 'garg-row-warn' : '';
@@ -5782,7 +5782,7 @@
         l.diasParado !== null ? l.diasParado : '',
         l.responsible || '',
         l.cat === 1 ? 'Espera Externa' : 'Ação do escritório',
-        `https://app.advbox.com.br/lawsuit/${l.id}`
+        `https://app.advbox.com.br/lawsuits/${l.id}`
       ]));
       const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
@@ -5898,7 +5898,7 @@
       const list = prodDetailData[type];
       const rows = list.map(l => {
         const nome = clientName(l);
-        const link = `https://app.advbox.com.br/${l.id}`;
+        const link = `https://app.advbox.com.br/lawsuits/${l.id}`;
         const dias = l.diasParado === 9999 ? '?' : l.diasParado;
         return `<tr class="clickable-row">
           <td><a class="cell-link" href="${link}" target="_blank">${nome}</a></td>
@@ -6005,7 +6005,7 @@
       }
 
       const rows = lista.map(t => {
-        const href = t.lawsuits_id ? `https://app.advbox.com.br/${t.lawsuits_id}` : null;
+        const href = t.lawsuits_id ? `https://app.advbox.com.br/lawsuits/${t.lawsuits_id}` : null;
         const rowClass = href ? 'clickable-row' : '';
         const cliente = t.lawsuit?.customers?.[0]?.name || '—';
         const dt = t.completedAt ? t.completedAt.substring(0, 10) : '—';
@@ -8655,7 +8655,7 @@
 
       const total = lista.reduce((s, l) => s + Number(l.fees_money || 0), 0);
       const rows  = lista.map(l => {
-        const href    = l.id ? `https://app.advbox.com.br/${l.id}` : null;
+        const href    = l.id ? `https://app.advbox.com.br/lawsuits/${l.id}` : null;
         const cliente = l.customers?.[0]?.name || '—';
         const etapa   = l.stage || l.step || '—';
         const resp    = l.responsible || '—';
@@ -9488,7 +9488,7 @@
           const typeLabel = (typeof finCatLabel === 'function') ? finCatLabel(it.type) : it.type;
           const typeStr   = it.installment ? `${typeLabel} <span style="color:#aaa;font-size:10px;">${it.installment}</span>` : typeLabel;
           const procLink  = it.lawsuit_id
-            ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuit_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>`
+            ? `<a href="https://app.advbox.com.br/lawsuits/${it.lawsuit_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>`
             : (it.process ? `<span style="font-size:11px;">${it.process}</span>` : '—');
           const respShort = (it.responsible || '').split(' ')[0];
           rows.push(`<tr class="${statusClass}">
@@ -9910,7 +9910,7 @@
       document.getElementById('petDetailCount').textContent = `— ${items.length} registro${items.length !== 1 ? 's' : ''}`;
       document.getElementById('petDetailTbody').innerHTML = items.length ? items.map(it => {
         const nome    = it.lawsuit_name || (it.lawsuits_id ? `Processo #${it.lawsuits_id}` : '—');
-        const link    = it.lawsuits_id ? `<a href="https://app.advbox.com.br/lawsuit/${it.lawsuits_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>` : '';
+        const link    = it.lawsuits_id ? `<a href="https://app.advbox.com.br/lawsuits/${it.lawsuits_id}" target="advbox" rel="noopener" style="color:#1a73e8;font-size:11px;" title="Abrir no AdvBox">↗</a>` : '';
         const dt      = it.created_at ? it.created_at.slice(0, 16).replace('T',' ') : '—';
         const task    = it.task || '—';
         return `<tr>
