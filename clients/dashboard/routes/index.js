@@ -29,5 +29,9 @@ router.use(require('./sentencas'));
 router.use(require('./asaas'));
 router.use(require('./publications'));
 router.use(require('./advbox-webhook'));
+router.use(require('./forecast'));
+router.use(require('./sla-leads'));
+router.use(require('./regua-cobranca'));
+router.use(require('./executivo'));
 
 module.exports = router;

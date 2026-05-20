@@ -36,6 +36,8 @@ const { startAutoWorkflowCron } = require('./cron/auto-workflow');
 const { startDiscordSchedulerCron } = require('./cron/discord-scheduler');
 const { startBriefingCron } = require('./cron/discord-briefing');
 const { startControllerSnapshotCron } = require('./cron/controller-snapshot');
+const { startSlaLeadsCron } = require('./cron/sla-leads');
+const { startReguaCobrancaCron } = require('./cron/regua-cobranca');
 const { AsaasClient }       = require('../../services/asaas-client');
 
 // ── Auto-register de webhook ASAAS no boot ──────────────────────────────────
@@ -234,6 +236,8 @@ migrate()
       startDiscordSchedulerCron({ logger });
       startBriefingCron({ logger });
       startControllerSnapshotCron({ logger });
+      startSlaLeadsCron({ logger });
+      startReguaCobrancaCron({ logger });
       // Auto-registra webhook ASAAS na conta do escritório, se token estiver
       // configurado. Idempotente (se já existir, não duplica). Falha silenciosa.
       ensureAsaasWebhookRegistered({ logger }).catch(err =>
