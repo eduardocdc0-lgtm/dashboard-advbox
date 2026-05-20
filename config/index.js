@@ -111,12 +111,15 @@ const config = Object.freeze({
   },
 
   // ── Banco ───────────────────────────────────────────────────────────────────
-  // poolMax default 5: Replit small tem RAM/CPU limitada e o auto-workflow
-  // pega 1 conexão dedicada pro advisory lock — 5 deixa margem confortável
-  // sem estourar. Setar DB_POOL_MAX=10 ou mais se sair de container pequeno.
+  // poolMax default 15: dimensionado pra suportar (a) 1 conexão dedicada do
+  // advisory lock do auto-workflow durante ciclos longos, (b) 2-3 conexões dos
+  // outros crons (briefing, snapshot) rodando em paralelo, (c) ~10 requests
+  // concorrentes da equipe sem timeout. Em containers muito pequenos pode
+  // baixar pra 10; abaixo disso o boot emite WARN porque histórico mostrou
+  // timeouts sob carga moderada.
   db: {
     url:     optional('DATABASE_URL', ''),
-    poolMax: intOpt('DB_POOL_MAX', 5),
+    poolMax: intOpt('DB_POOL_MAX', 15),
   },
 
   // ── Limites ─────────────────────────────────────────────────────────────────
@@ -135,6 +138,9 @@ function warnings() {
   const w = [];
   if (!config.advbox.token)      w.push('ADVBOX_TOKEN não configurado — endpoints AdvBox vão retornar erro.');
   if (!config.db.url)            w.push('DATABASE_URL não configurado — leads/aniversários/auditoria desativados.');
+  if (config.db.url && config.db.poolMax < 10) {
+    w.push(`DB_POOL_MAX=${config.db.poolMax} é baixo — crons + requests podem competir e gerar timeouts. Recomendado: 15.`);
+  }
   if (!config.readApiKey)        w.push('READ_API_KEY não configurada — autenticação por API Key desativada.');
   if (!config.users.admin.password && !config.users.team.password) {
     w.push('Nenhuma senha de usuário configurada (ADMIN_PASS / TEAM_PASS) — login não funcionará.');

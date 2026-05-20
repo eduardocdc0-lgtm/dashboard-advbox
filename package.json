@@ -29,6 +29,7 @@
     "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "eslint": "^9.15.0",
     "prettier": "^3.4.2"
   }
