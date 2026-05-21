@@ -11,6 +11,7 @@
 
 const cron = require('node-cron');
 const jobsRegistry = require('../../../services/jobs-registry');
+const { cronGuard } = jobsRegistry;
 
 const CRON_EXPR = '30 * * * * *';
 const TZ = 'America/Recife';
@@ -24,17 +25,13 @@ function startDiscordSchedulerCron({ logger = console } = {}) {
   }
 
   // A cada minuto, no segundo 30 (pra evitar bater com cron :15 e cron :0)
-  const job = cron.schedule(CRON_EXPR, async () => {
-    try {
-      const { runDueMessages } = require('../../../services/discord-scheduler');
-      const result = await runDueMessages({ logger });
-      if (result.enviadas > 0 || result.erros > 0) {
-        logger.info({ result }, '[Cron Discord] Ciclo concluído.');
-      }
-    } catch (err) {
-      logger.error({ err: err.message }, '[Cron Discord] Falha no ciclo.');
+  const job = cron.schedule(CRON_EXPR, () => cronGuard(JOB_NAME, async () => {
+    const { runDueMessages } = require('../../../services/discord-scheduler');
+    const result = await runDueMessages({ logger });
+    if (result.enviadas > 0 || result.erros > 0) {
+      logger.info({ result }, '[Cron Discord] Ciclo concluído.');
     }
-  }, { timezone: TZ });
+  }, { logger }), { timezone: TZ });
 
   logger.info('[Cron Discord] Agendado: a cada minuto (America/Recife).');
   jobsRegistry.register(JOB_NAME, { status: 'running', cronExpr: CRON_EXPR, timezone: TZ });

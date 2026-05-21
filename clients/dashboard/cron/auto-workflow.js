@@ -11,6 +11,7 @@
 
 const cron = require('node-cron');
 const jobsRegistry = require('../../../services/jobs-registry');
+const { cronGuard } = jobsRegistry;
 
 const CRON_EXPR = '15 * * * *';
 const TZ = 'America/Recife';
@@ -24,16 +25,12 @@ function startAutoWorkflowCron({ logger = console } = {}) {
   }
 
   // A cada hora no minuto 15 (pra não bater junto com outros crons)
-  const job = cron.schedule(CRON_EXPR, async () => {
-    try {
-      const { runCycle } = require('../../../services/auto-workflow');
-      logger.info('[Cron Auto-Workflow] Iniciando ciclo...');
-      const result = await runCycle({ logger, dryRun: false, forceRefresh: true });
-      logger.info({ result }, '[Cron Auto-Workflow] Ciclo concluído.');
-    } catch (err) {
-      logger.error({ err: err.message, stack: err.stack }, '[Cron Auto-Workflow] Falha no ciclo.');
-    }
-  }, { timezone: TZ });
+  const job = cron.schedule(CRON_EXPR, () => cronGuard(JOB_NAME, async () => {
+    const { runCycle } = require('../../../services/auto-workflow');
+    logger.info('[Cron Auto-Workflow] Iniciando ciclo...');
+    const result = await runCycle({ logger, dryRun: false, forceRefresh: true });
+    logger.info({ result }, '[Cron Auto-Workflow] Ciclo concluído.');
+  }, { logger }), { timezone: TZ });
 
   logger.info('[Cron Auto-Workflow] Agendado: a cada hora :15 (timezone America/Recife).');
   jobsRegistry.register(JOB_NAME, { status: 'running', cronExpr: CRON_EXPR, timezone: TZ });

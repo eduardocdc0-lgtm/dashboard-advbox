@@ -15,6 +15,7 @@
 
 const cron = require('node-cron');
 const jobsRegistry = require('../../../services/jobs-registry');
+const { cronGuard } = jobsRegistry;
 
 const DEFAULT_CRON = '0 23 * * *'; // 23h todos os dias
 const TZ = 'America/Recife';
@@ -28,16 +29,12 @@ function startControllerSnapshotCron({ logger = console } = {}) {
   }
 
   const cronExpr = process.env.CONTROLLER_SNAPSHOT_CRON || DEFAULT_CRON;
-  const job = cron.schedule(cronExpr, async () => {
-    try {
-      const { saveSnapshot } = require('../../../services/controller');
-      logger.info('[Cron Snapshot] Salvando snapshot do Controller...');
-      const result = await saveSnapshot({ force: true });
-      logger.info(`[Cron Snapshot] OK — ${result.saved}/${result.total} cats em ${result.date}`);
-    } catch (err) {
-      logger.error(`[Cron Snapshot] Erro: ${err.message}`);
-    }
-  }, { timezone: TZ });
+  const job = cron.schedule(cronExpr, () => cronGuard(JOB_NAME, async () => {
+    const { saveSnapshot } = require('../../../services/controller');
+    logger.info('[Cron Snapshot] Salvando snapshot do Controller...');
+    const result = await saveSnapshot({ force: true });
+    logger.info(`[Cron Snapshot] OK — ${result.saved}/${result.total} cats em ${result.date}`);
+  }, { logger }), { timezone: TZ });
 
   logger.info(`[Cron Snapshot] Agendado: "${cronExpr}" ${TZ}`);
   jobsRegistry.register(JOB_NAME, { status: 'running', cronExpr, timezone: TZ });
