@@ -51,8 +51,10 @@ class CircuitBreaker {
         this.metrics.rejections++;
         const remaining = Math.ceil((this.resetTimeoutMs - elapsed) / 1000);
         const err = new Error(`[CircuitBreaker:${this.name}] OPEN — request rejeitado, tente em ${remaining}s`);
-        err.code = 'CIRCUIT_OPEN';
-        err.breaker = this.name;
+        err.code           = 'CIRCUIT_OPEN';
+        err.breaker        = this.name;
+        err.retryAfterSec  = remaining;  // consumido pelo errorHandler pra setar Retry-After header
+        err.status         = 503;        // Service Unavailable — semanticamente correto
         throw err;
       }
     }

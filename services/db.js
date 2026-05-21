@@ -277,6 +277,39 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_ral_time ON route_access_log(accessed_at DESC);
     `);
 
+    // ── Índices adicionais (Week 3 — query patterns que surgiram dos fixes #8, #10, #11) ──
+    // Todos `IF NOT EXISTS` — idempotente, seguro pra re-rodar. Cada um cobre
+    // uma query nova que ficou sem índice próprio depois das melhorias da
+    // semana 2. Sem isso, queries vão a full-table scan quando o histórico
+    // crescer (poucas semanas pra Asaas e route_access_log).
+    await pool.query(`
+      -- "Mostre toda mutação no processo X" (audit trail de #10).
+      -- Existing idx_aa_cooldown começa com action_type; queries sem filtrar
+      -- por tipo não conseguem usar — precisam de um índice começando por
+      -- target_lawsuit_id.
+      CREATE INDEX IF NOT EXISTS idx_aa_lawsuit_time
+        ON audit_actions(target_lawsuit_id, created_at DESC)
+        WHERE target_lawsuit_id IS NOT NULL;
+
+      -- "Quais rotas o usuário X mais usou" (usage analytics by user).
+      -- Existing idx_ral_route_time é por rota, não por user.
+      CREATE INDEX IF NOT EXISTS idx_ral_user_time
+        ON route_access_log(user_id, accessed_at DESC)
+        WHERE user_id IS NOT NULL;
+
+      -- "Pagamentos ASAAS que falharam de sincronizar pro AdvBox" — pra
+      -- conferência/recovery operacional. WHERE filtra o subconjunto pequeno.
+      CREATE INDEX IF NOT EXISTS idx_aph_unsynced
+        ON asaas_payment_history(created_at DESC)
+        WHERE advbox_synced = FALSE;
+
+      -- "Tendência semanal de categoria X" — controller snapshots filtrados
+      -- por categoria. Existing UNIQUE(snapshot_date, categoria_id) atende
+      -- queries time-first, esta atende category-first.
+      CREATE INDEX IF NOT EXISTS idx_cs_cat_date
+        ON controller_snapshots(categoria_id, snapshot_date DESC);
+    `);
+
     console.log('[DB] Schema verificado/criado com sucesso.');
   } catch (err) {
     console.error('[DB] Erro na migração:', err.message);

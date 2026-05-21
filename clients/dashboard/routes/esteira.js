@@ -1,26 +1,8 @@
 const { Router } = require('express');
 const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
+const { ESTEIRA_STAGES, ESTEIRA_RULES } = require('../../../constants/esteira');
 
 const router = Router();
-
-// Stages financeiros (vir AdvBox CRM Financeiro) — RPVs removidos
-const ESTEIRA_STAGES = [
-  'SALARIO MATERNIDADE PARCELADO',
-  'JUDICIAL PARCELADO',
-  'ADM PARCELADO',
-  'JUDICIAL IMPLANTADO A RECEBER',
-  'ADM IMPLANTADO A RECEBER',
-];
-
-// Regras por stage (default da parcela / formato esperado)
-// 30% SM (1 SM = R$ 1.621) = R$ 486,30
-const ESTEIRA_RULES = {
-  'SALARIO MATERNIDADE PARCELADO': { mode: 'parcela_fixa', valor: 486.30 },
-  'JUDICIAL PARCELADO':            { mode: 'parcela_fixa', valor: 486.30 },
-  'ADM PARCELADO':                 { mode: 'parcela_fixa', valor: 500 },
-  'JUDICIAL IMPLANTADO A RECEBER': { mode: 'em_aberto' },
-  'ADM IMPLANTADO A RECEBER':      { mode: 'em_aberto' },
-};
 
 // Detecta entidade "institucional" (INSS / Justiça / órgão, etc.)
 // Heurística: nome contém marcadores OU identification é CNPJ.

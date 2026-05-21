@@ -23,21 +23,36 @@ class AppError extends Error {
   }
 }
 
+// `code` é uma chave estável (não-i18n) pra clients fazerem branch sem regex
+// no `error.message`. Aparece em response.code via errorHandler.
 class ValidationError extends AppError {
-  constructor(message = 'Dados inválidos.', details = null) { super(message, 400, details); }
+  constructor(message = 'Dados inválidos.', details = null) {
+    super(message, 400, details);
+    this.code = 'VALIDATION';
+  }
 }
 class AuthenticationError extends AppError {
-  constructor(message = 'Não autenticado.') { super(message, 401); }
+  constructor(message = 'Não autenticado.') {
+    super(message, 401);
+    this.code = 'UNAUTHENTICATED';
+  }
 }
 class AuthorizationError extends AppError {
-  constructor(message = 'Acesso negado.') { super(message, 403); }
+  constructor(message = 'Acesso negado.') {
+    super(message, 403);
+    this.code = 'FORBIDDEN';
+  }
 }
 class NotFoundError extends AppError {
-  constructor(message = 'Recurso não encontrado.') { super(message, 404); }
+  constructor(message = 'Recurso não encontrado.') {
+    super(message, 404);
+    this.code = 'NOT_FOUND';
+  }
 }
 class ExternalServiceError extends AppError {
   constructor(service, message, details = null) {
     super(`${service}: ${message}`, 502, details);
+    this.code = 'EXTERNAL_SERVICE';
   }
 }
 
@@ -63,6 +78,7 @@ function errorHandler(err, req, res, next) {
     err: {
       name:    err.name,
       message: err.message,
+      ...(err.code ? { code: err.code } : {}),
       ...(config.isDev || !isOperational ? { stack: err.stack } : {}),
       ...(err.details ? { details: err.details } : {}),
     },
@@ -73,10 +89,25 @@ function errorHandler(err, req, res, next) {
 
   if (res.headersSent) return;
 
-  const body = { error: err.message || 'Erro interno do servidor.' };
-  if (err.details) body.details = err.details;
+  // CIRCUIT_OPEN: o breaker de utils/circuitBreaker.js anexa retryAfterSec.
+  // Padrão HTTP: header Retry-After com inteiro em segundos (RFC 7231 §7.1.3).
+  // Cliente bem-feito honra isso antes de tentar de novo.
+  if (err.code === 'CIRCUIT_OPEN' && Number.isFinite(err.retryAfterSec)) {
+    res.setHeader('Retry-After', String(err.retryAfterSec));
+  }
+
+  // Contexto enriquecido em TODA resposta de erro — útil pro suporte ao usar
+  // o requestId pra cruzar com os logs.
+  const body = {
+    error:     err.message || 'Erro interno do servidor.',
+    timestamp: new Date().toISOString(),
+    path:      req.originalUrl || req.url,
+    method:    req.method,
+  };
+  if (err.code)    body.code    = err.code;       // 'CIRCUIT_OPEN' | 'VALIDATION' | etc — útil pra clients que querem branch sem regex no message
+  if (err.details) body.details = err.details;    // ValidationError carrega [{field, message}]
+  if (req.id)      body.requestId = req.id;
   if (config.isDev && status >= 500) body.stack = err.stack;
-  if (req.id) body.requestId = req.id;
 
   res.status(status).json(body);
 }

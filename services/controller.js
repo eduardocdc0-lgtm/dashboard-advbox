@@ -13,6 +13,7 @@ const fetch = require('node-fetch');
 const { fetchLawsuits, fetchAllPosts } = require('./data');
 const { query: dbQuery } = require('./db');
 const { logMutation } = require('./mutation-log');
+const { PHASES: P } = require('../constants/phases');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
 const ADVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -25,7 +26,7 @@ const CATEGORIAS = [
     id: 'sem_laudo_prevdoc',
     titulo: '📋 Processo sem laudo',
     descricao: 'Cliente precisa fazer/enviar laudo médico',
-    fases: ['PROCESSO SEM LAUDO', 'FALTA LAUDO - FAZER PREVDOC', 'FALTA LAUDO', 'PREVDOC', 'PROCESSOS SEM LAUDOS'],
+    fases: [P.PROCESSO_SEM_LAUDO, P.FALTA_LAUDO_FAZER_PREVDOC, P.FALTA_LAUDO, P.PREVDOC, P.PROCESSOS_SEM_LAUDOS],
     responsavel: 'TAMMYRES',
     slaDias: 7,
   },
@@ -33,7 +34,7 @@ const CATEGORIAS = [
     id: 'dar_entrada',
     titulo: '⚠️ Protocolar ADM',
     descricao: 'Processo pronto, falta protocolar no INSS',
-    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA'],
+    fases: [P.PROTOCOLAR_ADM, P.PARA_DAR_ENTRADA_ADM, P.PARA_DAR_ENTRADA],
     responsavel: 'MARILIA',
     slaDias: 5,
   },
@@ -41,7 +42,7 @@ const CATEGORIAS = [
     id: 'em_exigencia',
     titulo: '❗ Em Exigência',
     descricao: 'INSS pediu mais documentos/info — escritório precisa responder',
-    fases: ['EM EXIGENCIA', 'EM EXIGÊNCIA'],
+    fases: [P.EM_EXIGENCIA, P.EM_EXIGENCIA_ACENTUADO],
     responsavel: 'MARILIA',
     slaDias: 7,
   },
@@ -49,7 +50,7 @@ const CATEGORIAS = [
     id: 'peticao_inicial',
     titulo: '⚖️ Elaborar petição inicial',
     descricao: 'Caso judicial pronto, falta peticionar',
-    fases: ['ELABORAR PETIÇÃO INICIAL', 'ELABORAR PETICAO INICIAL'],
+    fases: [P.ELABORAR_PETICAO_INICIAL_ACENTUADO, P.ELABORAR_PETICAO_INICIAL],
     responsavel: 'LETICIA_OU_ALICE',
     slaDias: 10,
   },
@@ -57,7 +58,7 @@ const CATEGORIAS = [
     id: 'com_prazo',
     titulo: '⏰ Com prazo',
     descricao: 'Prazo judicial correndo',
-    fases: ['COM PRAZO'],
+    fases: [P.COM_PRAZO],
     responsavel: 'LETICIA_OU_ALICE',
     slaDias: 5,
   },
