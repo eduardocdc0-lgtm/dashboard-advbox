@@ -2,6 +2,7 @@ const { Router } = require('express');
 const fetch  = require('node-fetch');
 const cache  = require('../../../cache');
 const { fetchLawsuits } = require('../../../services/data');
+const { breakers } = require('../../../utils/circuitBreaker');
 
 const META_TOKEN      = process.env.META_TOKEN      || '';
 const META_AD_ACCOUNT = process.env.META_AD_ACCOUNT || '';
@@ -85,9 +86,12 @@ router.get('/meta/campaign-roi', async (req, res, next) => {
           const iFields   = 'campaign_id,campaign_name,spend,impressions,clicks,actions';
           const url = `${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${iFields}&time_range=${timeRange}&level=campaign&limit=100&access_token=${META_TOKEN}`;
 
-          const iRes  = await fetch(url);
-          const iJson = await iRes.json();
-          if (iJson.error) throw new Error(iJson.error.message);
+          const iJson = await breakers.meta.exec(async () => {
+            const iRes = await fetch(url);
+            const j = await iRes.json();
+            if (j.error) throw new Error(j.error.message);
+            return j;
+          });
 
           metaCampaigns = (iJson.data || []).map(i => {
             const actions = i.actions || [];

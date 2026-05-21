@@ -14,6 +14,7 @@
 'use strict';
 
 const fetch = require('node-fetch');
+const { breakers } = require('../utils/circuitBreaker');
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DEFAULTS = Object.freeze({
@@ -54,23 +55,29 @@ class AdvBoxClient {
   async request(endpoint, opts = {}) {
     if (!this.token) throw new Error('ADVBOX_TOKEN não configurado.');
 
-    let lastErr;
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
-      await this._respectRateLimit();
-      try {
-        const result = await this._tryOnce(endpoint, opts, attempt);
-        if (result.retry) {
-          lastErr = result.err;
-          continue;
+    // Circuit breaker envolvendo o retry loop inteiro. Uma "falha" da
+    // perspectiva do breaker = retry esgotado ou erro fatal não-retryável.
+    // Não conta cada attempt — isso permite os retries individuais sem
+    // tripar o breaker a cada blip transitório.
+    return breakers.advbox.exec(async () => {
+      let lastErr;
+      for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+        await this._respectRateLimit();
+        try {
+          const result = await this._tryOnce(endpoint, opts, attempt);
+          if (result.retry) {
+            lastErr = result.err;
+            continue;
+          }
+          return result.data;
+        } catch (err) {
+          lastErr = err;
+          if (!this._shouldRetry(err)) throw err;
+          await sleep(expoBackoff(this.baseDelayMs, attempt));
         }
-        return result.data;
-      } catch (err) {
-        lastErr = err;
-        if (!this._shouldRetry(err)) throw err;
-        await sleep(expoBackoff(this.baseDelayMs, attempt));
       }
-    }
-    throw lastErr || new Error('Requisição AdvBox falhou após todas as tentativas');
+      throw lastErr || new Error('Requisição AdvBox falhou após todas as tentativas');
+    });
   }
 
   async getAllLawsuits(pageSize = 500, maxPages = 30) {

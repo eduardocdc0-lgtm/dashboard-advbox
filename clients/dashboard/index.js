@@ -204,7 +204,8 @@ function requireAdmin(req, res, next) {
 }
 
 app.get('/api/cache-status', requireAdmin, (req, res) => {
-  res.json(cache.status());
+  const { allStatus: breakerStatus } = require('../../utils/circuitBreaker');
+  res.json({ ...cache.status(), breakers: breakerStatus() });
 });
 
 app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
@@ -212,6 +213,14 @@ app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
   if (key) cache.invalidate(key);
   else     cache.invalidateAll();
   res.json({ ok: true, invalidated: key || 'all' });
+});
+
+// Reset manual dos circuit breakers — útil quando admin sabe que a API
+// externa voltou e quer evitar esperar o resetTimeoutMs do breaker.
+app.post('/api/breakers-reset', requireAdmin, (req, res) => {
+  const { resetAll } = require('../../utils/circuitBreaker');
+  resetAll();
+  res.json({ ok: true, reset: true });
 });
 
 // ── Telemetria de uso (fire-and-forget) ──────────────────────────────────────
