@@ -16,7 +16,11 @@ const fetch = require('node-fetch');
 const { AsaasClient } = require('../../../services/asaas-client');
 const { createBatch } = require('../../../services/asaas-batch');
 const { requireFinance } = require('../../../middleware/auth');
-const { query } = require('../../../services/db');
+const { query, withAdvisoryLock } = require('../../../services/db');
+
+// Lock category pro webhook ASAAS. Resource key = payment.id (string). Veja
+// services/db.js pro mapa completo de categorias.
+const ASAAS_LOCK_CATEGORY = 902400;
 const { validatePaymentValue, sanitizeCpfCnpj } = require('../../../services/finance-helpers');
 const cache = require('../../../cache');
 
@@ -272,81 +276,96 @@ router.post('/asaas/webhook', async (req, res) => {
     let synced = false;
     let syncErr = null;
 
-    // Tentativa V2 (best-effort): marcar transaction como paga no AdvBox.
-    // IMPORTANTE: paymentDate (cliente pagou) tem prioridade sobre
-    // confirmedDate (ASAAS confirmou). Pra contabilidade brasileira (regime
-    // de caixa), a data correta é quando o dinheiro entrou — não quando o
-    // ASAAS processou. SEM fallback pra new Date() — se ASAAS não enviou
-    // data, ABORTAMOS o sync (data falsa é pior que pagamento não-sincronizado).
-    if ((event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED_IN_CASH')
-        && payment.externalReference && payment.externalReference.startsWith('tx_')) {
-      const txId = Number(payment.externalReference.slice(3));
-      const dataPagamento = payment.paymentDate || payment.confirmedDate;
-      if (!dataPagamento) {
-        syncErr = 'ASAAS não enviou paymentDate nem confirmedDate — sync abortado pra não falsificar histórico';
-        console.warn('[ASAAS webhook] sync abortado: sem data', { payment_id: payment.id });
-      } else if (txId && process.env.ADVBOX_TOKEN) {
-        try {
-          const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 10_000);
-          let r;
-          try {
-            r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
-              method: 'PATCH',
-              headers: {
-                'Authorization': `Bearer ${process.env.ADVBOX_TOKEN}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: JSON.stringify({ date_payment: dataPagamento }),
-              signal: ctrl.signal,
-            });
-          } finally {
-            clearTimeout(timer);
+    // ── Per-payment lock ────────────────────────────────────────────────────
+    // ASAAS dispara PAYMENT_CONFIRMED e PAYMENT_RECEIVED milissegundos
+    // de diferença pro mesmo payment.id. Sem este lock, duas execuções
+    // concorrentes:
+    //   1. Disparam PATCH /transactions/${txId} no AdvBox simultaneamente
+    //   2. Correm no ON CONFLICT DO UPDATE de asaas_payment_history — `event`
+    //      e `status` viram quaisquer valores do "último a chegar" no DB,
+    //      perdendo a fidelidade pro auditor.
+    // Serializamos por payment.id; eventos pra payments diferentes seguem
+    // rodando em paralelo. Lock auto-libera no COMMIT.
+    await withAdvisoryLock(
+      { category: ASAAS_LOCK_CATEGORY, resourceKey: payment.id, timeout: '10s' },
+      async () => {
+        // Tentativa V2 (best-effort): marcar transaction como paga no AdvBox.
+        // IMPORTANTE: paymentDate (cliente pagou) tem prioridade sobre
+        // confirmedDate (ASAAS confirmou). Pra contabilidade brasileira (regime
+        // de caixa), a data correta é quando o dinheiro entrou — não quando o
+        // ASAAS processou. SEM fallback pra new Date() — se ASAAS não enviou
+        // data, ABORTAMOS o sync (data falsa é pior que pagamento não-sincronizado).
+        if ((event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED_IN_CASH')
+            && payment.externalReference && payment.externalReference.startsWith('tx_')) {
+          const txId = Number(payment.externalReference.slice(3));
+          const dataPagamento = payment.paymentDate || payment.confirmedDate;
+          if (!dataPagamento) {
+            syncErr = 'ASAAS não enviou paymentDate nem confirmedDate — sync abortado pra não falsificar histórico';
+            console.warn('[ASAAS webhook] sync abortado: sem data', { payment_id: payment.id });
+          } else if (txId && process.env.ADVBOX_TOKEN) {
+            try {
+              const ctrl = new AbortController();
+              const timer = setTimeout(() => ctrl.abort(), 10_000);
+              let r;
+              try {
+                r = await fetch(`https://app.advbox.com.br/api/v1/transactions/${txId}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Authorization': `Bearer ${process.env.ADVBOX_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                  },
+                  body: JSON.stringify({ date_payment: dataPagamento }),
+                  signal: ctrl.signal,
+                });
+              } finally {
+                clearTimeout(timer);
+              }
+              if (r.ok) {
+                synced = true;
+                // Invalida cache de inadimplência — sem isso, Cau/Letícia podem
+                // ligar pra cliente cobrando dívida que acabou de ser paga.
+                try { cache.invalidate('inadimplentes_full'); } catch (_) {}
+                try { cache.invalidate('transactions'); } catch (_) {}
+              } else {
+                syncErr = `AdvBox HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`;
+              }
+            } catch (e) {
+              syncErr = e.message || String(e);
+            }
           }
-          if (r.ok) {
-            synced = true;
-            // Invalida cache de inadimplência — sem isso, Cau/Letícia podem
-            // ligar pra cliente cobrando dívida que acabou de ser paga.
-            try { cache.invalidate('inadimplentes_full'); } catch (_) {}
-            try { cache.invalidate('transactions'); } catch (_) {}
-          } else {
-            syncErr = `AdvBox HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`;
-          }
-        } catch (e) {
-          syncErr = e.message || String(e);
         }
-      }
-    }
 
-    await query(`
-      INSERT INTO asaas_payment_history (
-        asaas_payment_id, external_reference, event, status,
-        value, net_value, customer_id, paid_at, raw_payload, advbox_synced, advbox_sync_error
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (asaas_payment_id)
-      DO UPDATE SET
-        event             = EXCLUDED.event,
-        status            = EXCLUDED.status,
-        value             = EXCLUDED.value,
-        net_value         = EXCLUDED.net_value,
-        paid_at           = EXCLUDED.paid_at,
-        raw_payload       = EXCLUDED.raw_payload,
-        advbox_synced     = asaas_payment_history.advbox_synced OR EXCLUDED.advbox_synced,
-        advbox_sync_error = COALESCE(EXCLUDED.advbox_sync_error, asaas_payment_history.advbox_sync_error)
-    `, [
-      payment.id,
-      payment.externalReference || null,
-      event || 'UNKNOWN',
-      payment.status || 'UNKNOWN',
-      validatePaymentValue(payment.value),     // null se inválido (negativo, NaN, >R$10M)
-      validatePaymentValue(payment.netValue),
-      payment.customer || null,
-      (payment.paymentDate || payment.confirmedDate) || null,  // paymentDate prioritário
-      JSON.stringify(body),
-      synced,
-      syncErr,
-    ]);
+        await query(`
+          INSERT INTO asaas_payment_history (
+            asaas_payment_id, external_reference, event, status,
+            value, net_value, customer_id, paid_at, raw_payload, advbox_synced, advbox_sync_error
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          ON CONFLICT (asaas_payment_id)
+          DO UPDATE SET
+            event             = EXCLUDED.event,
+            status            = EXCLUDED.status,
+            value             = EXCLUDED.value,
+            net_value         = EXCLUDED.net_value,
+            paid_at           = EXCLUDED.paid_at,
+            raw_payload       = EXCLUDED.raw_payload,
+            advbox_synced     = asaas_payment_history.advbox_synced OR EXCLUDED.advbox_synced,
+            advbox_sync_error = COALESCE(EXCLUDED.advbox_sync_error, asaas_payment_history.advbox_sync_error)
+        `, [
+          payment.id,
+          payment.externalReference || null,
+          event || 'UNKNOWN',
+          payment.status || 'UNKNOWN',
+          validatePaymentValue(payment.value),     // null se inválido (negativo, NaN, >R$10M)
+          validatePaymentValue(payment.netValue),
+          payment.customer || null,
+          (payment.paymentDate || payment.confirmedDate) || null,  // paymentDate prioritário
+          JSON.stringify(body),
+          synced,
+          syncErr,
+        ]);
+      }
+    );
 
     res.status(200).json({ ok: true, synced });
   } catch (err) {

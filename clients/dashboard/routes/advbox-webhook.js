@@ -42,6 +42,23 @@ const STAGE_EVENT_REGEX = /(stage|fase|phase|move|moved|changed)/i;
  * Fire-and-forget: chamado SEM await pelo handler do webhook, com .catch()
  * pra não vazar unhandledRejection. Atualiza processed_at/processed_ok
  * na linha do evento ao final (sucesso ou erro).
+ *
+ * NOTA sobre concorrência (decisão de design 2026-05-20):
+ *   NÃO usa withAdvisoryLock per-lawsuit aqui, mesmo que o auditor tenha
+ *   flagado "concurrent webhook processing" pra este arquivo. Análise:
+ *   1. INSERT em advbox_flowter_events vai pra linhas separadas (PK auto-
+ *      incrementing) — sem race nesse passo.
+ *   2. cache.invalidate é idempotente — chamar 2x é no-op.
+ *   3. runCycle tem advisory lock próprio (902301) — concorrência já
+ *      serializada lá dentro, segundo evento retorna { skipped: true }.
+ *   4. UPDATE processed_at é por linha, sem conflito.
+ *   Adicionar um lock per-lawsuit aqui seguraria conexão Postgres durante
+ *   runCycle inteiro (potencialmente minutos), trocando uma race inexistente
+ *   por pressão real no pool de conexões. Mantemos sem lock.
+ *
+ *   Se aparecer race REAL no futuro (ex: dois events disputando a mesma
+ *   linha), reconsiderar — provavelmente refatorar runCycle pra não bloquear
+ *   antes de adicionar lock aqui.
  */
 async function processFlowterEvent({ eventId, eventType, lawsuitId, postId, stage }) {
   const errors = [];

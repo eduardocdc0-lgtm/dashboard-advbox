@@ -283,4 +283,57 @@ async function migrate() {
   }
 }
 
-module.exports = { pool, query, migrate };
+/**
+ * Executa `fn` mantendo um advisory lock per-resource. Garante que duas
+ * invocações concorrentes pra mesmo (category, resourceKey) serializem ao
+ * invés de correrem.
+ *
+ * Implementação: pg_advisory_xact_lock(category, hashtext(resourceKey))
+ * dentro de uma transação dedicada. xact_lock auto-libera em COMMIT/ROLLBACK
+ * — sem risco de lock órfão se o callback der throw.
+ *
+ * IMPORTANTE: o lock fica retido durante TODA a execução de `fn`. Não use
+ * pra trabalho que pode demorar minutos (ex: runCycle do auto-workflow) —
+ * tudo bem pra webhook handlers que fazem ~10s de trabalho.
+ *
+ * Convenções de category (int32):
+ *   - 902301: auto-workflow (formato single-int, não usa este helper)
+ *   - 902400: Asaas webhook per-payment
+ *   - 902401+: reservado pra futuras necessidades
+ *
+ * @param {object} opts
+ * @param {number} opts.category    int32 — agrupador do tipo de lock
+ * @param {string|number} opts.resourceKey  hash dele = chave fina
+ * @param {string} [opts.timeout='10s']  lock_timeout (Postgres-style: '10s', '500ms')
+ * @param {function} fn  async () => result
+ */
+async function withAdvisoryLock({ category, resourceKey, timeout = '10s' }, fn) {
+  if (!Number.isInteger(category)) {
+    throw new Error('[withAdvisoryLock] category must be an integer');
+  }
+  if (resourceKey == null || resourceKey === '') {
+    throw new Error('[withAdvisoryLock] resourceKey is required');
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // SET LOCAL só vale dentro da transação — reseta automaticamente no COMMIT.
+    await client.query(`SET LOCAL lock_timeout = '${timeout}'`);
+    await client.query(
+      'SELECT pg_advisory_xact_lock($1, hashtext($2))',
+      [category, String(resourceKey)]
+    );
+    try {
+      const result = await fn();
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    }
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, query, migrate, withAdvisoryLock };
