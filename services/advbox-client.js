@@ -15,6 +15,29 @@
 
 const fetch = require('node-fetch');
 const { breakers } = require('../utils/circuitBreaker');
+const { config } = require('../config');
+
+// Caps env-overridáveis — ver config/index.js → advbox.maxPages
+const MAX_PAGES = config.advbox.maxPages;
+
+// Métricas de truncamento — quando um getAll* sai pelo cap (não por fim
+// natural dos dados), incrementa aqui. Surfaceadas em /api/cache-status.
+const paginationMetrics = new Map();
+function _recordTruncation(resource, info) {
+  const prev = paginationMetrics.get(resource) || { count: 0, firstAt: new Date().toISOString() };
+  paginationMetrics.set(resource, {
+    count:        prev.count + 1,
+    firstAt:      prev.firstAt,
+    lastAt:       new Date().toISOString(),
+    lastFetched:  info.totalFetched,
+    lastMaxPages: info.maxPages,
+    lastPageSize: info.pageSize,
+    envVarToBump: info.envVarToBump,
+  });
+}
+function getPaginationStats() {
+  return Object.fromEntries(paginationMetrics.entries());
+}
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DEFAULTS = Object.freeze({
@@ -80,16 +103,25 @@ class AdvBoxClient {
     });
   }
 
-  async getAllLawsuits(pageSize = 500, maxPages = 30) {
+  async getAllLawsuits(pageSize = 500, maxPages = MAX_PAGES.lawsuits) {
     const all = [];
+    let mightHaveMore = false; // true se o loop saiu pelo cap com página cheia
     for (let page = 0; page < maxPages; page++) {
       const data = await this.request(`/lawsuits?limit=${pageSize}&offset=${page * pageSize}`);
       const arr  = Array.isArray(data) ? data : (data.data || []);
-      if (!arr.length) break;
+      if (!arr.length)            { mightHaveMore = false; break; }
       all.push(...arr);
-      if (arr.length < pageSize) break;
+      if (arr.length < pageSize)  { mightHaveMore = false; break; }
+      mightHaveMore = true;       // sobrescrito na próxima iteração se houver
     }
     this.logger.info(`[AdvBox] Processos carregados: ${all.length}`);
+    if (mightHaveMore) {
+      _recordTruncation('lawsuits', { totalFetched: all.length, pageSize, maxPages, envVarToBump: 'ADVBOX_MAX_PAGES_LAWSUITS' });
+      this.logger.warn(
+        `[AdvBox] /lawsuits TRUNCADO em maxPages=${maxPages} (${all.length} fetchados). ` +
+        `Última página cheia — provavelmente há mais. Setar ADVBOX_MAX_PAGES_LAWSUITS=${maxPages * 2}.`
+      );
+    }
     return all;
   }
 
@@ -101,35 +133,53 @@ class AdvBoxClient {
    * transações recentes ficam fora — causa #1 de falsos críticos no
    * kanban-financeiro (lançamento existia mas não chegava ao dashboard).
    */
-  async getAllTransactions(pageSize = 1000, maxPages = 20) {
+  async getAllTransactions(pageSize = 1000, maxPages = MAX_PAGES.transactions) {
     const all = [];
     const seen = new Set();
+    let mightHaveMore = false;
     for (let page = 0; page < maxPages; page++) {
       const data = await this.request(`/transactions?limit=${pageSize}&offset=${page * pageSize}`);
       const arr  = Array.isArray(data) ? data : (data.data || []);
-      if (!arr.length) break;
+      if (!arr.length)           { mightHaveMore = false; break; }
       let added = 0;
       for (const t of arr) {
         if (t?.id && !seen.has(t.id)) { seen.add(t.id); all.push(t); added++; }
       }
       this.logger.info(`[AdvBox] Transactions p${page + 1}: ${arr.length} (novos: ${added}, total: ${all.length})`);
-      if (arr.length < pageSize) break;
-      if (added === 0) break; // API ignorou offset e devolveu mesmos itens
+      if (arr.length < pageSize) { mightHaveMore = false; break; }
+      if (added === 0)           { mightHaveMore = false; break; } // API ignorou offset
+      mightHaveMore = true;
+    }
+    if (mightHaveMore) {
+      _recordTruncation('transactions', { totalFetched: all.length, pageSize, maxPages, envVarToBump: 'ADVBOX_MAX_PAGES_TRANSACTIONS' });
+      this.logger.warn(
+        `[AdvBox] /transactions TRUNCADO em maxPages=${maxPages} (${all.length} fetchados, ` +
+        `${seen.size} únicos). Setar ADVBOX_MAX_PAGES_TRANSACTIONS=${maxPages * 2}.`
+      );
     }
     return all;
   }
 
   getCustomers(limit = 1000)    { return this.request(`/customers?limit=${limit}`); }
 
-  async getAllCustomers(pageSize = 1000, maxPages = 20) {
+  async getAllCustomers(pageSize = 1000, maxPages = MAX_PAGES.customers) {
     const all = [];
+    let mightHaveMore = false;
     for (let page = 0; page < maxPages; page++) {
       const data = await this.request(`/customers?limit=${pageSize}&offset=${page * pageSize}`);
       const arr  = Array.isArray(data) ? data : (data.data || []);
-      if (!arr.length) break;
+      if (!arr.length)           { mightHaveMore = false; break; }
       all.push(...arr);
       this.logger.info(`[AdvBox] Customers p${page + 1}: ${arr.length} (total: ${all.length})`);
-      if (arr.length < pageSize) break;
+      if (arr.length < pageSize) { mightHaveMore = false; break; }
+      mightHaveMore = true;
+    }
+    if (mightHaveMore) {
+      _recordTruncation('customers', { totalFetched: all.length, pageSize, maxPages, envVarToBump: 'ADVBOX_MAX_PAGES_CUSTOMERS' });
+      this.logger.warn(
+        `[AdvBox] /customers TRUNCADO em maxPages=${maxPages} (${all.length} fetchados). ` +
+        `Setar ADVBOX_MAX_PAGES_CUSTOMERS=${maxPages * 2}.`
+      );
     }
     return all;
   }
@@ -228,3 +278,4 @@ class AdvBoxClient {
 }
 
 module.exports = AdvBoxClient;
+module.exports.getPaginationStats = getPaginationStats;

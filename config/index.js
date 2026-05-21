@@ -102,9 +102,21 @@ const config = Object.freeze({
   corsOrigins: listOpt('CORS_ORIGINS', isProd ? [] : ['http://localhost:5000', 'http://localhost:3000']),
 
   // ── AdvBox ──────────────────────────────────────────────────────────────────
+  // maxPages: cap de páginas que o cliente busca em getAll*. Cada chamada
+  // bate em /lawsuits|/transactions|/customers com offset crescente até
+  // (a) página vazia, (b) página parcial (fim natural), ou (c) este cap.
+  // Caso (c) emite WARN e contabiliza em /api/cache-status.pagination —
+  // sinal de que provavelmente há mais dados que não estão sendo lidos.
+  // Defaults: 30/20/20 páginas × 500/1000/1000 itens = 15k/20k/20k respectivamente.
+  // Aumentar via env ADVBOX_MAX_PAGES_* se o escritório passar desses volumes.
   advbox: {
     token:   optional('ADVBOX_TOKEN', ''),
     baseUrl: optional('ADVBOX_BASE_URL', 'https://app.advbox.com.br/api/v1'),
+    maxPages: {
+      lawsuits:     intOpt('ADVBOX_MAX_PAGES_LAWSUITS',     30),
+      transactions: intOpt('ADVBOX_MAX_PAGES_TRANSACTIONS', 20),
+      customers:    intOpt('ADVBOX_MAX_PAGES_CUSTOMERS',    20),
+    },
   },
 
   // ── Meta Ads ────────────────────────────────────────────────────────────────

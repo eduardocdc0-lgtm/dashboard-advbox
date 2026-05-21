@@ -206,10 +206,12 @@ function requireAdmin(req, res, next) {
 app.get('/api/cache-status', requireAdmin, (req, res) => {
   const { allStatus: breakerStatus } = require('../../utils/circuitBreaker');
   const { getStats: accessLogStats } = require('../../middleware/access-log');
+  const { getPaginationStats } = require('../../services/advbox-client');
   res.json({
     ...cache.status(),
     breakers:   breakerStatus(),
     accessLog:  accessLogStats(),
+    pagination: getPaginationStats(),
   });
 });
 
