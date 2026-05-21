@@ -30,7 +30,9 @@ function isParcelaValida(t) {
 }
 
 // ── 2. Validação de input do POST /finance/entries ───────────────────────────
-// Retorna array de erros (vazio = ok). Pega typos antes de virar lançamento.
+// Retorna array de strings (vazio = ok). API mantida pra compat com chamadores
+// que esperam o shape antigo. Internamente usa utils/validate.js — quando o
+// route handler for migrado pra .done(), este wrapper pode sair.
 
 function validateEntryInput(b) {
   const errs = [];
