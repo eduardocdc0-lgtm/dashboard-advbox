@@ -205,7 +205,12 @@ function requireAdmin(req, res, next) {
 
 app.get('/api/cache-status', requireAdmin, (req, res) => {
   const { allStatus: breakerStatus } = require('../../utils/circuitBreaker');
-  res.json({ ...cache.status(), breakers: breakerStatus() });
+  const { getStats: accessLogStats } = require('../../middleware/access-log');
+  res.json({
+    ...cache.status(),
+    breakers:   breakerStatus(),
+    accessLog:  accessLogStats(),
+  });
 });
 
 app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
