@@ -107,16 +107,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // ── Auth: login / logout / me ────────────────────────────────────────────────
-// Perfis genéricos (admin/team) — sobrevivem da época pré-multi-user. Senha
-// pode vir como hash bcrypt (preferido) ou texto puro (fallback).
+// Perfis genéricos (admin/team) — sobrevivem da época pré-multi-user.
+// Quando config.auth.requireBcrypt está ligado, `plain` é zerado aqui de
+// uma vez — verifyPassword então ainda roda o bcrypt contra dummy (timing-safe)
+// mas sempre retorna false na ausência de hash. O boot já teria falhado em
+// config/index.js se houvesse plaintext sem hash com a flag ligada, então
+// chegar aqui com requireBcrypt=true significa que só *_HASH existe.
+const stripPlainIfRequired = (plain) => (config.auth.requireBcrypt ? '' : plain);
+
 const GENERIC_USERS = {
   [config.users.admin.username]: {
-    plain: config.users.admin.password,
+    plain: stripPlainIfRequired(config.users.admin.password),
     hash:  config.users.admin.passwordHash,
     role:  'admin',
   },
   [config.users.team.username]: {
-    plain: config.users.team.password,
+    plain: stripPlainIfRequired(config.users.team.password),
     hash:  config.users.team.passwordHash,
     role:  'team',
   },
