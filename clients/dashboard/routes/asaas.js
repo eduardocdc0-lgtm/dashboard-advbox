@@ -17,6 +17,7 @@ const { AsaasClient } = require('../../../services/asaas-client');
 const { createBatch } = require('../../../services/asaas-batch');
 const { requireFinance } = require('../../../middleware/auth');
 const { query, withAdvisoryLock } = require('../../../services/db');
+const { logMutation } = require('../../../services/mutation-log');
 
 // Lock category pro webhook ASAAS. Resource key = payment.id (string). Veja
 // services/db.js pro mapa completo de categorias.
@@ -175,14 +176,30 @@ router.post('/asaas/payer-overrides', requireFinance, async (req, res, next) => 
       `, [transaction_id, payer_name, payer_cpf_cnpj, payer_email, payer_phone]);
     }
     res.json({ ok: true });
-  } catch (err) { next(err); }
+    logMutation({
+      actor:     req.session?.user,
+      action:    'asaas.payer-overrides.upsert',
+      lawsuitId: lawsuit_id,
+      payload:   { lawsuit_id, transaction_id, payer_name, payer_cpf_cnpj, payer_email, payer_phone },
+      success:   true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:   req.session?.user,
+      action:  'asaas.payer-overrides.upsert',
+      payload: { body: req.body },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── DELETE /api/asaas/payer-overrides/:key ───────────────────────────────
 // key formato: "law_123" ou "tx_456"
 router.delete('/asaas/payer-overrides/:key', requireFinance, async (req, res, next) => {
+  const key = String(req.params.key);
   try {
-    const key = String(req.params.key);
     const [kind, idStr] = key.split('_');
     const id = Number(idStr);
     if (!id) return res.status(400).json({ error: 'key inválida' });
@@ -190,7 +207,23 @@ router.delete('/asaas/payer-overrides/:key', requireFinance, async (req, res, ne
     else if (kind === 'tx') await query('DELETE FROM asaas_payer_overrides WHERE transaction_id = $1', [id]);
     else return res.status(400).json({ error: 'kind inválido (use law_ ou tx_)' });
     res.json({ ok: true });
-  } catch (err) { next(err); }
+    logMutation({
+      actor:     req.session?.user,
+      action:    'asaas.payer-overrides.delete',
+      lawsuitId: kind === 'law' ? id : null,
+      payload:   { key, kind, id },
+      success:   true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:   req.session?.user,
+      action:  'asaas.payer-overrides.delete',
+      payload: { key },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── GET /api/asaas/payments-received ─────────────────────────────────────

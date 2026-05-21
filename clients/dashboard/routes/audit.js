@@ -3,6 +3,7 @@ const { requireAdmin, requireAuth } = require('../../../middleware/auth');
 const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
+const { logMutation } = require('../../../services/mutation-log');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
 const { runAudit } = require('../../../services/auditor');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
@@ -385,8 +386,8 @@ router.get('/audit-responsible', requireAdmin, async (req, res, next) => {
 
 // ── Marcar processo como passado ─────────────────────────────────────────────
 router.post('/audit-responsible/resolve', requireAdmin, async (req, res, next) => {
+  const { lawsuitId, cliente, fase, responsible, destinoZone, destinoLabel } = req.body || {};
   try {
-    const { lawsuitId, cliente, fase, responsible, destinoZone, destinoLabel } = req.body || {};
     if (!lawsuitId) return res.status(400).json({ error: 'lawsuitId obrigatório' });
     await dbQuery(
       `INSERT INTO audit_resolved (lawsuit_id, cliente, fase, responsible, destino_zone, destino_label)
@@ -394,7 +395,24 @@ router.post('/audit-responsible/resolve', requireAdmin, async (req, res, next) =
       [String(lawsuitId), cliente || '', fase || '', responsible || '', destinoZone || '', destinoLabel || '']
     );
     res.json({ ok: true });
-  } catch (err) { next(err); }
+    logMutation({
+      actor:     req.session?.user,
+      action:    'audit-responsible.resolve',
+      lawsuitId: Number(lawsuitId),
+      payload:   { cliente, fase, responsible, destinoZone, destinoLabel },
+      success:   true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:     req.session?.user,
+      action:    'audit-responsible.resolve',
+      lawsuitId: lawsuitId ? Number(lawsuitId) : null,
+      payload:   { body: req.body },
+      success:   false,
+      error:     err.message,
+    });
+    next(err);
+  }
 });
 
 // ── Registrar geração de lista de cobrança ───────────────────────────────────

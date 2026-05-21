@@ -6,6 +6,7 @@ const { fetchTransactions } = require('../../../services/data');
 const { getInadimplentes } = require('../../../services/inadimplentes');
 const { parseAdvboxDate, toISODate } = require('../../../services/date-utils');
 const { isParcelaValida, validateEntryInput } = require('../../../services/finance-helpers');
+const { logMutation } = require('../../../services/mutation-log');
 const cache = require('../../../cache');
 
 const router = Router();
@@ -240,7 +241,23 @@ router.post('/finance/entries', requireFinance, async (req, res, next) => {
       total_value: total_value || pv * tp,
       parcelas: inserted,
     });
-  } catch (err) { next(err); }
+    logMutation({
+      actor:     req.session?.user,
+      action:    'finance.entries.create',
+      lawsuitId: lawsuit_id ? Number(lawsuit_id) : null,
+      payload:   { group_id: groupId, client_name, category, kind, total_parcelas: tp, parcela_value: pv, first_due_date, day_of_month },
+      success:   true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:   req.session?.user,
+      action:  'finance.entries.create',
+      payload: { body: req.body },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── GET /api/finance/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD ──────────────────
@@ -330,34 +347,59 @@ router.patch('/finance/parcela/:id', requireFinance, async (req, res, next) => {
     if (!r.rows.length) return res.status(404).json({ error: 'não encontrado' });
 
     res.json(r.rows[0]);
-  } catch (err) { next(err); }
+    logMutation({
+      actor:  req.session?.user,
+      action: 'finance.parcela.update',
+      payload: { id, changes: { status, paid_date, paid_value, due_date, value, notes }, result: r.rows[0] },
+      success: true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:  req.session?.user,
+      action: 'finance.parcela.update',
+      payload: { id: parseInt(req.params.id, 10), body: req.body },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── DELETE /api/finance/parcela/:id ──────────────────────────────────────────
 // Remove uma parcela específica (não desfaz o lançamento inteiro).
 router.delete('/finance/parcela/:id', requireFinance, async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id inválido' });
     const r = await query(`DELETE FROM financial_parcelas WHERE id = $1 RETURNING id`, [id]);
     if (!r.rows.length) return res.status(404).json({ error: 'não encontrado' });
     res.json({ ok: true, id });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.parcela.delete', payload: { id }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.parcela.delete', payload: { id }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 // ── DELETE /api/finance/group/:groupId ───────────────────────────────────────
 // Remove TODAS as parcelas de um lançamento (undo).
 router.delete('/finance/group/:groupId', requireFinance, async (req, res, next) => {
+  const groupId = req.params.groupId;
   try {
-    const r = await query(`DELETE FROM financial_parcelas WHERE group_id = $1 RETURNING id`, [req.params.groupId]);
+    const r = await query(`DELETE FROM financial_parcelas WHERE group_id = $1 RETURNING id`, [groupId]);
     res.json({ ok: true, removed: r.rows.length });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.group.delete', payload: { groupId, removed: r.rows.length }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.group.delete', payload: { groupId }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 // ── PATCH /api/finance/group/:groupId/end-after ──────────────────────────────
 // "Encerra" um lançamento parcelado a partir de uma parcela específica:
 // remove todas as parcelas com num > X.
 router.patch('/finance/group/:groupId/end-after', requireFinance, async (req, res, next) => {
+  const groupId = req.params.groupId;
   try {
     const { parcela_num } = req.body || {};
     const n = parseInt(parcela_num, 10);
@@ -366,16 +408,20 @@ router.patch('/finance/group/:groupId/end-after', requireFinance, async (req, re
       `DELETE FROM financial_parcelas
        WHERE group_id = $1 AND parcela_num > $2
        RETURNING id`,
-      [req.params.groupId, n]
+      [groupId, n]
     );
     // Atualiza total_parcelas das remanescentes pra refletir o novo encerramento
     await query(
       `UPDATE financial_parcelas SET total_parcelas = $2
        WHERE group_id = $1`,
-      [req.params.groupId, n]
+      [groupId, n]
     );
     res.json({ ok: true, removed: r.rows.length, new_total: n });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.group.end-after', payload: { groupId, after_parcela_num: n, removed: r.rows.length }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.group.end-after', payload: { groupId, body: req.body }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 module.exports = router;

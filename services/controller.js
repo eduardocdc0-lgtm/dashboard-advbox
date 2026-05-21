@@ -12,6 +12,7 @@
 const fetch = require('node-fetch');
 const { fetchLawsuits, fetchAllPosts } = require('./data');
 const { query: dbQuery } = require('./db');
+const { logMutation } = require('./mutation-log');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
 const ADVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -389,27 +390,16 @@ async function cobrarLawsuit({ actor, lawsuit_id, user_id, descricao, problema_i
   }
 
   // Audit log SEMPRE
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actor?.username || 'controller-lote',
-        actor?.advboxUserId || null,
-        actionType,
-        Number(lawsuit_id),
-        Number(user_id),
-        JSON.stringify({ problema_id, categoriaId, descricao, payload, source: 'controller-lote' }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[controller] audit log:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actor?.username || 'controller-lote', advboxUserId: actor?.advboxUserId || null },
+    action:       actionType,
+    lawsuitId:    Number(lawsuit_id),
+    targetUserId: Number(user_id),
+    payload:      { problema_id, categoriaId, descricao, payload, source: 'controller-lote' },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) return { ok: false, status: 502, error: errorMessage };
   return { ok: true, cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString() };
@@ -476,27 +466,16 @@ async function aplicarWorkflow({ actor, lawsuit_id, categoriaId }) {
     errorMessage = err.message || String(err);
   }
 
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actor?.username || 'controller-workflow-lote',
-        actor?.advboxUserId || null,
-        actionType,
-        Number(lawsuit_id),
-        Number(cfg.responsavelId),
-        JSON.stringify({ categoriaId, workflowNome: cfg.workflowNome, primeiraTarefa: cfg.primeiraTarefa, payload, source: 'controller-workflow-lote' }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[controller] audit log workflow:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actor?.username || 'controller-workflow-lote', advboxUserId: actor?.advboxUserId || null },
+    action:       actionType,
+    lawsuitId:    Number(lawsuit_id),
+    targetUserId: Number(cfg.responsavelId),
+    payload:      { categoriaId, workflowNome: cfg.workflowNome, primeiraTarefa: cfg.primeiraTarefa, payload, source: 'controller-workflow-lote' },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) return { ok: false, status: 502, error: errorMessage };
   return { ok: true, cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString() };

@@ -15,6 +15,7 @@ const { requireAuth } = require('../../../middleware/auth');
 const { query: dbQuery } = require('../../../services/db');
 const { client } = require('../../../services/data');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
+const { logMutation } = require('../../../services/mutation-log');
 const { dateInMes } = require('../../../services/date-utils');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
@@ -161,27 +162,16 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   }
 
   // ── Audit log SEMPRE ───────────────────────────────────────────────────────
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actorUsername,
-        actorAdvboxId,
-        actionType,
-        lawsuit_id ? Number(lawsuit_id) : null,
-        Number(user_id),
-        JSON.stringify({ problema_id, problema_tipo, problema_campo, descricao, payload: advboxPayload }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[audit-actions] erro ao gravar audit_actions:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actorUsername, advboxUserId: actorAdvboxId },
+    action:       actionType,
+    lawsuitId:    lawsuit_id ? Number(lawsuit_id) : null,
+    targetUserId: Number(user_id),
+    payload:      { problema_id, problema_tipo, problema_campo, descricao, payload: advboxPayload },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) {
     return res.status(502).json({
