@@ -4032,6 +4032,66 @@
       <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">
         ⓘ Cache 30 min. Botão "<svg class="ico"><use href="#ico-bell"/></svg> Cobrar" cria tarefa no AdvBox pro responsável (cooldown 60 min por processo).
       </div>
+
+      <!-- ── Produtividade da equipe ────────────────────────────────────────── -->
+      <section id="prodSection" style="margin-top:32px;border-top:2px solid #ececec;padding-top:24px;">
+        <header class="ov-page-head">
+          <div>
+            <h1 class="ov-page-title" style="font-size:20px;"><svg class="ico"><use href="#ico-bars"/></svg> Produtividade da equipe</h1>
+            <div class="ov-page-sub" id="prodEscopoBadge">comercial · jurídico · financeiro</div>
+          </div>
+          <div class="ov-toolbar" style="margin-bottom:0;align-items:center;gap:8px;">
+            <button class="btn-link" onclick="prodNavMes(-1)" aria-label="Mês anterior">‹</button>
+            <span id="prodMesLabel" style="font-weight:600;min-width:120px;text-align:center;">—</span>
+            <button class="btn-link" onclick="prodNavMes(1)" aria-label="Próximo mês">›</button>
+            <button class="btn-link" onclick="prodNavMes(0)" aria-label="Mês atual">Hoje</button>
+            <button class="btn-link" onclick="loadProdutividade(true)" aria-label="Atualizar produtividade">↺ Atualizar</button>
+          </div>
+        </header>
+
+        <div id="prodLoading" style="display:none;text-align:center;padding:24px;color:#aaa;font-size:14px;">Carregando produtividade…</div>
+        <div id="prodErro" style="display:none;color:#b02020;font-size:13px;padding:12px;"></div>
+
+        <div id="prodBody" style="display:none;">
+          <!-- COMERCIAL -->
+          <h2 style="font-family:'Playfair Display',serif;font-size:17px;margin:0 0 12px;color:#1a1a2e;">Comercial — contratos fechados</h2>
+          <section class="metrics" aria-label="Resumo comercial">
+            <article class="metric-card is-neutral"><div class="metric-label">Contratos no mês</div><div class="metric-value" id="prodComContratos">—</div><div class="metric-sub">cadastrados</div></article>
+            <article class="metric-card is-success"><div class="metric-label">Honorários</div><div class="metric-value success" id="prodComHonorarios">—</div><div class="metric-sub">soma fechados</div></article>
+            <article class="metric-card is-danger"><div class="metric-label">Sem "FECHADO POR"</div><div class="metric-value danger" id="prodComSemResp">—</div><div class="metric-sub">não atribuídos</div></article>
+          </section>
+          <div style="overflow-x:auto;">
+            <table class="fin-table" style="width:100%;">
+              <thead><tr><th>Responsável</th><th style="text-align:center;">Contratos</th><th style="text-align:right;">Honorários</th><th style="text-align:right;">Valor da causa</th></tr></thead>
+              <tbody id="prodComBody"><tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">—</td></tr></tbody>
+            </table>
+          </div>
+
+          <!-- JURÍDICO -->
+          <h2 style="font-family:'Playfair Display',serif;font-size:17px;margin:28px 0 12px;color:#1a1a2e;">Jurídico — atividades no AdvBox</h2>
+          <div style="overflow-x:auto;">
+            <table class="fin-table" style="width:100%;">
+              <thead><tr><th>Pessoa</th><th style="text-align:center;">Atividades</th><th style="text-align:center;">Concluídas</th><th>Principais tipos</th></tr></thead>
+              <tbody id="prodJurBody"><tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">—</td></tr></tbody>
+            </table>
+          </div>
+
+          <!-- FINANCEIRO -->
+          <div id="prodFinWrap">
+            <h2 style="font-family:'Playfair Display',serif;font-size:17px;margin:28px 0 12px;color:#1a1a2e;">Financeiro — Claudiana (Cau)</h2>
+            <section class="metrics" aria-label="Resumo financeiro">
+              <article class="metric-card is-neutral"><div class="metric-label">Lançamentos</div><div class="metric-value" id="prodFinLanc">—</div><div class="metric-sub">receitas no mês</div></article>
+              <article class="metric-card is-success"><div class="metric-label">Valor lançado</div><div class="metric-value success" id="prodFinValor">—</div><div class="metric-sub">total income</div></article>
+              <article class="metric-card is-success"><div class="metric-label">Cobrança em dia</div><div class="metric-value success" id="prodFinEmDia">—</div><div class="metric-sub">parceladas c/ lançamento</div></article>
+              <article class="metric-card is-danger"><div class="metric-label">Cobrança atrasada</div><div class="metric-value danger" id="prodFinAtraso">—</div><div class="metric-sub">parceladas s/ lançamento</div></article>
+            </section>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">
+          ⓘ Comercial: anotação "FECHADO POR X" no processo. Jurídico: atividades do mês atribuídas ao 1º responsável (executor). Financeiro: volume de lançamentos do mês — Cau é a única que lança. Cache 20 min.
+        </div>
+      </section>
     </div>
 
     <!-- MODAL: Cobrar responsável -->
@@ -10783,10 +10843,107 @@
         }
 
         renderAuditUsageTable();
+        loadProdutividade(force);
       } catch (e) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#b02020;">Erro: ${auuEscapeHtml(e.message)}</td></tr>`;
       } finally {
         loadEl.style.display = 'none';
+      }
+    }
+
+    // ── Produtividade da equipe (dentro da Auditoria de uso) ──────────────────
+    let prodMesAtual = null;
+    window._prodData = null;
+
+    function prodNavMes(delta) {
+      const now = new Date();
+      if (delta === 0 || !prodMesAtual) {
+        prodMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+      } else {
+        const [mm, yyyy] = prodMesAtual.split('/').map(Number);
+        const d = new Date(yyyy, mm - 1 + delta, 1);
+        prodMesAtual = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      }
+      loadProdutividade();
+    }
+
+    async function loadProdutividade(force) {
+      const now = new Date();
+      if (!prodMesAtual) prodMesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+      const [mm, yyyy] = prodMesAtual.split('/').map(Number);
+      const lbl = document.getElementById('prodMesLabel');
+      if (lbl) lbl.textContent = MES_NOMES[mm - 1] + ' ' + yyyy;
+
+      const loadEl = document.getElementById('prodLoading');
+      const bodyEl = document.getElementById('prodBody');
+      const errEl  = document.getElementById('prodErro');
+      if (errEl)  errEl.style.display = 'none';
+      if (loadEl) loadEl.style.display = 'block';
+      if (bodyEl) bodyEl.style.display = 'none';
+      try {
+        const url = '/api/audit/produtividade?mes=' + encodeURIComponent(prodMesAtual) + (force ? '&force=1' : '');
+        const data = await fetchJson(url);
+        window._prodData = data;
+        renderProdutividade();
+        if (bodyEl) bodyEl.style.display = 'block';
+      } catch (e) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Erro ao carregar produtividade: ' + e.message; }
+      } finally {
+        if (loadEl) loadEl.style.display = 'none';
+      }
+    }
+
+    function renderProdutividade() {
+      const d = window._prodData;
+      if (!d) return;
+      const esc = auuEscapeHtml;
+
+      const badge = document.getElementById('prodEscopoBadge');
+      if (badge) badge.textContent = d.escopo === 'todos'
+        ? 'comercial · jurídico · financeiro — todos'
+        : (d.escopo || 'comercial · jurídico · financeiro');
+
+      // Comercial
+      const com = d.comercial || { porPessoa: [], contratosTotal: 0, semFechadoPor: 0 };
+      document.getElementById('prodComContratos').textContent = com.contratosTotal ?? 0;
+      const totHon = (com.porPessoa || []).reduce((s, p) => s + (p.honorarios || 0), 0);
+      document.getElementById('prodComHonorarios').textContent = formatMoney(totHon);
+      document.getElementById('prodComSemResp').textContent = com.semFechadoPor ?? 0;
+      const comTb = document.getElementById('prodComBody');
+      comTb.innerHTML = (com.porPessoa && com.porPessoa.length)
+        ? com.porPessoa.map(p => `<tr>
+            <td style="font-weight:600;">${esc(p.nome)}</td>
+            <td style="text-align:center;">${p.contratos}</td>
+            <td style="text-align:right;">${formatMoney(p.honorarios)}</td>
+            <td style="text-align:right;color:#888;">${formatMoney(p.valorCausa)}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">Nenhum contrato com "FECHADO POR" neste mês.</td></tr>';
+
+      // Jurídico
+      const jur = d.juridico || [];
+      const jurTb = document.getElementById('prodJurBody');
+      jurTb.innerHTML = jur.length
+        ? jur.map(j => {
+            const tipos = (j.topTipos || []).map(t => `${esc(t.tipo)} (${t.n})`).join(', ');
+            return `<tr>
+              <td style="font-weight:600;">${esc(j.nome)}</td>
+              <td style="text-align:center;">${j.total}</td>
+              <td style="text-align:center;color:#1f8a4c;">${j.concluidas}</td>
+              <td style="font-size:12px;color:#666;">${tipos || '—'}</td>
+            </tr>`;
+          }).join('')
+        : '<tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">Nenhuma atividade neste mês.</td></tr>';
+
+      // Financeiro (só finance/admin — backend manda null caso contrário)
+      const finWrap = document.getElementById('prodFinWrap');
+      if (d.financeiro) {
+        finWrap.style.display = 'block';
+        document.getElementById('prodFinLanc').textContent   = d.financeiro.lancamentos ?? 0;
+        document.getElementById('prodFinValor').textContent  = formatMoney(d.financeiro.valorLancado);
+        document.getElementById('prodFinEmDia').textContent  = d.financeiro.cobrancaEmDia ?? 0;
+        document.getElementById('prodFinAtraso').textContent = d.financeiro.cobrancaAtrasada ?? 0;
+      } else {
+        finWrap.style.display = 'none';
       }
     }
     function renderAuditUsageTable() {

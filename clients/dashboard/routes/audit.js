@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { requireAdmin, requireAuth } = require('../../../middleware/auth');
-const { fetchLawsuits, fetchTransactions } = require('../../../services/data');
+const { fetchLawsuits, fetchTransactions, fetchAllPosts } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
@@ -433,6 +433,171 @@ router.get('/audit-debug-stages', requireAdmin, async (req, res, next) => {
     }
     const stages = Object.entries(counts).map(([stage, count]) => ({ stage, count })).sort((a, b) => b.count - a.count);
     res.json({ total: lawsuits.filter(l => !l.status_closure).length, stages });
+  } catch (err) { next(err); }
+});
+
+// ── Produtividade da Equipe ───────────────────────────────────────────────────
+// GET /api/audit/produtividade?mes=MM/YYYY[&force=1]
+//   comercial  → contratos fechados no mês (anotação "FECHADO POR X" no lawsuit)
+//   juridico   → atividades (posts) do mês por executor (users[0], convenção AdvBox)
+//   financeiro → volume de lançamentos income do mês (proxy direta do Cau, única
+//                pessoa que lança) + cobrança em dia vs atrasada (fases parceladas)
+// Escopo: admin vê tudo; team vê só o próprio; financeiro só pra finance/admin.
+
+const RESP_CONTRATO = ['THIAGO', 'TAMMYRES', 'MARILIA', 'LETICIA', 'EDUARDO'];
+
+function toNumBRL(s) {
+  return parseFloat(String(s || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+}
+
+function extrairFechadoPor(notes) {
+  const up = normFase(notes); // uppercase + sem acento + espaços colapsados
+  const idx = up.indexOf('FECHADO POR ');
+  if (idx < 0) return null;
+  const after = up.slice(idx + 12);
+  const end = after.search(/[,.|;]/);
+  const trecho = (end >= 0 ? after.slice(0, end) : after.slice(0, 35)).trim();
+  return RESP_CONTRATO.find(n => trecho.includes(n)) || null;
+}
+
+function pickClienteNome(l) {
+  const arr = Array.isArray(l.customers) ? l.customers : [];
+  const personal = arr.find(c => c.name &&
+    !/INSS|INSTITUTO NACIONAL|PREVIDENCIA|ESTADO|MUNICIPIO|UNIAO FEDERAL/i.test((c.name || '').toUpperCase()));
+  return (personal || arr[0] || {}).name || `#${l.id}`;
+}
+
+router.get('/audit/produtividade', requireAuth, async (req, res, next) => {
+  const today  = new Date();
+  const defMes = String(today.getMonth() + 1).padStart(2, '0') + '/' + today.getFullYear();
+  const mes    = req.query.mes || defMes;
+  const force  = req.query.force === '1';
+  const key    = `produtividade:${mes}`;
+  cache.define(key, 20 * 60 * 1000);
+
+  try {
+    const data = await cache.getOrFetch(key, async () => {
+      const [lawsuits, transactions, posts] = await Promise.all([
+        fetchLawsuits(),
+        fetchTransactions(),
+        fetchAllPosts(500, 10, 600, false),
+      ]);
+      const [mm, yyyy] = mes.split('/').map(Number);
+      const inMes = (s) => dateInMes(s, mm, yyyy);
+
+      // ── COMERCIAL: contratos fechados no mês ───────────────────────────────
+      const comercialMap = {};
+      let contratosTotal = 0, semFechadoPor = 0;
+      for (const l of lawsuits) {
+        if (!inMes(l.created_at)) continue;
+        contratosTotal++;
+        const notes = l.general_notes || l.annotations || l.notes || '';
+        const quem  = extrairFechadoPor(notes);
+        if (!quem) { semFechadoPor++; continue; }
+        if (!comercialMap[quem]) comercialMap[quem] = { nome: quem, contratos: 0, honorarios: 0, valorCausa: 0, items: [] };
+        const e = comercialMap[quem];
+        const hon = toNumBRL(l.fees_money);
+        e.contratos++;
+        e.honorarios += hon;
+        e.valorCausa += toNumBRL(l.fees_expec);
+        e.items.push({
+          id: l.id,
+          cliente: pickClienteNome(l),
+          processo: l.process_number || `#${l.id}`,
+          honorarios: hon,
+          created_at: l.created_at,
+          link: `https://app.advbox.com.br/lawsuit/${l.id}`,
+        });
+      }
+      const comercial = Object.values(comercialMap).sort((a, b) => b.contratos - a.contratos);
+
+      // ── JURÍDICO: atividades do mês por executor (users[0]) ────────────────
+      const juridicoMap = {};
+      for (const p of posts) {
+        if (!inMes(p.created_at)) continue;
+        const u = (p.users || [])[0];
+        if (!u || !u.name) continue;
+        const nome = u.name;
+        if (!juridicoMap[nome]) juridicoMap[nome] = { nome, user_id: u.user_id || u.id || null, total: 0, concluidas: 0, tipos: {} };
+        const e = juridicoMap[nome];
+        e.total++;
+        if (u.completed) e.concluidas++;
+        const tipo = (p.task || '(sem tipo)').trim();
+        e.tipos[tipo] = (e.tipos[tipo] || 0) + 1;
+      }
+      const juridico = Object.values(juridicoMap)
+        .map(e => ({
+          nome: e.nome, user_id: e.user_id, total: e.total, concluidas: e.concluidas,
+          topTipos: Object.entries(e.tipos).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, n]) => ({ tipo: t, n })),
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      // ── FINANCEIRO: volume de lançamentos do Cau + cobrança ────────────────
+      const txIncome = transactions.filter(t => t.entry_type === 'income');
+      const txDoMes  = txIncome.filter(t => inMes(t.date_payment) || inMes(t.date_due));
+      const valorLancado = txDoMes.reduce((s, t) => s + Number(t.amount || 0), 0);
+
+      const txByLaw = {};
+      txDoMes.forEach(t => { const lid = String(t.lawsuits_id || t.lawsuit_id || ''); if (lid) (txByLaw[lid] = txByLaw[lid] || []).push(t); });
+      const txMesNomes = new Set(
+        txDoMes.filter(t => !(t.lawsuits_id || t.lawsuit_id))
+               .map(t => normFase(t.name || t.customer_name || ''))
+               .filter(Boolean)
+      );
+
+      let cobrancaEmDia = 0, cobrancaAtrasada = 0;
+      for (const l of lawsuits) {
+        if (!matchFase(l.stage || l.step || '', FASES_COBRANCA)) continue;
+        const lid = String(l.id || '');
+        let tem = (txByLaw[lid] || []).length > 0;
+        if (!tem) {
+          for (const c of (l.customers || [])) {
+            if (txMesNomes.has(normFase(c.name || ''))) { tem = true; break; }
+          }
+        }
+        if (tem) cobrancaEmDia++; else cobrancaAtrasada++;
+      }
+
+      const financeiro = {
+        responsavel: 'Claudiana (Cau)',
+        lancamentos: txDoMes.length,
+        valorLancado,
+        cobrancaEmDia,
+        cobrancaAtrasada,
+        cobrancaTotal: cobrancaEmDia + cobrancaAtrasada,
+      };
+
+      return {
+        mes,
+        comercial: { porPessoa: comercial, contratosTotal, semFechadoPor },
+        juridico,
+        financeiro,
+        geradoEm: new Date().toISOString(),
+      };
+    }, force);
+
+    // ── Escopo por sessão ────────────────────────────────────────────────────
+    const isAdmin = req.session.user.role === 'admin';
+    if (isAdmin) return res.json({ ...data, escopo: 'todos' });
+
+    const advboxUserIdNum = Number(advboxUserIdFromSession(req.session.user)) || null;
+    const meuNomeNorm = normFase(req.session.user.name || req.session.user.username || '');
+    const meuToken    = RESP_CONTRATO.find(n => meuNomeNorm.includes(n)) || null;
+    const isFinance   = req.session.user.role === 'finance' ||
+                        meuNomeNorm.includes('CAU') || meuNomeNorm.includes('CLAUDIANA');
+
+    res.json({
+      mes: data.mes,
+      comercial: {
+        porPessoa: meuToken ? data.comercial.porPessoa.filter(p => p.nome === meuToken) : [],
+        contratosTotal: data.comercial.contratosTotal,
+        semFechadoPor: data.comercial.semFechadoPor,
+      },
+      juridico: advboxUserIdNum ? data.juridico.filter(j => Number(j.user_id) === advboxUserIdNum) : [],
+      financeiro: isFinance ? data.financeiro : null,
+      geradoEm: data.geradoEm,
+      escopo: `apenas ${req.session.user.name || req.session.user.username}`,
+    });
   } catch (err) { next(err); }
 });
 
