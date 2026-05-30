@@ -308,6 +308,30 @@ function imprimeRanking(titulo, mapa) {
   const concluidas = await paginar(`completed_start=${ini}&completed_end=${fim}`);
   comparaContagem('CONCLUÍDAS no mês', concluidas);
 
+  // ── [H] PRÉVIA do painel NOVO: concluídas, creditadas a QUEM concluiu ──────
+  // Replica exatamente a lógica do audit.js. Se "ambíguos" (2+ marcaram
+  // concluído) for alto, a regra "quem concluiu" cai pro 1º responsável e a
+  // Alice volta a ser sub-contada — sinal de que o flag completed é setado em
+  // TODOS os designados, não só em quem fechou.
+  console.log('\n================ [H] PRÉVIA DO PAINEL NOVO (concluídas / quem concluiu) ================');
+  const isDone = (u) => u && u.completed != null && u.completed !== false && u.completed !== 0;
+  const previa = {};
+  let multiDone = 0, semDone = 0;
+  for (const p of concluidas) {
+    const us = (p.users || []).filter(u => u && u.name);
+    if (!us.length) continue;
+    const done = us.filter(isDone);
+    if (done.length >= 2) multiDone++;
+    if (done.length === 0) semDone++;
+    const dono = done[0] || us[0];
+    previa[dono.name] = (previa[dono.name] || 0) + 1;
+  }
+  imprimeRanking(`Concluídas creditadas a quem concluiu (${concluidas.length} tarefas — é ISSO que o painel vai mostrar):`, previa);
+  console.log(`\n  Registros c/ 2+ pessoas marcadas concluído (ambíguos → vão pro 1º resp.): ${multiDone}`);
+  console.log(`  Registros s/ ninguém marcado concluído (fallback p/ 1º resp.):           ${semDone}`);
+  console.log('  Se "ambíguos" for ALTO e a Alice continuar baixa aqui, o flag é por-tarefa');
+  console.log('  (não por-pessoa) e a regra precisa mudar (ex.: creditar todos os que fecharam).');
+
   console.log('\n================ CONCLUSÃO ================');
   console.log(`Posts CRIADOS no mês:           ${posts.length}`);
   console.log(`Após dedup processo+tarefa+dia: ${canonicos.length}  (excesso ${posts.length - canonicos.length})`);

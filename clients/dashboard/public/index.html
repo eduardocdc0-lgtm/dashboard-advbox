@@ -4068,11 +4068,11 @@
           </div>
 
           <!-- JURÍDICO -->
-          <h2 style="font-family:'Playfair Display',serif;font-size:17px;margin:28px 0 12px;color:#1a1a2e;">Jurídico — atividades no AdvBox</h2>
+          <h2 style="font-family:'Playfair Display',serif;font-size:17px;margin:28px 0 12px;color:#1a1a2e;">Jurídico — tarefas concluídas no mês</h2>
           <div style="overflow-x:auto;">
             <table class="fin-table" style="width:100%;">
-              <thead><tr><th>Pessoa</th><th style="text-align:center;">Atividades</th><th style="text-align:center;">Concluídas</th><th>Principais tipos</th></tr></thead>
-              <tbody id="prodJurBody"><tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">—</td></tr></tbody>
+              <thead><tr><th>Pessoa</th><th style="text-align:center;">Concluídas no mês</th><th>Principais tipos</th></tr></thead>
+              <tbody id="prodJurBody"><tr><td colspan="3" style="text-align:center;padding:24px;color:#aaa;">—</td></tr></tbody>
             </table>
           </div>
 
@@ -4089,7 +4089,7 @@
         </div>
 
         <div style="font-size:11px;color:#bbb;margin-top:14px;padding:8px 4px;border-top:1px solid #f0f0f0;">
-          ⓘ Comercial: anotação "FECHADO POR X" no processo. Jurídico: atividades do mês atribuídas ao 1º responsável (executor). Financeiro: volume de lançamentos do mês — Cau é a única que lança. Cache 20 min.
+          ⓘ Comercial: anotação "FECHADO POR X" no processo. Jurídico: tarefas concluídas no mês, creditadas a quem concluiu (tarefa compartilhada conta 1x). Financeiro: volume de lançamentos do mês — Cau é a única que lança. Cache 20 min.
         </div>
       </section>
     </div>
@@ -10927,12 +10927,11 @@
             const tipos = (j.topTipos || []).map(t => `${esc(t.tipo)} (${t.n})`).join(', ');
             return `<tr>
               <td style="font-weight:600;">${esc(j.nome)}</td>
-              <td style="text-align:center;">${j.total}</td>
-              <td style="text-align:center;color:#1f8a4c;">${j.concluidas}</td>
+              <td style="text-align:center;color:#1f8a4c;font-weight:600;">${j.concluidas}</td>
               <td style="font-size:12px;color:#666;">${tipos || '—'}</td>
             </tr>`;
           }).join('')
-        : '<tr><td colspan="4" style="text-align:center;padding:24px;color:#aaa;">Nenhuma atividade neste mês.</td></tr>';
+        : '<tr><td colspan="3" style="text-align:center;padding:24px;color:#aaa;">Nenhuma tarefa concluída neste mês.</td></tr>';
 
       // Financeiro (só finance/admin — backend manda null caso contrário)
       const finWrap = document.getElementById('prodFinWrap');

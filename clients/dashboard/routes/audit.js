@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { requireAdmin, requireAuth } = require('../../../middleware/auth');
-const { fetchLawsuits, fetchTransactions, fetchPostsCreatedBetween } = require('../../../services/data');
+const { fetchLawsuits, fetchTransactions, fetchPostsCompletedBetween } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
@@ -480,20 +480,21 @@ router.get('/audit/produtividade', requireAuth, async (req, res, next) => {
       const [mm, yyyy] = mes.split('/').map(Number);
       const inMes = (s) => dateInMes(s, mm, yyyy);
 
-      // Intervalo do mês p/ filtro nativo da API (/posts?created_start&created_end).
-      // created_start inclusivo; created_end = 1º dia do mês seguinte (cobre o dia
+      // Intervalo do mês p/ filtro nativo da API (/posts?completed_start&completed_end).
+      // completed_start inclusivo; completed_end = 1º dia do mês seguinte (cobre o dia
       // 31 inteiro independente de a API tratar a borda como inclusiva/exclusiva).
-      // O inMes() abaixo ainda filtra qualquer sobra que vier fora do mês.
+      // Jurídico mede tarefas CONCLUÍDAS no mês (o que a equipe entregou ≈334),
+      // não criadas (≈164) — decisão do Eduardo (30/05/2026).
       const pad = (n) => String(n).padStart(2, '0');
-      const createdStart = `${yyyy}-${pad(mm)}-01`;
+      const completedStart = `${yyyy}-${pad(mm)}-01`;
       const nY = mm === 12 ? yyyy + 1 : yyyy;
       const nM = mm === 12 ? 1 : mm + 1;
-      const createdEnd = `${nY}-${pad(nM)}-01`;
+      const completedEnd = `${nY}-${pad(nM)}-01`;
 
       const [lawsuits, transactions, posts] = await Promise.all([
         fetchLawsuits(),
         fetchTransactions(),
-        fetchPostsCreatedBetween(createdStart, createdEnd),
+        fetchPostsCompletedBetween(completedStart, completedEnd),
       ]);
 
       // ── COMERCIAL: contratos fechados no mês ───────────────────────────────
@@ -522,26 +523,31 @@ router.get('/audit/produtividade', requireAuth, async (req, res, next) => {
       }
       const comercial = Object.values(comercialMap).sort((a, b) => b.contratos - a.contratos);
 
-      // ── JURÍDICO: atividades do mês por executor (users[0]) ────────────────
+      // ── JURÍDICO: tarefas CONCLUÍDAS no mês, creditadas a QUEM concluiu ─────
+      // Tarefa compartilhada (ex.: Letícia+Alice) é UM registro com vários users,
+      // cada um com seu flag `completed`. Creditamos a tarefa 1x, pra quem marcou
+      // concluído (primeiro completer); assim NÃO dobra (o x2 da tela do AdvBox
+      // some) e quem concluiu de fato aparece (antes ia 100% pro 1º responsável,
+      // zerando a Alice). Sem completer válido, cai pro 1º responsável (users[0]).
+      const isCompleted = (u) => u && u.completed != null && u.completed !== false && u.completed !== 0;
       const juridicoMap = {};
       for (const p of posts) {
-        if (!inMes(p.created_at)) continue;
-        const u = (p.users || [])[0];
-        if (!u || !u.name) continue;
-        const nome = u.name;
-        if (!juridicoMap[nome]) juridicoMap[nome] = { nome, user_id: u.user_id || u.id || null, total: 0, concluidas: 0, tipos: {} };
+        const us = (p.users || []).filter(u => u && u.name);
+        if (!us.length) continue;
+        const dono = us.find(isCompleted) || us[0]; // quem concluiu; senão 1º responsável
+        const nome = dono.name;
+        if (!juridicoMap[nome]) juridicoMap[nome] = { nome, user_id: dono.user_id || dono.id || null, concluidas: 0, tipos: {} };
         const e = juridicoMap[nome];
-        e.total++;
-        if (u.completed) e.concluidas++;
+        e.concluidas++;
         const tipo = (p.task || '(sem tipo)').trim();
         e.tipos[tipo] = (e.tipos[tipo] || 0) + 1;
       }
       const juridico = Object.values(juridicoMap)
         .map(e => ({
-          nome: e.nome, user_id: e.user_id, total: e.total, concluidas: e.concluidas,
+          nome: e.nome, user_id: e.user_id, total: e.concluidas, concluidas: e.concluidas,
           topTipos: Object.entries(e.tipos).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, n]) => ({ tipo: t, n })),
         }))
-        .sort((a, b) => b.total - a.total);
+        .sort((a, b) => b.concluidas - a.concluidas);
 
       // ── FINANCEIRO: volume de lançamentos do Cau + cobrança ────────────────
       const txIncome = transactions.filter(t => t.entry_type === 'income');
