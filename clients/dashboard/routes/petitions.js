@@ -137,25 +137,27 @@ router.get('/petitions/by-person', async (req, res, next) => {
     const { posts, range } = await fetchPostsForPeriod(period);
     const petitions = posts.filter(p => isPetition(p.task));
 
-    // Agrupar por responsável
+    // Agrupar por responsável.
+    // Conta só o PRIMEIRO responsável da tarefa (users[0] = executor, convenção AdvBox).
+    // Sem isso, tarefa com 2 nomes (ex: executor + SDR/acompanhante) dava +1 pra cada,
+    // inflando o ranking. Mesma regra usada em services/auditor.js (userIdDaTarefa).
     const byPerson = {};
     for (const p of petitions) {
-      for (const u of (p.users || [])) {
-        if (!u.name) continue;
-        const name = u.name;
-        if (filterResp && normStr(name) !== normStr(filterResp)) continue;
-        if (!byPerson[name]) byPerson[name] = { name, count: 0, types: {}, items: [] };
-        byPerson[name].count++;
-        byPerson[name].types[p.task] = (byPerson[name].types[p.task] || 0) + 1;
-        byPerson[name].items.push({
-          id: p.id,
-          task: p.task,
-          notes: (p.notes || '').slice(0, 120),
-          lawsuits_id: p.lawsuits_id,
-          lawsuit_name: p.lawsuit?.name || null,
-          created_at: p.created_at,
-        });
-      }
+      const u = (p.users || [])[0];
+      if (!u || !u.name) continue;
+      const name = u.name;
+      if (filterResp && normStr(name) !== normStr(filterResp)) continue;
+      if (!byPerson[name]) byPerson[name] = { name, count: 0, types: {}, items: [] };
+      byPerson[name].count++;
+      byPerson[name].types[p.task] = (byPerson[name].types[p.task] || 0) + 1;
+      byPerson[name].items.push({
+        id: p.id,
+        task: p.task,
+        notes: (p.notes || '').slice(0, 120),
+        lawsuits_id: p.lawsuits_id,
+        lawsuit_name: p.lawsuit?.name || null,
+        created_at: p.created_at,
+      });
     }
 
     const result = Object.values(byPerson).sort((a, b) => b.count - a.count);
