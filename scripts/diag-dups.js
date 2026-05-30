@@ -45,13 +45,20 @@ function executor(p) {
   return u && u.name ? u.name : '(sem responsável)';
 }
 
-/** Pagina /posts filtrando por created_start/created_end, dedup por id. */
-async function baixarMes(ini, fim) {
+/** Todos os responsáveis de um post: [{ name, completed }]. */
+function usuariosDe(p) {
+  return (p.users || [])
+    .filter(u => u && u.name)
+    .map(u => ({ name: u.name, completed: !!u.completed }));
+}
+
+/** Pagina /posts com QUALQUER query extra (limit=1000, offset), dedup por id. */
+async function paginar(extraQS) {
   const all = [];
   const seen = new Set();
   for (let page = 0; page < 15; page++) {
     const offset = page * 1000;
-    const url = `/posts?limit=1000&offset=${offset}&created_start=${ini}&created_end=${fim}`;
+    const url = `/posts?limit=1000&offset=${offset}${extraQS ? '&' + extraQS : ''}`;
     let data;
     try {
       data = await client.request(url);
@@ -74,12 +81,26 @@ async function baixarMes(ini, fim) {
   return all;
 }
 
-/** Conta registros por pessoa (executor = users[0]). */
+/** Atalho: posts criados no intervalo [ini, fim). */
+function baixarMes(ini, fim) {
+  return paginar(`created_start=${ini}&created_end=${fim}`);
+}
+
+/** Conta registros por pessoa (executor = users[0] — jeito do dashboard). */
 function porPessoa(lista) {
   const m = {};
   for (const p of lista) {
     const nome = executor(p);
     m[nome] = (m[nome] || 0) + 1;
+  }
+  return m;
+}
+
+/** Conta dando +1 a CADA responsável do post (jeito "por designado", AdvBox). */
+function porAssignee(lista) {
+  const m = {};
+  for (const p of lista) {
+    for (const u of usuariosDe(p)) m[u.name] = (m[u.name] || 0) + 1;
   }
   return m;
 }
@@ -225,10 +246,77 @@ function imprimeRanking(titulo, mapa) {
   }
   if (!mostrados) console.log('  (nenhum grupo cross-user encontrado por essa chave)');
 
+  // ── [F] Tarefas COMPARTILHADAS (1 registro com 2+ responsáveis) ──
+  // É AQUI que mora o "quando uma conclui, aparece pra outra concluindo tb":
+  // um único post com users=[Letícia, Alice]. O dashboard conta só users[0],
+  // mas a tela de Atividades do AdvBox conta pra CADA designado (infla x2).
+  console.log('\n================ [F] TAREFAS COMPARTILHADAS (users[] >= 2) ================');
+  const distrib = {};            // quantos responsáveis -> nº de posts
+  const pares = {};              // "A + B" -> nº de posts
+  const paresAmbosConcluiram = {}; // "A + B" -> posts onde 2+ marcaram concluído
+  let compartilhados = 0, comDoisConcluidos = 0;
+  for (const p of posts) {
+    const us = usuariosDe(p);
+    distrib[us.length] = (distrib[us.length] || 0) + 1;
+    if (us.length >= 2) {
+      compartilhados++;
+      const chave = us.map(u => u.name).sort().join(' + ');
+      pares[chave] = (pares[chave] || 0) + 1;
+      const nConcl = us.filter(u => u.completed).length;
+      if (nConcl >= 2) {
+        comDoisConcluidos++;
+        paresAmbosConcluiram[chave] = (paresAmbosConcluiram[chave] || 0) + 1;
+      }
+    }
+  }
+  console.log('Distribuição de responsáveis por post:');
+  for (const [n, q] of Object.entries(distrib).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+    console.log(`   ${q} posts com ${n} responsável(is)`);
+  }
+  console.log(`\nPosts compartilhados (2+ responsáveis): ${compartilhados}`);
+  console.log(`  destes, com 2+ pessoas marcadas como CONCLUÍDO: ${comDoisConcluidos}`);
+  if (compartilhados) {
+    console.log('\nPares de responsáveis que mais dividem tarefa:');
+    for (const [par, n] of Object.entries(pares).sort((a, b) => b[1] - a[1]).slice(0, 15)) {
+      const amb = paresAmbosConcluiram[par] || 0;
+      console.log(`   ${String(n).padStart(3)}x  ${par}${amb ? `   (ambos concluíram em ${amb})` : ''}`);
+    }
+  } else {
+    console.log('=> NENHUM post tem 2+ responsáveis. Tarefa "compartilhada" no AdvBox vira');
+    console.log('   registros separados (1 por pessoa), não um registro com vários users.');
+  }
+
+  // ── [G] Dashboard (users[0]) x "por designado" (todos os users) ──
+  // Mostra QUANTO cada pessoa inflaria se contássemos cada designado. Se o
+  // dashboard batesse com a tela do AdvBox, seria por contar "por designado".
+  console.log('\n================ [G] users[0] x por-designado ================');
+  function comparaContagem(rotulo, lista) {
+    const d = porPessoa(lista);     // dashboard
+    const a = porAssignee(lista);   // por designado
+    const nomes = new Set([...Object.keys(d), ...Object.keys(a)]);
+    console.log(`\n  ${rotulo} (${lista.length} registros):`);
+    console.log('     pessoa                         users[0]   por-designado   +infla');
+    for (const nome of [...nomes].sort((x, y) => (a[y] || 0) - (a[x] || 0))) {
+      const du = d[nome] || 0, ad = a[nome] || 0;
+      console.log(`     ${nome.padEnd(30)} ${String(du).padStart(6)}   ${String(ad).padStart(11)}   ${String(ad - du).padStart(5)}`);
+    }
+  }
+  comparaContagem('CRIADAS no mês (recorte atual do dashboard)', posts);
+
+  // Slice de CONCLUÍDAS no mês — onde o "quando conclui" realmente acontece.
+  console.log('\n  Baixando CONCLUÍDAS no mês (completed_start/completed_end)...');
+  const concluidas = await paginar(`completed_start=${ini}&completed_end=${fim}`);
+  comparaContagem('CONCLUÍDAS no mês', concluidas);
+
   console.log('\n================ CONCLUSÃO ================');
-  console.log(`Posts no mês:                 ${posts.length}`);
-  console.log(`Após dedup (composto):        ${canonicos.length}`);
-  console.log(`Excesso removido:             ${posts.length - canonicos.length}`);
-  console.log('Se o excesso bate com o "x2" da Letícia/Alice, esse é o dedup a aplicar no audit.js.');
+  console.log(`Posts CRIADOS no mês:           ${posts.length}`);
+  console.log(`Após dedup processo+tarefa+dia: ${canonicos.length}  (excesso ${posts.length - canonicos.length})`);
+  console.log(`Posts compartilhados (2+ resp): ${compartilhados}`);
+  console.log(`Posts CONCLUÍDOS no mês:        ${concluidas.length}`);
+  console.log('');
+  console.log('Leitura: se [F] mostra muitos pares Letícia+Alice e [G] tem "+infla" alto,');
+  console.log('o x2 vem de contar POR DESIGNADO — e o fix é garantir users[0] (já é o caso)');
+  console.log('OU contar a tarefa 1x mesmo no slice de concluídas. Se [F]=0 e [G] +infla=0,');
+  console.log('não há dup nesse recorte e o número do dashboard já está correto.');
   console.log('');
 })().catch(e => { console.error('\nFALHA GERAL:', e.message); process.exit(1); });
