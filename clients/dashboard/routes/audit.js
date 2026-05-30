@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { requireAdmin, requireAuth } = require('../../../middleware/auth');
-const { fetchLawsuits, fetchTransactions, fetchAllPosts } = require('../../../services/data');
+const { fetchLawsuits, fetchTransactions, fetchPostsCreatedBetween } = require('../../../services/data');
 const cache = require('../../../cache');
 const { query: dbQuery } = require('../../../services/db');
 const { sendWhatsApp } = require('../../../services/chatguru-sender');
@@ -477,13 +477,24 @@ router.get('/audit/produtividade', requireAuth, async (req, res, next) => {
 
   try {
     const data = await cache.getOrFetch(key, async () => {
+      const [mm, yyyy] = mes.split('/').map(Number);
+      const inMes = (s) => dateInMes(s, mm, yyyy);
+
+      // Intervalo do mês p/ filtro nativo da API (/posts?created_start&created_end).
+      // created_start inclusivo; created_end = 1º dia do mês seguinte (cobre o dia
+      // 31 inteiro independente de a API tratar a borda como inclusiva/exclusiva).
+      // O inMes() abaixo ainda filtra qualquer sobra que vier fora do mês.
+      const pad = (n) => String(n).padStart(2, '0');
+      const createdStart = `${yyyy}-${pad(mm)}-01`;
+      const nY = mm === 12 ? yyyy + 1 : yyyy;
+      const nM = mm === 12 ? 1 : mm + 1;
+      const createdEnd = `${nY}-${pad(nM)}-01`;
+
       const [lawsuits, transactions, posts] = await Promise.all([
         fetchLawsuits(),
         fetchTransactions(),
-        fetchAllPosts(500, 10, 600, false),
+        fetchPostsCreatedBetween(createdStart, createdEnd),
       ]);
-      const [mm, yyyy] = mes.split('/').map(Number);
-      const inMes = (s) => dateInMes(s, mm, yyyy);
 
       // ── COMERCIAL: contratos fechados no mês ───────────────────────────────
       const comercialMap = {};
