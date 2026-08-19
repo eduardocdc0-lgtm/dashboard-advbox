@@ -9,6 +9,9 @@
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
+    "test": "node --test --test-reporter=spec",
+    "test:unit": "node --test --test-reporter=spec tests/unit/access-log-buffer.test.js tests/unit/advbox-pagination.test.js tests/unit/circuit-breaker.test.js tests/unit/cron-guard.test.js tests/unit/validate.test.js",
+    "test:integration": "node --test --test-reporter=spec tests/integration/auth.test.js",
     "push-github": "bash scripts/push-github.sh"
   },
   "engines": {
@@ -29,6 +32,7 @@
     "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "eslint": "^9.15.0",
     "prettier": "^3.4.2"
   }

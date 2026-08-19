@@ -6,6 +6,8 @@ const { fetchTransactions } = require('../../../services/data');
 const { getInadimplentes } = require('../../../services/inadimplentes');
 const { parseAdvboxDate, toISODate } = require('../../../services/date-utils');
 const { isParcelaValida, validateEntryInput } = require('../../../services/finance-helpers');
+const { logMutation } = require('../../../services/mutation-log');
+const { validate } = require('../../../utils/validate');
 const cache = require('../../../cache');
 
 const router = Router();
@@ -167,31 +169,31 @@ function lastDayOfMonth(yyyy, mm /* 1-12 */) {
 // }
 router.post('/finance/entries', requireFinance, async (req, res, next) => {
   try {
-    const {
-      client_name, lawsuit_id, category,
-      kind = 'parcelado',
-      parcela_value, total_parcelas, total_value,
-      first_due_date, day_of_month,
-      notes,
-    } = req.body || {};
+    // Estrutura: tipos, presença, formato (validate() — joga 400 + details[]).
+    // Limites de negócio (teto valor, max parcelas) ficam em validateEntryInput
+    // — separação intencional: structural vs policy.
+    const data = validate(req.body)
+      .string('client_name',    { maxLength: 500 })
+      .number('lawsuit_id',     { integer: true, min: 1, optional: true })
+      .string('category',       { maxLength: 100, optional: true })
+      .enum  ('kind',           ['a_vista', 'parcelado'])
+      .number('parcela_value',  { min: 0.01 })
+      .number('total_parcelas', { integer: true, min: 1, optional: true })
+      .number('total_value',    { min: 0,    optional: true })
+      .dateYMD('first_due_date')
+      .number('day_of_month',   { integer: true, min: 1, max: 99, optional: true })
+      .string('notes',          { maxLength: 1000, optional: true })
+      .done();
 
-    // Validação básica
-    if (!client_name || !String(client_name).trim()) {
-      return res.status(400).json({ error: 'client_name é obrigatório' });
-    }
-    if (!['a_vista', 'parcelado'].includes(kind)) {
-      return res.status(400).json({ error: 'kind deve ser a_vista ou parcelado' });
-    }
-    // Sanity checks centralizados (anti-typo)
+    // Policy checks (tetos R$ / parcelas) — usa o b cru pra manter API antiga.
     const validationErrs = validateEntryInput(req.body || {});
     if (validationErrs.length) {
       return res.status(400).json({ error: validationErrs.join(' · '), errors: validationErrs });
     }
-    const pv = Number(parcela_value);
-    const tp = kind === 'a_vista' ? 1 : Math.max(1, parseInt(total_parcelas, 10) || 1);
-    if (!isValidDate(first_due_date)) {
-      return res.status(400).json({ error: 'first_due_date inválido (esperado YYYY-MM-DD)' });
-    }
+
+    const { client_name, lawsuit_id, category, kind,
+            parcela_value: pv, total_value, first_due_date, day_of_month, notes } = data;
+    const tp = kind === 'a_vista' ? 1 : Math.max(1, data.total_parcelas || 1);
 
     // Cascade: cada parcela +30 dias, opcionalmente forçando dia do mês fixo
     const parcelasDates = [];
@@ -240,7 +242,23 @@ router.post('/finance/entries', requireFinance, async (req, res, next) => {
       total_value: total_value || pv * tp,
       parcelas: inserted,
     });
-  } catch (err) { next(err); }
+    logMutation({
+      actor:     req.session?.user,
+      action:    'finance.entries.create',
+      lawsuitId: lawsuit_id ? Number(lawsuit_id) : null,
+      payload:   { group_id: groupId, client_name, category, kind, total_parcelas: tp, parcela_value: pv, first_due_date, day_of_month },
+      success:   true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:   req.session?.user,
+      action:  'finance.entries.create',
+      payload: { body: req.body },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── GET /api/finance/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD ──────────────────
@@ -284,37 +302,43 @@ router.get('/finance/calendar', requireFinance, async (req, res, next) => {
 // Atualiza status (paga/cancelada), data de pagamento, valor pago, etc.
 router.patch('/finance/parcela/:id', requireFinance, async (req, res, next) => {
   try {
+    // id vem da URL — checagem direta. validate() é só pro body.
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id inválido' });
 
-    const { status, paid_date, paid_value, due_date, value, notes } = req.body || {};
+    // Todos os campos são opcionais aqui (PATCH = update parcial), mas SE
+    // vierem precisam estar no formato certo. validate() coerce.
+    const data = validate(req.body)
+      .enum  ('status',     ['pendente', 'paga', 'cancelada'], { optional: true })
+      .dateYMD('paid_date', { optional: true })
+      .number('paid_value', { min: 0,    optional: true })
+      .dateYMD('due_date',  { optional: true })
+      .number('value',      { min: 0.01, optional: true })
+      .string('notes',      { maxLength: 1000, optional: true })
+      .done();
+
+    const { status, paid_date, paid_value, due_date, value, notes } = data;
     const fields = [];
     const values = [];
     let i = 1;
 
     if (status !== undefined) {
-      if (!['pendente', 'paga', 'cancelada'].includes(status)) {
-        return res.status(400).json({ error: 'status inválido' });
-      }
       fields.push(`status = $${i++}`); values.push(status);
       if (status === 'paga') {
         fields.push(`paid_date = COALESCE($${i++}, CURRENT_DATE)`);
-        values.push(isValidDate(paid_date) ? paid_date : null);
+        values.push(paid_date || null);
         fields.push(`paid_value = COALESCE($${i++}, value)`);
-        values.push(paid_value != null ? Number(paid_value) : null);
+        values.push(paid_value != null ? paid_value : null);
       } else {
         fields.push(`paid_date = NULL`);
         fields.push(`paid_value = NULL`);
       }
     }
     if (due_date !== undefined) {
-      if (!isValidDate(due_date)) return res.status(400).json({ error: 'due_date inválido' });
       fields.push(`due_date = $${i++}`); values.push(due_date);
     }
     if (value !== undefined) {
-      const v = Number(value);
-      if (!v || v <= 0) return res.status(400).json({ error: 'value inválido' });
-      fields.push(`value = $${i++}`); values.push(v);
+      fields.push(`value = $${i++}`); values.push(value);
     }
     if (notes !== undefined) {
       fields.push(`notes = $${i++}`); values.push(notes);
@@ -330,52 +354,81 @@ router.patch('/finance/parcela/:id', requireFinance, async (req, res, next) => {
     if (!r.rows.length) return res.status(404).json({ error: 'não encontrado' });
 
     res.json(r.rows[0]);
-  } catch (err) { next(err); }
+    logMutation({
+      actor:  req.session?.user,
+      action: 'finance.parcela.update',
+      payload: { id, changes: { status, paid_date, paid_value, due_date, value, notes }, result: r.rows[0] },
+      success: true,
+    });
+  } catch (err) {
+    logMutation({
+      actor:  req.session?.user,
+      action: 'finance.parcela.update',
+      payload: { id: parseInt(req.params.id, 10), body: req.body },
+      success: false,
+      error:   err.message,
+    });
+    next(err);
+  }
 });
 
 // ── DELETE /api/finance/parcela/:id ──────────────────────────────────────────
 // Remove uma parcela específica (não desfaz o lançamento inteiro).
 router.delete('/finance/parcela/:id', requireFinance, async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id inválido' });
     const r = await query(`DELETE FROM financial_parcelas WHERE id = $1 RETURNING id`, [id]);
     if (!r.rows.length) return res.status(404).json({ error: 'não encontrado' });
     res.json({ ok: true, id });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.parcela.delete', payload: { id }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.parcela.delete', payload: { id }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 // ── DELETE /api/finance/group/:groupId ───────────────────────────────────────
 // Remove TODAS as parcelas de um lançamento (undo).
 router.delete('/finance/group/:groupId', requireFinance, async (req, res, next) => {
+  const groupId = req.params.groupId;
   try {
-    const r = await query(`DELETE FROM financial_parcelas WHERE group_id = $1 RETURNING id`, [req.params.groupId]);
+    const r = await query(`DELETE FROM financial_parcelas WHERE group_id = $1 RETURNING id`, [groupId]);
     res.json({ ok: true, removed: r.rows.length });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.group.delete', payload: { groupId, removed: r.rows.length }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.group.delete', payload: { groupId }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 // ── PATCH /api/finance/group/:groupId/end-after ──────────────────────────────
 // "Encerra" um lançamento parcelado a partir de uma parcela específica:
 // remove todas as parcelas com num > X.
 router.patch('/finance/group/:groupId/end-after', requireFinance, async (req, res, next) => {
+  const groupId = req.params.groupId;
   try {
-    const { parcela_num } = req.body || {};
-    const n = parseInt(parcela_num, 10);
-    if (!n) return res.status(400).json({ error: 'parcela_num obrigatório' });
+    const { parcela_num: n } = validate(req.body)
+      .number('parcela_num', { integer: true, min: 1, max: 60 })
+      .done();
     const r = await query(
       `DELETE FROM financial_parcelas
        WHERE group_id = $1 AND parcela_num > $2
        RETURNING id`,
-      [req.params.groupId, n]
+      [groupId, n]
     );
     // Atualiza total_parcelas das remanescentes pra refletir o novo encerramento
     await query(
       `UPDATE financial_parcelas SET total_parcelas = $2
        WHERE group_id = $1`,
-      [req.params.groupId, n]
+      [groupId, n]
     );
     res.json({ ok: true, removed: r.rows.length, new_total: n });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'finance.group.end-after', payload: { groupId, after_parcela_num: n, removed: r.rows.length }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'finance.group.end-after', payload: { groupId, body: req.body }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 module.exports = router;

@@ -1,9 +1,10 @@
 /**
  * Mapeamento de usuários do dashboard ↔ usuários do AdvBox + verificação de senha.
  *
- * MIGRAÇÃO bcrypt (2026-05-16):
- *   - Preferência: ADV_USER_<NOME>_HASH (bcrypt hash gerado com cost 12)
- *   - Fallback temporário: ADV_USER_<NOME>  (texto puro — loga warning)
+ * MIGRAÇÃO bcrypt (concluída — gate em config.auth.requireBcrypt):
+ *   - Em prod (AUTH_REQUIRE_BCRYPT=true): só ADV_USER_<NOME>_HASH funciona.
+ *     Plaintext (ADV_USER_<NOME>) é ignorado e o boot FALHA se setado sem hash.
+ *   - Em dev (AUTH_REQUIRE_BCRYPT=false): plaintext aceito com warning.
  *
  * Geração de hash: `node scripts/hash-password.js`  (prompt interativo).
  *
@@ -15,6 +16,9 @@
 
 const bcrypt = require('bcryptjs');
 const { safeCompare } = require('../utils/safeCompare');
+const { config } = require('../config');
+
+const REQUIRE_BCRYPT = config.auth.requireBcrypt;
 
 // Hash dummy com cost 12 — usado pra manter o tempo de resposta constante
 // quando username não existe ou env var não está setada. Sem isso, atacante
@@ -34,10 +38,34 @@ const TEAM_USERS = [
 function getCredential(envBase) {
   const hash = process.env[`${envBase}_HASH`];
   if (hash) return { kind: 'hash', value: hash };
+  // Em prod (requireBcrypt): NÃO aceita texto puro. Trata como "sem credencial".
+  if (REQUIRE_BCRYPT) return null;
   const plain = process.env[envBase];
   if (plain) return { kind: 'plain', value: plain };
   return null;
 }
+
+// ── Validação FATAL no module load ──────────────────────────────────────────
+// Mesma política do config/index.js mas aplicada às vars ADV_USER_*. Roda
+// uma vez quando o módulo é required (acontece cedo no boot do dashboard).
+(function validateTeamCredentials() {
+  if (!REQUIRE_BCRYPT) return;
+  const violations = [];
+  for (const u of TEAM_USERS) {
+    const hasPlain = !!process.env[u.envBase];
+    const hasHash  = !!process.env[`${u.envBase}_HASH`];
+    if (hasPlain && !hasHash) {
+      violations.push(`${u.envBase} (texto puro detectado, ${u.envBase}_HASH ausente)`);
+    }
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      `[team-users] AUTH_REQUIRE_BCRYPT=true mas há credenciais individuais em texto puro:\n` +
+      violations.map(v => `  • ${v}`).join('\n') +
+      `\n\nGere os hashes com 'node scripts/hash-password.js', cole em ${'<NOME>_HASH'} (Replit Secrets), e remova as vars em texto puro.`
+    );
+  }
+})();
 
 /**
  * Verifica `password` contra (passwordHash || plaintext) de forma timing-safe.

@@ -11,6 +11,7 @@ const {
   VARIACOES,
   primeiroNome,
 } = require('../../../services/birthday');
+const { logMutation } = require('../../../services/mutation-log');
 
 const router = Router();
 
@@ -65,10 +66,15 @@ router.get('/birthday/config', async (req, res, next) => {
 });
 
 router.post('/birthday/config', async (req, res, next) => {
+  const enabled = !!req.body.auto_enabled;
   try {
-    await setConfig(!!req.body.auto_enabled);
+    await setConfig(enabled);
     res.json({ ok: true });
-  } catch (err) { next(err); }
+    logMutation({ actor: req.session?.user, action: 'birthday.config.update', payload: { auto_enabled: enabled }, success: true });
+  } catch (err) {
+    logMutation({ actor: req.session?.user, action: 'birthday.config.update', payload: { auto_enabled: enabled }, success: false, error: err.message });
+    next(err);
+  }
 });
 
 router.get('/birthday/preview', (req, res) => {

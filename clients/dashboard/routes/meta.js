@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const fetch = require('node-fetch');
 const cache = require('../../../cache');
+const { breakers } = require('../../../utils/circuitBreaker');
 
 const META_TOKEN      = process.env.META_TOKEN      || '';
 const META_AD_ACCOUNT = process.env.META_AD_ACCOUNT || '';
@@ -19,15 +20,24 @@ router.get('/meta-ads', async (req, res, next) => {
         throw Object.assign(new Error('META_TOKEN ou META_AD_ACCOUNT não configurados.'), { status: 500 });
       }
 
+      // Breaker envolve as 2 chamadas separadamente — assim uma falha em
+      // /campaigns NÃO conta como falha de /insights (e vice-versa), mas
+      // ambas tripam o mesmo breaker `meta` em caso de outage geral.
       const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time';
-      const cRes   = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`);
-      const cJson  = await cRes.json();
-      if (cJson.error) throw new Error('Campaigns: ' + cJson.error.message);
+      const cJson  = await breakers.meta.exec(async () => {
+        const cRes = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/campaigns?fields=${fields}&limit=100&access_token=${META_TOKEN}`);
+        const j = await cRes.json();
+        if (j.error) throw new Error('Campaigns: ' + j.error.message);
+        return j;
+      });
 
       const iFields = 'campaign_id,campaign_name,impressions,clicks,spend,reach,cpm,cpc,ctr,actions';
-      const iRes    = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${iFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`);
-      const iJson   = await iRes.json();
-      if (iJson.error) throw new Error('Insights: ' + iJson.error.message);
+      const iJson   = await breakers.meta.exec(async () => {
+        const iRes = await fetch(`${META_BASE}/${META_AD_ACCOUNT}/insights?fields=${iFields}&date_preset=${preset}&level=campaign&limit=100&access_token=${META_TOKEN}`);
+        const j = await iRes.json();
+        if (j.error) throw new Error('Insights: ' + j.error.message);
+        return j;
+      });
 
       const byId = {}, byName = {};
       iJson.data.forEach(i => {

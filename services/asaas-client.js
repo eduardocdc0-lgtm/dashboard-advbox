@@ -19,6 +19,7 @@
 'use strict';
 
 const fetch = require('node-fetch');
+const { breakers } = require('../utils/circuitBreaker');
 
 const DEFAULTS = Object.freeze({
   sandbox:    'https://api-sandbox.asaas.com/v3',
@@ -43,35 +44,39 @@ class AsaasClient {
   }
 
   async _request(method, path, body) {
-    const url = `${this.baseURL}${path}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    try {
-      const r = await fetch(url, {
-        method,
-        headers: {
-          'access_token':  this.token,
-          'Accept':        'application/json',
-          'Content-Type':  'application/json',
-          'User-Agent':    DEFAULTS.userAgent,
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      });
-      const text = await r.text();
-      let json;
-      try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
-      if (!r.ok) {
-        const msg = json.errors?.[0]?.description || json.message || `HTTP ${r.status}`;
-        const err = new Error(`ASAAS ${method} ${path}: ${msg}`);
-        err.status = r.status;
-        err.body = json;
-        throw err;
+    // Circuit breaker — quando ASAAS estiver fora, abortamos antes de gastar
+    // o timeout de 20s por chamada. Operador vê estado em /api/cache-status.
+    return breakers.asaas.exec(async () => {
+      const url = `${this.baseURL}${path}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      try {
+        const r = await fetch(url, {
+          method,
+          headers: {
+            'access_token':  this.token,
+            'Accept':        'application/json',
+            'Content-Type':  'application/json',
+            'User-Agent':    DEFAULTS.userAgent,
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
+        const text = await r.text();
+        let json;
+        try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
+        if (!r.ok) {
+          const msg = json.errors?.[0]?.description || json.message || `HTTP ${r.status}`;
+          const err = new Error(`ASAAS ${method} ${path}: ${msg}`);
+          err.status = r.status;
+          err.body = json;
+          throw err;
+        }
+        return json;
+      } finally {
+        clearTimeout(timer);
       }
-      return json;
-    } finally {
-      clearTimeout(timer);
-    }
+    });
   }
 
   // ── Customers ─────────────────────────────────────────────────────────────

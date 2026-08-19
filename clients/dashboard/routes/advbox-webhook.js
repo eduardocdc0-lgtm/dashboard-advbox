@@ -5,11 +5,11 @@
  *   - Tarefa é concluída
  *   - Processo muda de fase
  *
- * V1 (este): só RECEBE e PERSISTE em advbox_flowter_events. Não reage.
- * V2 (depois de ver payload real): adiciona reações:
- *   - Invalidar caches (inadimplentes, audit, overview)
- *   - Disparar runCycle({ onlyLawsuitId }) sem polling
- *   - Notificar via WhatsApp/email se evento crítico
+ * V2: RECEBE + PERSISTE + REAGE.
+ *   - Invalida caches afetados (lawsuits/flow/distribution/audit/transactions)
+ *   - Em mudança de fase, dispara runCycle({ onlyLawsuitId }) em fire-and-forget
+ *     (advisory lock interno do auto-workflow serializa contra o cron horário)
+ *   - Marca processed_at/processed_ok na linha do evento depois das side effects
  *
  * SETUP:
  *   1. Gerar token: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -28,8 +28,94 @@
 const crypto = require('crypto');
 const { Router } = require('express');
 const { query } = require('../../../services/db');
+const cache = require('../../../cache');
 
 const router = Router();
+
+// Eventos que devem disparar runCycle. Heurística defensiva: além do match
+// explícito por nome, qualquer payload com `stage` setado conta como mudança
+// de fase. Eventos só de tarefa (sem stage) entram só nas invalidações.
+const STAGE_EVENT_REGEX = /(stage|fase|phase|move|moved|changed)/i;
+
+/**
+ * Processa side effects de um evento Flowter já persistido.
+ * Fire-and-forget: chamado SEM await pelo handler do webhook, com .catch()
+ * pra não vazar unhandledRejection. Atualiza processed_at/processed_ok
+ * na linha do evento ao final (sucesso ou erro).
+ *
+ * NOTA sobre concorrência (decisão de design 2026-05-20):
+ *   NÃO usa withAdvisoryLock per-lawsuit aqui, mesmo que o auditor tenha
+ *   flagado "concurrent webhook processing" pra este arquivo. Análise:
+ *   1. INSERT em advbox_flowter_events vai pra linhas separadas (PK auto-
+ *      incrementing) — sem race nesse passo.
+ *   2. cache.invalidate é idempotente — chamar 2x é no-op.
+ *   3. runCycle tem advisory lock próprio (902301) — concorrência já
+ *      serializada lá dentro, segundo evento retorna { skipped: true }.
+ *   4. UPDATE processed_at é por linha, sem conflito.
+ *   Adicionar um lock per-lawsuit aqui seguraria conexão Postgres durante
+ *   runCycle inteiro (potencialmente minutos), trocando uma race inexistente
+ *   por pressão real no pool de conexões. Mantemos sem lock.
+ *
+ *   Se aparecer race REAL no futuro (ex: dois events disputando a mesma
+ *   linha), reconsiderar — provavelmente refatorar runCycle pra não bloquear
+ *   antes de adicionar lock aqui.
+ */
+async function processFlowterEvent({ eventId, eventType, lawsuitId, postId, stage }) {
+  const errors = [];
+
+  // 1. Invalidações de cache (síncronas, baratas)
+  try {
+    if (lawsuitId) {
+      cache.invalidate('lawsuits');
+      cache.invalidate('flow');
+      cache.invalidate('distribution');
+      cache.invalidate('audit_usage');
+      cache.invalidate('audit-responsible');
+    }
+    if (postId) {
+      // Tarefa concluída pode afetar parcelas/transações
+      cache.invalidate('transactions');
+      cache.invalidate('inadimplentes_full');
+    }
+  } catch (e) {
+    errors.push(`cache: ${e.message}`);
+  }
+
+  // 2. Trigger auto-workflow só se mudança de fase + lawsuit conhecido.
+  // Lazy-require pra não criar dependência circular no boot — mesmo padrão
+  // do audit-actions.js:207.
+  const isStageChange = !!stage || STAGE_EVENT_REGEX.test(String(eventType || ''));
+  if (lawsuitId && isStageChange) {
+    try {
+      const { runCycle } = require('../../../services/auto-workflow');
+      const result = await runCycle({
+        onlyLawsuitId: lawsuitId,
+        forceRefresh: true,
+        logger: console,
+      });
+      if (result?.skipped) {
+        console.log(`[Flowter] runCycle ignorado (${result.reason}) — cron horário pega no próximo ciclo`);
+      } else {
+        console.log(`[Flowter] runCycle OK — criados=${result?.criados ?? 0}, novos=${result?.novos ?? 0}`);
+      }
+    } catch (e) {
+      errors.push(`runCycle: ${e.message}`);
+    }
+  }
+
+  // 3. Marca processado no banco
+  const ok = errors.length === 0;
+  try {
+    await query(
+      `UPDATE advbox_flowter_events
+       SET processed_at = NOW(), processed_ok = $1, error_message = $2
+       WHERE id = $3`,
+      [ok, ok ? null : errors.join('; ').slice(0, 1000), eventId]
+    );
+  } catch (e) {
+    console.error('[Flowter] Falha ao marcar processed_at:', e.message);
+  }
+}
 
 // ── POST /api/advbox/webhook/flowter ─────────────────────────────────────────
 router.post('/advbox/webhook/flowter', async (req, res) => {
@@ -85,10 +171,11 @@ router.post('/advbox/webhook/flowter', async (req, res) => {
     null;
 
   try {
-    await query(
+    const insertRes = await query(
       `INSERT INTO advbox_flowter_events
        (event_type, lawsuit_id, post_id, stage, payload, source_ip, processed_ok)
-       VALUES ($1, $2, $3, $4, $5, $6, NULL)`,
+       VALUES ($1, $2, $3, $4, $5, $6, NULL)
+       RETURNING id`,
       [
         String(eventType).slice(0, 200),
         lawsuitId,
@@ -98,17 +185,25 @@ router.post('/advbox/webhook/flowter', async (req, res) => {
         sourceIp,
       ]
     );
+    const eventId = insertRes.rows[0].id;
 
     // Log estruturado pra debug
     console.log('[Flowter] OK', {
+      id: eventId,
       event: eventType,
       lawsuit_id: lawsuitId,
       post_id: postId,
       stage,
     });
 
+    // Fire-and-forget: side effects rodam após a resposta. .catch() obrigatório
+    // pra não vazar unhandledRejection. Tudo dentro do helper é idempotente
+    // (cache invalidate é no-op se a chave nem existe; runCycle tem advisory lock).
+    processFlowterEvent({ eventId, eventType, lawsuitId, postId, stage })
+      .catch(err => console.error('[Flowter] Side-effect falhou:', err.message));
+
     // 200 com body curto — Flowter normalmente não precisa de muito retorno
-    return res.status(200).json({ ok: true, received: true });
+    return res.status(200).json({ ok: true, received: true, eventId });
   } catch (err) {
     console.error('[Flowter] Erro ao persistir:', err.message);
     // 200 mesmo em erro pra Flowter não ficar tentando reenviar — temos log

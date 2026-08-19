@@ -109,16 +109,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // ── Auth: login / logout / me ────────────────────────────────────────────────
-// Perfis genéricos (admin/team) — sobrevivem da época pré-multi-user. Senha
-// pode vir como hash bcrypt (preferido) ou texto puro (fallback).
+// Perfis genéricos (admin/team) — sobrevivem da época pré-multi-user.
+// Quando config.auth.requireBcrypt está ligado, `plain` é zerado aqui de
+// uma vez — verifyPassword então ainda roda o bcrypt contra dummy (timing-safe)
+// mas sempre retorna false na ausência de hash. O boot já teria falhado em
+// config/index.js se houvesse plaintext sem hash com a flag ligada, então
+// chegar aqui com requireBcrypt=true significa que só *_HASH existe.
+const stripPlainIfRequired = (plain) => (config.auth.requireBcrypt ? '' : plain);
+
 const GENERIC_USERS = {
   [config.users.admin.username]: {
-    plain: config.users.admin.password,
+    plain: stripPlainIfRequired(config.users.admin.password),
     hash:  config.users.admin.passwordHash,
     role:  'admin',
   },
   [config.users.team.username]: {
-    plain: config.users.team.password,
+    plain: stripPlainIfRequired(config.users.team.password),
     hash:  config.users.team.passwordHash,
     role:  'team',
   },
@@ -200,7 +206,15 @@ function requireAdmin(req, res, next) {
 }
 
 app.get('/api/cache-status', requireAdmin, (req, res) => {
-  res.json(cache.status());
+  const { allStatus: breakerStatus } = require('../../utils/circuitBreaker');
+  const { getStats: accessLogStats } = require('../../middleware/access-log');
+  const { getPaginationStats } = require('../../services/advbox-client');
+  res.json({
+    ...cache.status(),
+    breakers:   breakerStatus(),
+    accessLog:  accessLogStats(),
+    pagination: getPaginationStats(),
+  });
 });
 
 app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
@@ -208,6 +222,14 @@ app.post('/api/cache-invalidate', requireAdmin, (req, res) => {
   if (key) cache.invalidate(key);
   else     cache.invalidateAll();
   res.json({ ok: true, invalidated: key || 'all' });
+});
+
+// Reset manual dos circuit breakers — útil quando admin sabe que a API
+// externa voltou e quer evitar esperar o resetTimeoutMs do breaker.
+app.post('/api/breakers-reset', requireAdmin, (req, res) => {
+  const { resetAll } = require('../../utils/circuitBreaker');
+  resetAll();
+  res.json({ ok: true, reset: true });
 });
 
 // ── Telemetria de uso (fire-and-forget) ──────────────────────────────────────

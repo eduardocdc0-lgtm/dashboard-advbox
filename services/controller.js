@@ -12,6 +12,8 @@
 const fetch = require('node-fetch');
 const { fetchLawsuits, fetchAllPosts } = require('./data');
 const { query: dbQuery } = require('./db');
+const { logMutation } = require('./mutation-log');
+const { PHASES: P } = require('../constants/phases');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
 const ADVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -24,7 +26,7 @@ const CATEGORIAS = [
     id: 'sem_laudo_prevdoc',
     titulo: '📋 Processo sem laudo',
     descricao: 'Cliente precisa fazer/enviar laudo médico',
-    fases: ['PROCESSO SEM LAUDO', 'FALTA LAUDO - FAZER PREVDOC', 'FALTA LAUDO', 'PREVDOC', 'PROCESSOS SEM LAUDOS'],
+    fases: [P.PROCESSO_SEM_LAUDO, P.FALTA_LAUDO_FAZER_PREVDOC, P.FALTA_LAUDO, P.PREVDOC, P.PROCESSOS_SEM_LAUDOS],
     responsavel: 'TAMMYRES',
     slaDias: 7,
   },
@@ -32,7 +34,7 @@ const CATEGORIAS = [
     id: 'dar_entrada',
     titulo: '⚠️ Protocolar ADM',
     descricao: 'Processo pronto, falta protocolar no INSS',
-    fases: ['PROTOCOLAR ADM', 'PARA DAR ENTRADA ADM', 'PARA DAR ENTRADA'],
+    fases: [P.PROTOCOLAR_ADM, P.PARA_DAR_ENTRADA_ADM, P.PARA_DAR_ENTRADA],
     responsavel: 'MARILIA',
     slaDias: 5,
   },
@@ -40,7 +42,7 @@ const CATEGORIAS = [
     id: 'em_exigencia',
     titulo: '❗ Em Exigência',
     descricao: 'INSS pediu mais documentos/info — escritório precisa responder',
-    fases: ['EM EXIGENCIA', 'EM EXIGÊNCIA'],
+    fases: [P.EM_EXIGENCIA, P.EM_EXIGENCIA_ACENTUADO],
     responsavel: 'MARILIA',
     slaDias: 7,
   },
@@ -48,7 +50,7 @@ const CATEGORIAS = [
     id: 'peticao_inicial',
     titulo: '⚖️ Elaborar petição inicial',
     descricao: 'Caso judicial pronto, falta peticionar',
-    fases: ['ELABORAR PETIÇÃO INICIAL', 'ELABORAR PETICAO INICIAL'],
+    fases: [P.ELABORAR_PETICAO_INICIAL_ACENTUADO, P.ELABORAR_PETICAO_INICIAL],
     responsavel: 'LETICIA_OU_ALICE',
     slaDias: 10,
   },
@@ -56,7 +58,7 @@ const CATEGORIAS = [
     id: 'com_prazo',
     titulo: '⏰ Com prazo',
     descricao: 'Prazo judicial correndo',
-    fases: ['COM PRAZO'],
+    fases: [P.COM_PRAZO],
     responsavel: 'LETICIA_OU_ALICE',
     slaDias: 5,
   },
@@ -389,27 +391,16 @@ async function cobrarLawsuit({ actor, lawsuit_id, user_id, descricao, problema_i
   }
 
   // Audit log SEMPRE
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actor?.username || 'controller-lote',
-        actor?.advboxUserId || null,
-        actionType,
-        Number(lawsuit_id),
-        Number(user_id),
-        JSON.stringify({ problema_id, categoriaId, descricao, payload, source: 'controller-lote' }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[controller] audit log:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actor?.username || 'controller-lote', advboxUserId: actor?.advboxUserId || null },
+    action:       actionType,
+    lawsuitId:    Number(lawsuit_id),
+    targetUserId: Number(user_id),
+    payload:      { problema_id, categoriaId, descricao, payload, source: 'controller-lote' },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) return { ok: false, status: 502, error: errorMessage };
   return { ok: true, cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString() };
@@ -476,27 +467,16 @@ async function aplicarWorkflow({ actor, lawsuit_id, categoriaId }) {
     errorMessage = err.message || String(err);
   }
 
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actor?.username || 'controller-workflow-lote',
-        actor?.advboxUserId || null,
-        actionType,
-        Number(lawsuit_id),
-        Number(cfg.responsavelId),
-        JSON.stringify({ categoriaId, workflowNome: cfg.workflowNome, primeiraTarefa: cfg.primeiraTarefa, payload, source: 'controller-workflow-lote' }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[controller] audit log workflow:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actor?.username || 'controller-workflow-lote', advboxUserId: actor?.advboxUserId || null },
+    action:       actionType,
+    lawsuitId:    Number(lawsuit_id),
+    targetUserId: Number(cfg.responsavelId),
+    payload:      { categoriaId, workflowNome: cfg.workflowNome, primeiraTarefa: cfg.primeiraTarefa, payload, source: 'controller-workflow-lote' },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) return { ok: false, status: 502, error: errorMessage };
   return { ok: true, cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString() };

@@ -65,8 +65,29 @@ npm run format   # Prettier
 Veja [`.env.example`](./.env.example). Mínimo obrigatório:
 
 - `SESSION_SECRET` — gere com `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
-- `ADMIN_PASS` (e/ou `TEAM_PASS`) — senha de login
+- `ADMIN_PASS_HASH` (e/ou `TEAM_PASS_HASH`) em prod — gere com `node scripts/hash-password.js`
 - `ADVBOX_TOKEN` — Bearer token da API AdvBox
+
+## Senhas / autenticação
+
+Login aceita **duas formas** de credencial por usuário: hash bcrypt (`*_PASS_HASH` / `ADV_USER_<NOME>_HASH`) e texto puro (`*_PASS` / `ADV_USER_<NOME>`). A flag `AUTH_REQUIRE_BCRYPT` controla qual está em uso.
+
+- `AUTH_REQUIRE_BCRYPT=true` (default em prod): só hash funciona. Plaintext é ignorado e o boot **falha** se uma var em texto puro estiver setada sem o `*_HASH` correspondente — impede deploy acidental com `.env` legado.
+- `AUTH_REQUIRE_BCRYPT=false` (default em dev): plaintext aceito, com warning no boot. Útil pra rodar local sem gerar hash. **Nunca** deploye assim.
+
+Para migrar uma senha de plaintext pra hash:
+
+```bash
+node scripts/hash-password.js          # digite a senha (não aparece no terminal)
+# copia o hash $2b$12$... que ele imprime
+```
+
+Depois, no Replit Secrets (ou `.env`):
+
+1. Cole o hash em `<NOME>_PASS_HASH` (ex: `ADMIN_PASS_HASH`, `ADV_USER_MARILIA_HASH`).
+2. Confirme que o login funciona.
+3. **Remova** a var em texto puro (`ADMIN_PASS`, `ADV_USER_MARILIA`, etc).
+4. Quando todas as contas estiverem migradas, `AUTH_REQUIRE_BCRYPT=true`.
 
 ## Endpoints principais
 

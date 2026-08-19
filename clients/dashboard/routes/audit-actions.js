@@ -12,9 +12,12 @@
 const fetch = require('node-fetch');
 const { Router } = require('express');
 const { requireAuth } = require('../../../middleware/auth');
+const { asyncHandler } = require('../../../middleware/errorHandler');
 const { query: dbQuery } = require('../../../services/db');
 const { client } = require('../../../services/data');
 const { advboxUserIdFromSession } = require('../../../services/team-users');
+const { logMutation } = require('../../../services/mutation-log');
+const { validate } = require('../../../utils/validate');
 const { dateInMes } = require('../../../services/date-utils');
 
 const ADVBOX_BASE = 'https://app.advbox.com.br/api/v1';
@@ -63,28 +66,25 @@ function ymd(d) {
   return `${y}-${m}-${dd}`;
 }
 
-router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, next) => {
+router.post('/audit/action/cobrar-responsavel', requireAuth, asyncHandler(async (req, res, next) => {
   const sessionUser = req.session.user;
   const actorUsername = sessionUser.username;
   const actorAdvboxId = sessionUser.advboxUserId || null;
   const actionType = 'cobrar-responsavel';
 
   const body = req.body || {};
-  const { problema_id, problema_tipo, problema_campo, lawsuit_id, user_id, descricao } = body;
 
   // ── Validações de entrada ──────────────────────────────────────────────────
-  if (problema_tipo !== 'workflow' || !COBRAVEIS.has(problema_campo)) {
-    return res.status(400).json({ error: 'Problema não cobrável (tipo/campo inválidos).' });
-  }
-  if (!user_id) {
-    return res.status(400).json({ error: 'user_id (responsável) é obrigatório.' });
-  }
-  if (!lawsuit_id) {
-    return res.status(400).json({ error: 'lawsuit_id é obrigatório (AdvBox exige vincular task a um processo).' });
-  }
-  if (!descricao) {
-    return res.status(400).json({ error: 'descricao é obrigatória.' });
-  }
+  // validate() retorna valores coercidos via destructuring. Falha → 400 com
+  // details[] field-level (errorHandler global serializa).
+  const { problema_id, problema_tipo, problema_campo, lawsuit_id, user_id, descricao } = validate(body)
+    .enum  ('problema_tipo',  ['workflow'])
+    .enum  ('problema_campo', [...COBRAVEIS])
+    .number('user_id',        { integer: true, min: 1 })
+    .number('lawsuit_id',     { integer: true, min: 1 })
+    .string('descricao',      { maxLength: 1000 })
+    .string('problema_id',    { maxLength: 200, optional: true })
+    .done();
 
   // Team users só podem cobrar a si mesmos
   const isAdmin = sessionUser.role === 'admin';
@@ -161,27 +161,16 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
   }
 
   // ── Audit log SEMPRE ───────────────────────────────────────────────────────
-  try {
-    await dbQuery(
-      `INSERT INTO audit_actions
-         (actor_username, actor_advbox_id, action_type, target_lawsuit_id, target_user_id,
-          problema_payload, advbox_response, success, error_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        actorUsername,
-        actorAdvboxId,
-        actionType,
-        lawsuit_id ? Number(lawsuit_id) : null,
-        Number(user_id),
-        JSON.stringify({ problema_id, problema_tipo, problema_campo, descricao, payload: advboxPayload }),
-        advboxResponse ? JSON.stringify(advboxResponse) : null,
-        success,
-        errorMessage,
-      ]
-    );
-  } catch (logErr) {
-    console.error('[audit-actions] erro ao gravar audit_actions:', logErr.message);
-  }
+  await logMutation({
+    actor:        { username: actorUsername, advboxUserId: actorAdvboxId },
+    action:       actionType,
+    lawsuitId:    lawsuit_id ? Number(lawsuit_id) : null,
+    targetUserId: Number(user_id),
+    payload:      { problema_id, problema_tipo, problema_campo, descricao, payload: advboxPayload },
+    response:     advboxResponse,
+    success,
+    error:        errorMessage,
+  });
 
   if (!success) {
     return res.status(502).json({
@@ -196,7 +185,7 @@ router.post('/audit/action/cobrar-responsavel', requireAuth, async (req, res, ne
     cooldown_until: new Date(Date.now() + COOLDOWN_MIN * 60_000).toISOString(),
     task: advboxResponse,
   });
-});
+}));
 
 // ── Admin: roda 1 ciclo do auto-workflow manualmente ─────────────────────────
 // GET /api/audit/auto-workflow/run?dryRun=1

@@ -688,7 +688,7 @@ router.get('/admin/flowter-events', requireAdmin, async (req, res, next) => {
       stats: stats.rows[0],
       by_event_type_last_7d: byEventType.rows,
       events: r.rows,
-      hint: 'V1 só persiste — não reage ainda. Configure o Flowter no AdvBox apontando pra /api/advbox/webhook/flowter com header x-flowter-token=<ADVBOX_FLOWTER_TOKEN>. Depois que vier 1 evento real, podemos adicionar reação automatizada.',
+      hint: 'V2: webhook persiste + reage (invalida caches relevantes e dispara runCycle em mudança de fase). processed_ok=true significa side effects OK; false significa que algo na cadeia falhou (ver error_message). Configure o Flowter no AdvBox apontando pra /api/advbox/webhook/flowter com header x-flowter-token=<ADVBOX_FLOWTER_TOKEN>.',
     });
   } catch (err) { next(err); }
 });

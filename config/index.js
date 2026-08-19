@@ -58,9 +58,29 @@ const config = Object.freeze({
     return { keys: [single], maxAgeMs: intOpt('SESSION_MAX_AGE_MS', 12 * 60 * 60 * 1000), secure: isProd };
   })(),
 
+  // ── Auth / senhas ───────────────────────────────────────────────────────────
+  // requireBcrypt: quando true, login só aceita *_PASS_HASH (bcrypt). Senhas
+  // em texto puro (*_PASS, ADV_USER_<NOME>) são IGNORADAS — verifyPassword
+  // ainda gasta o tempo do bcrypt contra dummy pra não vazar timing, mas
+  // retorna false. Default: true em prod, false em dev (pra rodar local sem
+  // gerar hash). Override via AUTH_REQUIRE_BCRYPT=true|false.
+  //
+  // Migração: `node scripts/hash-password.js` → cola em *_HASH (Replit Secrets).
+  // Boot vai FALHAR (throw) se requireBcrypt=true e algum *_PASS estiver
+  // setado sem o *_HASH correspondente — força a migração antes do deploy.
+  auth: {
+    requireBcrypt: (() => {
+      const raw = process.env.AUTH_REQUIRE_BCRYPT;
+      if (raw === 'true')  return true;
+      if (raw === 'false') return false;
+      return isProd;
+    })(),
+  },
+
   // ── Usuários ────────────────────────────────────────────────────────────────
-  // Preferência: *_PASS_HASH (bcrypt). Fallback: *_PASS (texto puro, com warning).
-  // Migração: `node scripts/hash-password.js`.
+  // Perfis genéricos (admin/team) — herdados da época pré-multi-user.
+  // Em prod: setar APENAS *_HASH (gerar com scripts/hash-password.js).
+  // Em dev: pode usar *_PASS direto enquanto AUTH_REQUIRE_BCRYPT=false.
   users: {
     admin: {
       username:     optional('ADMIN_USER', 'eduardo'),
@@ -82,9 +102,21 @@ const config = Object.freeze({
   corsOrigins: listOpt('CORS_ORIGINS', isProd ? [] : ['http://localhost:5000', 'http://localhost:3000']),
 
   // ── AdvBox ──────────────────────────────────────────────────────────────────
+  // maxPages: cap de páginas que o cliente busca em getAll*. Cada chamada
+  // bate em /lawsuits|/transactions|/customers com offset crescente até
+  // (a) página vazia, (b) página parcial (fim natural), ou (c) este cap.
+  // Caso (c) emite WARN e contabiliza em /api/cache-status.pagination —
+  // sinal de que provavelmente há mais dados que não estão sendo lidos.
+  // Defaults: 30/20/20 páginas × 500/1000/1000 itens = 15k/20k/20k respectivamente.
+  // Aumentar via env ADVBOX_MAX_PAGES_* se o escritório passar desses volumes.
   advbox: {
     token:   optional('ADVBOX_TOKEN', ''),
     baseUrl: optional('ADVBOX_BASE_URL', 'https://app.advbox.com.br/api/v1'),
+    maxPages: {
+      lawsuits:     intOpt('ADVBOX_MAX_PAGES_LAWSUITS',     30),
+      transactions: intOpt('ADVBOX_MAX_PAGES_TRANSACTIONS', 20),
+      customers:    intOpt('ADVBOX_MAX_PAGES_CUSTOMERS',    20),
+    },
   },
 
   // ── Meta Ads ────────────────────────────────────────────────────────────────
@@ -111,12 +143,15 @@ const config = Object.freeze({
   },
 
   // ── Banco ───────────────────────────────────────────────────────────────────
-  // poolMax default 5: Replit small tem RAM/CPU limitada e o auto-workflow
-  // pega 1 conexão dedicada pro advisory lock — 5 deixa margem confortável
-  // sem estourar. Setar DB_POOL_MAX=10 ou mais se sair de container pequeno.
+  // poolMax default 15: dimensionado pra suportar (a) 1 conexão dedicada do
+  // advisory lock do auto-workflow durante ciclos longos, (b) 2-3 conexões dos
+  // outros crons (briefing, snapshot) rodando em paralelo, (c) ~10 requests
+  // concorrentes da equipe sem timeout. Em containers muito pequenos pode
+  // baixar pra 10; abaixo disso o boot emite WARN porque histórico mostrou
+  // timeouts sob carga moderada.
   db: {
     url:     optional('DATABASE_URL', ''),
-    poolMax: intOpt('DB_POOL_MAX', 5),
+    poolMax: intOpt('DB_POOL_MAX', 15),
   },
 
   // ── Limites ─────────────────────────────────────────────────────────────────
@@ -130,15 +165,55 @@ const config = Object.freeze({
   },
 });
 
+// ── Validação FATAL de auth (executa no require, antes do boot) ─────────────
+// Quando AUTH_REQUIRE_BCRYPT=true, qualquer credencial em texto puro sem o
+// hash correspondente é fatal — o processo nem chega a abrir porta. Isso
+// impede deploy acidental com .env legado.
+(function validateAuth() {
+  if (!config.auth.requireBcrypt) return;
+
+  const violations = [];
+  if (config.users.admin.password && !config.users.admin.passwordHash) {
+    violations.push('ADMIN_PASS está setado em texto puro mas ADMIN_PASS_HASH não está.');
+  }
+  if (config.users.team.password && !config.users.team.passwordHash) {
+    violations.push('TEAM_PASS está setado em texto puro mas TEAM_PASS_HASH não está.');
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      `[config] AUTH_REQUIRE_BCRYPT=true mas credenciais em texto puro foram detectadas:\n` +
+      violations.map(v => `  • ${v}`).join('\n') +
+      `\n\nPara corrigir:\n` +
+      `  1. Gere um hash bcrypt: node scripts/hash-password.js\n` +
+      `  2. Cole o hash em *_PASS_HASH (Replit > Secrets, ou .env local)\n` +
+      `  3. Remova a env var em texto puro (*_PASS)\n` +
+      `  4. Reinicie o app\n\n` +
+      `Em desenvolvimento (NODE_ENV=development) plaintext é tolerado por default.`
+    );
+  }
+})();
+
 // ── Avisos não-fatais no boot ────────────────────────────────────────────────
 function warnings() {
   const w = [];
   if (!config.advbox.token)      w.push('ADVBOX_TOKEN não configurado — endpoints AdvBox vão retornar erro.');
   if (!config.db.url)            w.push('DATABASE_URL não configurado — leads/aniversários/auditoria desativados.');
-  if (!config.readApiKey)        w.push('READ_API_KEY não configurada — autenticação por API Key desativada.');
-  if (!config.users.admin.password && !config.users.team.password) {
-    w.push('Nenhuma senha de usuário configurada (ADMIN_PASS / TEAM_PASS) — login não funcionará.');
+  if (config.db.url && config.db.poolMax < 10) {
+    w.push(`DB_POOL_MAX=${config.db.poolMax} é baixo — crons + requests podem competir e gerar timeouts. Recomendado: 15.`);
   }
+  if (!config.readApiKey)        w.push('READ_API_KEY não configurada — autenticação por API Key desativada.');
+
+  const hasAdminCred = config.users.admin.passwordHash || (!config.auth.requireBcrypt && config.users.admin.password);
+  const hasTeamCred  = config.users.team.passwordHash  || (!config.auth.requireBcrypt && config.users.team.password);
+  if (!hasAdminCred && !hasTeamCred) {
+    w.push('Nenhuma credencial de usuário genérico configurada (*_PASS_HASH ou *_PASS em dev) — só usuários individuais conseguirão logar.');
+  }
+
+  // Aviso em dev quando alguém está rodando com plaintext (lembrete pra não deployar assim).
+  if (!config.auth.requireBcrypt && (config.users.admin.password || config.users.team.password)) {
+    w.push('AUTH_REQUIRE_BCRYPT=false — *_PASS em texto puro aceito (OK em dev, FATAL em prod). Migre antes de deployar.');
+  }
+
   if (!config.isProd && config.corsOrigins.length === 0) {
     w.push('CORS_ORIGINS vazio em modo dev — usando localhost:5000 e :3000.');
   }

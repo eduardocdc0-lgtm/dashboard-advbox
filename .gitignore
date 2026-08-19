@@ -1,10 +1,10 @@
 # Dependências
 node_modules/
 
-# Variáveis de ambiente
+# Variáveis de ambiente — ignora qualquer .env exceto o .env.example (template público)
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 
 # Logs
 *.log

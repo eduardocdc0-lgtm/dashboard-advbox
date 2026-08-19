@@ -85,8 +85,24 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders:   false,
   message: { error: 'Limite de requisições atingido. Tente novamente em instantes.' },
-  // Não conta requests autenticados por API key (back-office tem fluxos batch)
-  skip: (req) => !!req.headers['x-api-key'] && req.headers['x-api-key'] === config.readApiKey,
+
+  // Bucket POR USUÁRIO quando logado, IP como fallback. Bug histórico: time
+  // atrás de NAT corporativo compartilhava o mesmo bucket de IP — 1 pessoa
+  // rodando job batch derrubava o limite de todo mundo. Username aqui é
+  // único entre os 9 perfis (admin/team genéricos + 7 ADV_USER_*).
+  // 'anonymous' como último fallback pra garantir string não-vazia
+  // (express-rate-limit v7 reclama se keyGenerator retornar falsy).
+  keyGenerator: (req) => req.session?.user?.username || req.ip || 'anonymous',
+
+  // Bypass só pra X-Api-Key + GET. O auth gate em index.js já restringe
+  // X-Api-Key a GETs, mas duplicamos a checagem aqui pra defesa em
+  // profundidade: se alguém adicionar acidentalmente uma rota POST behind
+  // X-Api-Key no futuro, ela continua rate-limited.
+  skip: (req) => (
+    req.method === 'GET' &&
+    !!req.headers['x-api-key'] &&
+    req.headers['x-api-key'] === config.readApiKey
+  ),
 });
 
 module.exports = {
